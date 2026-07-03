@@ -38,10 +38,13 @@ dependencies {
 group = 'shortestpath'
 
 
+// Toolchain pin removed: requires a JDK 11 install. The JavaCompile config below already sets
+// options.release = 11 and source/targetCompatibility = 11, so any JDK 11+ (e.g. 21) still produces
+// Java 11 bytecode. To restore strict pinning, re-add:
+//   java { toolchain { languageVersion.set(JavaLanguageVersion.of(11)) } }
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
-    }
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 tasks.withType(JavaCompile).configureEach {
