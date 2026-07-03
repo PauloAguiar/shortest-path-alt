@@ -114,7 +114,7 @@ public class PathMapOverlay extends Overlay
 		if (plugin.getPathfinder() != null)
 		{
 			Color colour = plugin.getPathColor();
-			java.util.List<PathStep> path = plugin.getPathfinder().getPath();
+			java.util.List<PathStep> path = plugin.getDisplayPath();
 			Point cursorPos = client.getMouseCanvasPosition();
 			for (int i = 0; i < path.size(); i++)
 			{

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,7 @@ import shortestpath.JewelleryBoxTier;
 import shortestpath.PrimitiveIntHashMap;
 import shortestpath.ShortestPathConfig;
 import shortestpath.ShortestPathPlugin;
+import shortestpath.TeleportMethod;
 import shortestpath.TeleportationItem;
 import shortestpath.WorldPointUtil;
 import shortestpath.leagues.LeagueModeState;
@@ -130,6 +132,29 @@ public class PathfinderConfig
 	private int currencyThreshold;
 	@Getter
 	private boolean isOnSailingBoat;
+	/**
+	 * Alternative-routes "planning" mode. When true the per-player possession/unlock gates (transport
+	 * type toggles, item/rune/level/quest/var requirements, jewellery-box tier) are bypassed so the
+	 * search offers every teleport that exists in the game, regardless of whether the player can use
+	 * it right now. Structural world rules (sailing, POH master switch, league regions, POH variants,
+	 * planted spirit trees) still apply. Used by the alternative-routes service, never by the main path.
+	 */
+	private boolean planningMode = false;
+	/**
+	 * True on the alternative-routes planning copy (not the main path config). Gates the per-mode
+	 * item/bank overrides applied in {@link #refresh()}.
+	 */
+	private boolean planningCopy = false;
+	/**
+	 * Alternative-routes "with bank" mode: when true (and not full planning mode), the planning copy
+	 * offers teleport items in the bank and routes through a bank to pick them up.
+	 */
+	private boolean considerBank = false;
+	/**
+	 * Teleport methods the user has switched off in the alternative-routes panel; excluded from the
+	 * next search so a different method is forced.
+	 */
+	private Set<TeleportMethod> excludedMethods = Collections.emptySet();
 
 	public PathfinderConfig(Client client, ShortestPathConfig config)
 	{
@@ -166,6 +191,69 @@ public class PathfinderConfig
 		this.filteredDestinations = filteredDestinations;
 		this.destinations = allDestinations;
 		this.bankRequirements = bankRequirements;
+	}
+
+	/**
+	 * Builds a second config that shares this one's heavy immutable data (collision map, loaded
+	 * transports, destinations, bank requirements) so the alternative-routes service can run its own
+	 * searches without reloading the ~20 MB collision map or re-parsing the transport data. The copy
+	 * keeps its own mutable availability/state, so its {@link #refresh()} passes never disturb the
+	 * main path's config.
+	 */
+	private PathfinderConfig(PathfinderConfig source)
+	{
+		this.client = source.client;
+		this.config = source.config;
+		this.transportTypeConfig = new TransportTypeConfig(source.config);
+		this.mapData = source.mapData;
+		this.map = ThreadLocal.withInitial(() -> new CollisionMap(this.mapData));
+		this.allTransports = source.allTransports;
+		this.transportAvailabilityWithoutBank = new TransportAvailability.Builder(this.allTransports.length).build();
+		this.transportAvailabilityWithBank = new TransportAvailability.Builder(this.allTransports.length).build();
+		this.allDestinations = source.allDestinations;
+		this.filteredDestinations = source.filteredDestinations;
+		this.destinations = source.allDestinations;
+		this.bankRequirements = source.bankRequirements;
+	}
+
+	/**
+	 * A planning-mode sibling of this config for the alternative-routes feature (see {@link #planningMode}).
+	 */
+	public PathfinderConfig copyForPlanning()
+	{
+		PathfinderConfig copy = new PathfinderConfig(this);
+		copy.planningCopy = true;
+		copy.planningMode = true;
+		return copy;
+	}
+
+	public void setExcludedMethods(Set<TeleportMethod> excludedMethods)
+	{
+		this.excludedMethods = (excludedMethods == null || excludedMethods.isEmpty())
+			? Collections.emptySet() : new HashSet<>(excludedMethods);
+	}
+
+	/**
+	 * For the planning copy: whether to also consider teleport items in the bank (routing through a
+	 * bank to pick them up). Ignored in full planning mode, which offers everything anyway.
+	 */
+	public void setConsiderBank(boolean considerBank)
+	{
+		this.considerBank = considerBank;
+	}
+
+	public boolean isPlanningMode()
+	{
+		return planningMode;
+	}
+
+	/**
+	 * Toggles whether this (planning) config offers every in-game teleport ({@code true}) or only the
+	 * teleports the player can currently use ({@code false}). Takes effect on the next {@link #refresh()}.
+	 */
+	public void setPlanningMode(boolean planningMode)
+	{
+		this.planningMode = planningMode;
 	}
 
 	/**
@@ -236,6 +324,38 @@ public class PathfinderConfig
 		return getTransportAvailability(bankVisited).getUsableTeleports();
 	}
 
+	/**
+	 * The distinct travel methods (teleports + networks, never plain walking connectors) currently in
+	 * this config's availability. Reflects the planning/available mode set on this config; intended to
+	 * be read after a {@link #refresh()} with no exclusions so the full catalog is returned regardless
+	 * of which methods the user has switched off.
+	 */
+	public Set<TeleportMethod> getMethodCatalog()
+	{
+		Set<TeleportMethod> methods = new LinkedHashSet<>();
+		// In bank mode, read the with-bank availability so bank-only teleport items appear in the catalog.
+		TransportAvailability availability = getTransportAvailability(includeBankPath);
+		for (Transport transport : availability.getUsableTeleports())
+		{
+			if (TeleportMethod.isMethodType(transport.getType()))
+			{
+				methods.add(TeleportMethod.fromTransport(transport));
+			}
+		}
+		PrimitiveIntHashMap<Transport[]> packed = availability.getTransportsPacked();
+		for (int origin : packed.keys())
+		{
+			for (Transport transport : packed.getOrDefault(origin, TransportAvailability.EMPTY_TRANSPORTS))
+			{
+				if (TeleportMethod.isMethodType(transport.getType()))
+				{
+					methods.add(TeleportMethod.fromTransport(transport));
+				}
+			}
+		}
+		return methods;
+	}
+
 	public TransportAvailability getTransportAvailability(boolean bankVisited)
 	{
 		return bankVisited ? transportAvailabilityWithBank : transportAvailabilityWithoutBank;
@@ -286,6 +406,17 @@ public class PathfinderConfig
 
 		// Note: Transport type costs are now managed by transportTypeConfig.getCost()
 		costConsumableTeleportationItems = ShortestPathPlugin.override("costConsumableTeleportationItems", config.costConsumableTeleportationItems());
+
+		// Alternative-routes "Bank" mode ONLY: restrict to items the player owns (inventory + equipment +
+		// bank) and route through a bank to pick up bank items. The "Available" mode is left exactly as
+		// before — it follows the user's Shortest Path teleport-item / bank-path config — and "All" mode
+		// (planningMode) bypasses possession gates entirely.
+		if (planningCopy && !planningMode && considerBank)
+		{
+			this.bank = client.getItemContainer(InventoryID.BANK);
+			includeBankPath = true;
+			transportTypeConfig.setTeleportationItemSetting(TeleportationItem.INVENTORY_AND_BANK);
+		}
 
 		if (GameState.LOGGED_IN.equals(client.getGameState()))
 		{
@@ -513,8 +644,9 @@ public class PathfinderConfig
 				continue;
 			}
 
-			boolean usableWithoutBank = hasRequiredItems(transport, true, true, false, true);
-			boolean usableWithBank = hasRequiredItems(transport, true, true, includeBankPath, true);
+			// Planning mode surfaces every teleport regardless of inventory/bank possession.
+			boolean usableWithoutBank = planningMode || hasRequiredItems(transport, true, true, false, true);
+			boolean usableWithBank = planningMode || hasRequiredItems(transport, true, true, includeBankPath, true);
 			if (usableWithoutBank)
 			{
 				withoutBank.add(transport);
@@ -662,6 +794,12 @@ public class PathfinderConfig
 
 	private boolean useTransport(Transport transport)
 	{
+		// Alternative-routes exclusion: the user switched this exact method off for the next search.
+		if (!excludedMethods.isEmpty() && excludedMethods.contains(TeleportMethod.fromTransport(transport)))
+		{
+			return false;
+		}
+
 		// Sailing: suppress teleports while the player is aboard a boat.
 		// We don't model sailing navigation, so teleporting away mid-ocean would produce
 		// confusing suggestions. Pathfinding resumes normally after disembarking.
@@ -693,51 +831,55 @@ public class PathfinderConfig
 		final boolean isQuestLocked = transport.isQuestLocked();
 		TransportType type = transport.getType();
 
-		// Check if transport type is enabled in config
-		if (!transportTypeConfig.isEnabled(type))
-		{
-			return false;
-		}
-
-		// Handle POH variants for types that have them
+		// Handle POH variants for types that have them. This is a structural world rule (the variant
+		// depends on POH settings, not on possession) so it applies even in planning mode.
 		if (!checkPohVariant(transport, type))
 		{
 			return false;
 		}
 
-		// Handle special cases for teleportation items and seasonal transports
-		if (!checkTeleportationItemRules(transport, type))
+		// In planning mode every teleport that exists in the game is offered, so the per-player
+		// possession/unlock gates below (type toggles, item/level/quest/var requirements, jewellery
+		// tier) are skipped. See PathfinderConfig#planningMode.
+		if (!planningMode)
 		{
-			return false;
-		}
-
-		// Handle jewellery box tier filtering
-		if (TransportType.TELEPORTATION_BOX.equals(type))
-		{
-			if (!checkJewelleryBoxTier(transport))
+			// Check if transport type is enabled in config
+			if (!transportTypeConfig.isEnabled(type))
 			{
 				return false;
 			}
-		}
 
-		if (!hasRequiredLevels(transport))
-		{
-			return false;
-		}
+			// Handle special cases for teleportation items and seasonal transports
+			if (!checkTeleportationItemRules(transport, type))
+			{
+				return false;
+			}
 
-		if (isQuestLocked && !completedQuests(transport))
-		{
-			return false;
-		}
+			// Handle jewellery box tier filtering
+			if (TransportType.TELEPORTATION_BOX.equals(type) && !checkJewelleryBoxTier(transport))
+			{
+				return false;
+			}
 
-		if (varbitChecks(transport))
-		{
-			return false;
-		}
+			if (!hasRequiredLevels(transport))
+			{
+				return false;
+			}
 
-		if (varPlayerChecks(transport))
-		{
-			return false;
+			if (isQuestLocked && !completedQuests(transport))
+			{
+				return false;
+			}
+
+			if (varbitChecks(transport))
+			{
+				return false;
+			}
+
+			if (varPlayerChecks(transport))
+			{
+				return false;
+			}
 		}
 
 		if (TransportType.SPIRIT_TREE.equals(type) || TransportType.SEASONAL_TRANSPORTS.equals(type))
