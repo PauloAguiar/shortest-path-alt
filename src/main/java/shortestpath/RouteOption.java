@@ -29,13 +29,20 @@ public final class RouteOption
 	 * tile (mirrors Shortest Path's own behaviour for unreachable targets, e.g. an NPC/object tile).
 	 */
 	private final boolean reached;
+	/**
+	 * Whether one of this route's methods requires an item that must first be withdrawn from the bank
+	 * (the path includes a walk to a bank before that method is used).
+	 */
+	private final boolean viaBank;
 
-	public RouteOption(List<PathStep> path, List<TeleportMethod> methods, int totalCost, boolean reached)
+	public RouteOption(List<PathStep> path, List<TeleportMethod> methods, int totalCost, boolean reached,
+		boolean viaBank)
 	{
 		this.path = path;
 		this.methods = methods;
 		this.totalCost = totalCost;
 		this.reached = reached;
+		this.viaBank = viaBank;
 	}
 
 	/**

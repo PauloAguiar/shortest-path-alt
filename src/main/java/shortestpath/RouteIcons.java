@@ -29,6 +29,7 @@ final class RouteIcons
 	private static final Color GREEN_LIGHT = new Color(0x7C, 0xD6, 0x80);
 	private static final Color ORANGE = new Color(0xFF, 0x98, 0x1F);
 	private static final Color ORANGE_LIGHT = new Color(0xFF, 0xC0, 0x6A);
+	private static final Color GOLD = new Color(0xF2, 0xC1, 0x4E);
 
 	// Show / hide a route on the map (map pin). Active = currently shown.
 	static final ImageIcon SHOW = new ImageIcon(pin(GREY));
@@ -59,6 +60,10 @@ final class RouteIcons
 	static final ImageIcon CHEVRON_RIGHT_HOVER = new ImageIcon(chevron(LIGHT, false));
 	static final ImageIcon CHEVRON_DOWN = new ImageIcon(chevron(GREY, true));
 	static final ImageIcon CHEVRON_DOWN_HOVER = new ImageIcon(chevron(LIGHT, true));
+	// Method the player can't use right now (missing item/level/quest/unlock).
+	static final ImageIcon LOCKED = new ImageIcon(lock(ORANGE));
+	// Method whose required item is owned but sitting in the bank (route through a bank to grab it).
+	static final ImageIcon IN_BANK = new ImageIcon(coins(GOLD));
 
 	private RouteIcons()
 	{
@@ -193,6 +198,36 @@ final class RouteIcons
 			g.setColor(colour);
 			g.setStroke(new BasicStroke(1.9f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 			g.draw(new Line2D.Double(4.0, 8.0, 12.0, 8.0));
+		});
+	}
+
+	private static BufferedImage lock(Color colour)
+	{
+		return render(g ->
+		{
+			g.setColor(colour);
+			// Shackle
+			g.draw(new Arc2D.Double(4.75, 2.5, 6.5, 7.5, 0, 180, Arc2D.OPEN));
+			// Body
+			g.fillRoundRect(3, 7, 10, 6, 3, 3);
+		});
+	}
+
+	private static BufferedImage coins(Color colour)
+	{
+		return render(g ->
+		{
+			g.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			final double x = 3.5, w = 9.0, h = 3.4;
+			// Bottom-to-top so the upper coins overlap the lower ones, reading as a stack.
+			final double[] ys = {9.6, 7.0, 4.4};
+			for (double y : ys)
+			{
+				g.setColor(colour);
+				g.fill(new Ellipse2D.Double(x, y, w, h));
+				g.setColor(colour.darker());
+				g.draw(new Ellipse2D.Double(x, y, w, h));
+			}
 		});
 	}
 

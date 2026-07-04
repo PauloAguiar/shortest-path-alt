@@ -110,8 +110,12 @@ public class CollisionMap
 
 		// Either we have already visited a bank, if the current tile is a bank switch into the bankVisited state for the
 		// rest of the path.
-		boolean pathBankVisited = graph.bankVisited(node)
+		boolean alreadyBanked = graph.bankVisited(node);
+		boolean pathBankVisited = alreadyBanked
 			|| (config.isBankPathEnabled() && config.bankAccessible(packedPosition));
+		// Charge the bank-pickup penalty once, on every edge leaving the tile where the path first
+		// enters the banked state, so banking only wins when it saves more than that many tiles overall.
+		int bankEntryCost = (!alreadyBanked && pathBankVisited) ? config.getBankPickupCost() : 0;
 
 		// Firstly check if there are any transports or teleports which are applicable from the current tile.
 		Transport[] transports = config.getTransportsPacked(pathBankVisited).getOrDefault(packedPosition, TransportAvailability.EMPTY_TRANSPORTS);
@@ -141,7 +145,7 @@ public class CollisionMap
 				transport.getDestination(),
 				node,
 				transport.getDuration(),
-				config.getAdditionalTransportCost(transport) + chainPenalty,
+				config.getAdditionalTransportCost(transport) + chainPenalty + bankEntryCost,
 				pathBankVisited,
 				delayedVisit,
 				delayedVisit ? config.getDifferentialCost(transport) : 0));
@@ -152,7 +156,7 @@ public class CollisionMap
 		AbstractNodeKind abstractKind = AbstractNodeKind.fromWildernessLevel(wildernessLevel);
 		if (!visited.getAbstract(abstractKind, pathBankVisited))
 		{
-			neighbors.add(graph.createAbstract(abstractKind, node, pathBankVisited));
+			neighbors.add(graph.createAbstract(abstractKind, node, pathBankVisited, bankEntryCost));
 		}
 
 		// Then add tiles which we can walk to, which go into the FIFO boundary queue.
@@ -198,7 +202,7 @@ public class CollisionMap
 
 			if (traversable[i])
 			{
-				neighbors.add(graph.createTile(neighborPacked, node, pathBankVisited));
+				neighbors.add(graph.createTile(neighborPacked, node, pathBankVisited, bankEntryCost));
 			}
 			else if (Math.abs(d.x + d.y) == 1 && isBlocked(x + d.x, y + d.y, z))
 			{
@@ -215,7 +219,7 @@ public class CollisionMap
 					{
 						continue;
 					}
-					neighbors.add(graph.createTile(transport.getOrigin(), node, pathBankVisited));
+					neighbors.add(graph.createTile(transport.getOrigin(), node, pathBankVisited, bankEntryCost));
 				}
 			}
 		}

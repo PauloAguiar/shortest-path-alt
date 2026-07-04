@@ -35,6 +35,34 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "defaultRouteCount",
+		name = "Routes to find",
+		description = "How many alternative routes to search for by default<br>" +
+			"(the panel's \"Show more\" button can extend this per query)",
+		position = 1,
+		section = sectionSettings
+	)
+	@Range(min = 1, max = 25)
+	default int defaultRouteCount()
+	{
+		return 10;
+	}
+
+	@ConfigItem(
+		keyName = "routeCountStep",
+		name = "Show more increment",
+		description = "How many extra routes the panel's \"Show more\" button fetches each time",
+		position = 2,
+		section = sectionSettings
+	)
+	@Range(min = 1, max = 25)
+	default int routeCountStep()
+	{
+		return 5;
+	}
+
+	@ConfigItem(
+		hidden = true,
 		keyName = "useAgilityShortcuts",
 		name = "Use agility shortcuts",
 		description = "Whether to include agility shortcuts in the path.<br>" +
@@ -48,6 +76,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useGrappleShortcuts",
 		name = "Use grapple shortcuts",
 		description = "Whether to include crossbow grapple agility shortcuts in the path.<br>" +
@@ -61,6 +90,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useBoats",
 		name = "Use boats",
 		description = "Whether to include small boats in the path<br>" +
@@ -74,6 +104,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useCanoes",
 		name = "Use canoes",
 		description = "Whether to include canoes in the path",
@@ -86,6 +117,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useCharterShips",
 		name = "Use charter ships",
 		description = "Whether to include charter ships in the path",
@@ -98,6 +130,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useShips",
 		name = "Use ships",
 		description = "Whether to include passenger ships in the path<br>" +
@@ -111,6 +144,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useFairyRings",
 		name = "Use fairy rings",
 		description = "Whether to include fairy rings in the path.<br>" +
@@ -124,6 +158,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useGnomeGliders",
 		name = "Use gnome gliders",
 		description = "Whether to include gnome gliders in the path",
@@ -136,6 +171,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useHotAirBalloons",
 		name = "Use hot air balloons",
 		description = "Whether to include hot air balloons in the path",
@@ -148,6 +184,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useMagicCarpets",
 		name = "Use magic carpets",
 		description = "Whether to include magic carpets in the path",
@@ -160,6 +197,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useMagicMushtrees",
 		name = "Use magic mushtrees",
 		description = "Whether to include Fossil Island Magic Mushtrees in the path<br>" +
@@ -173,6 +211,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useMinecarts",
 		name = "Use minecarts",
 		description = "Whether to include minecarts in the path<br>" +
@@ -186,6 +225,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useQuetzals",
 		name = "Use quetzals",
 		description = "Whether to include quetzals in the path",
@@ -198,6 +238,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useSpiritTrees",
 		name = "Use spirit trees",
 		description = "Whether to include spirit trees in the path",
@@ -210,6 +251,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useTeleportationItems",
 		name = "Use teleportation items",
 		description = "Whether to include teleportation items from the player's inventory and equipment.<br>" +
@@ -224,6 +266,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useTeleportationLevers",
 		name = "Use teleportation levers",
 		description = "Whether to include teleportation levers in the path<br>" +
@@ -237,6 +280,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useTeleportationPortals",
 		name = "Use teleportation portals",
 		description = "Whether to include teleportation portals in the path<br>" +
@@ -250,6 +294,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useTeleportationSpells",
 		name = "Use teleportation spells",
 		description = "Whether to include teleportation spells in the path",
@@ -262,6 +307,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useTeleportationMinigames",
 		name = "Use teleportation to minigames",
 		description = "Whether to include teleportation to minigames/activities/grouping in the path<br>" +
@@ -275,6 +321,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useWildernessObelisks",
 		name = "Use wilderness obelisks",
 		description = "Whether to include wilderness obelisks in the path",
@@ -287,6 +334,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useSeasonalTransports",
 		name = "Use seasonal transports",
 		description = "Whether to include seasonal transports like League teleports in the path",
@@ -299,6 +347,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "includeBankPath",
 		name = "Include path to bank",
 		description = "Whether to include the path to the closest bank<br>" +
@@ -312,6 +361,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "currencyThreshold",
 		name = "Currency threshold",
 		description = "The maximum amount of currency to use on a single transportation method." +
@@ -453,21 +503,14 @@ public interface ShortestPathConfig extends Config
 		return false;
 	}
 
-	@ConfigSection(
-		name = "Player-Owned House",
-		description = "Options for POH (Player-Owned House) teleports",
-		position = 34,
-		closedByDefault = true
-	)
-	String sectionPoh = "sectionPoh";
-
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePoh",
 		name = "Enable POH teleports",
 		description = "Master toggle for all Player-Owned House (POH) teleports.<br>" +
 			"When disabled, all POH transports are excluded regardless of individual settings below.",
 		position = 35,
-		section = sectionPoh
+		section = sectionSettings
 	)
 	default boolean usePoh()
 	{
@@ -475,12 +518,13 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePohFairyRing",
 		name = "POH fairy ring",
 		description = "Whether to include the POH fairy ring in the path.<br>" +
 			"Enable this if you have built a fairy ring in your house (85 Construction or boosted)",
 		position = 36,
-		section = sectionPoh
+		section = sectionSettings
 	)
 	default boolean usePohFairyRing()
 	{
@@ -488,12 +532,13 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePohSpiritTree",
 		name = "POH spirit tree",
 		description = "Whether to include the POH spirit tree in the path.<br>" +
 			"Enable this if you have built a spirit tree in your house (75 Construction, 83 Farming or boosted)",
 		position = 37,
-		section = sectionPoh
+		section = sectionSettings
 	)
 	default boolean usePohSpiritTree()
 	{
@@ -501,11 +546,12 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useTeleportationPortalsPoh",
 		name = "POH portal nexus",
 		description = "Whether to include POH teleportation portals/nexus in the path",
 		position = 38,
-		section = sectionPoh
+		section = sectionSettings
 	)
 	default boolean useTeleportationPortalsPoh()
 	{
@@ -513,12 +559,13 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "pohJewelleryBoxTier",
 		name = "POH jewellery box tier",
 		description = "The tier of jewellery box built in your POH<br>" +
 			"(Basic: 1-9, Fancy: A-J, Ornate: K-R). Set to None to disable jewellery box.",
 		position = 39,
-		section = sectionPoh
+		section = sectionSettings
 	)
 	default JewelleryBoxTier pohJewelleryBoxTier()
 	{
@@ -526,12 +573,13 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePohMountedItems",
 		name = "POH mounted items",
 		description = "Whether to include POH mounted items in the path<br>" +
 			"(e.g. mounted glory, Xeric's talisman, digsite pendant, mythical cape)",
 		position = 40,
-		section = sectionPoh
+		section = sectionSettings
 	)
 	default boolean usePohMountedItems()
 	{
@@ -539,12 +587,13 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePohObelisk",
 		name = "POH wilderness obelisk",
 		description = "Whether to include the POH wilderness obelisk in the path.<br>" +
 			"Enable this if you have built an obelisk in your house (80 Construction or boosted)",
 		position = 41,
-		section = sectionPoh
+		section = sectionSettings
 	)
 	default boolean usePohObelisk()
 	{
@@ -552,9 +601,10 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigSection(
-		name = "Transport Thresholds",
-		description = "Set customizable thresholds for how much faster a transportation<br>" +
-			"method must be to be preferred over other methods",
+		name = "Travel method weights",
+		description = "Extra step weight added when a route uses each travel method.<br>" +
+			"Higher = the path avoids it unless it saves more than that many tiles of walking<br>" +
+			"(e.g. a fairy ring weight of 30 is only used when it saves over 30 tiles).",
 		position = 42,
 		closedByDefault = true
 	)
@@ -565,9 +615,9 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costAgilityShortcuts",
-		name = "Agility shortcut threshold",
-		description = "How many extra tiles an agility shortcut must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Agility shortcut weight",
+		description = "Extra steps added when the route uses an agility shortcut.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 43,
 		section = sectionThresholds
 	)
@@ -581,9 +631,9 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costGrappleShortcuts",
-		name = "Grapple shortcut threshold",
-		description = "How many extra tiles a grapple shortcut must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Grapple shortcut weight",
+		description = "Extra steps added when the route uses a grapple shortcut.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 44,
 		section = sectionThresholds
 	)
@@ -597,9 +647,9 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costBoats",
-		name = "Boat threshold",
-		description = "How many extra tiles a small boat must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Boat weight",
+		description = "Extra steps added when the route uses a small boat.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 45,
 		section = sectionThresholds
 	)
@@ -613,15 +663,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costCanoes",
-		name = "Canoe threshold",
-		description = "How many extra tiles a canoe must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Canoe weight",
+		description = "Extra steps added when the route uses a canoe.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 46,
 		section = sectionThresholds
 	)
 	default int costCanoes()
 	{
-		return 0;
+		return 5;
 	}
 
 	@Range(
@@ -629,15 +679,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costCharterShips",
-		name = "Charter ship threshold",
-		description = "How many extra tiles a charter ship must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Charter ship weight",
+		description = "Extra steps added when the route uses a charter ship.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 47,
 		section = sectionThresholds
 	)
 	default int costCharterShips()
 	{
-		return 0;
+		return 20;
 	}
 
 	@Range(
@@ -645,15 +695,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costShips",
-		name = "Ship threshold",
-		description = "How many extra tiles a passenger ship must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Ship weight",
+		description = "Extra steps added when the route uses a passenger ship.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 48,
 		section = sectionThresholds
 	)
 	default int costShips()
 	{
-		return 0;
+		return 10;
 	}
 
 	@Range(
@@ -661,15 +711,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costFairyRings",
-		name = "Fairy ring threshold",
-		description = "How many extra tiles a fairy ring must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Fairy ring weight",
+		description = "Extra steps added when the route uses a fairy ring.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 49,
 		section = sectionThresholds
 	)
 	default int costFairyRings()
 	{
-		return 0;
+		return 30;
 	}
 
 	@Range(
@@ -677,15 +727,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costGnomeGliders",
-		name = "Gnome glider threshold",
-		description = "How many extra tiles a gnome glider must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Gnome glider weight",
+		description = "Extra steps added when the route uses a gnome glider.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 50,
 		section = sectionThresholds
 	)
 	default int costGnomeGliders()
 	{
-		return 0;
+		return 25;
 	}
 
 	@Range(
@@ -693,15 +743,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costHotAirBalloons",
-		name = "Hot air balloon threshold",
-		description = "How many extra tiles a hot air balloon must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Hot air balloon weight",
+		description = "Extra steps added when the route uses a hot air balloon.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 51,
 		section = sectionThresholds
 	)
 	default int costHotAirBalloons()
 	{
-		return 0;
+		return 30;
 	}
 
 	@Range(
@@ -709,15 +759,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costMagicCarpets",
-		name = "Magic carpets threshold",
-		description = "How many extra tiles a magic carpet must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Magic carpet weight",
+		description = "Extra steps added when the route uses a magic carpet.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 52,
 		section = sectionThresholds
 	)
 	default int costMagicCarpets()
 	{
-		return 0;
+		return 20;
 	}
 
 	@Range(
@@ -725,15 +775,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costMagicMushtrees",
-		name = "Magic mushtrees threshold",
-		description = "How many extra tiles a magic mushtree must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Magic mushtree weight",
+		description = "Extra steps added when the route uses a magic mushtree.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 53,
 		section = sectionThresholds
 	)
 	default int costMagicMushtrees()
 	{
-		return 0;
+		return 20;
 	}
 
 	@Range(
@@ -741,45 +791,13 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costMinecarts",
-		name = "Minecart threshold",
-		description = "How many extra tiles a minecart must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Minecart weight",
+		description = "Extra steps added when the route uses a minecart.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 54,
 		section = sectionThresholds
 	)
 	default int costMinecarts()
-	{
-		return 0;
-	}
-
-	@Range(
-		max = 10000
-	)
-	@ConfigItem(
-		keyName = "costQuetzals",
-		name = "Quetzal threshold",
-		description = "How many extra tiles a quetzal must save<br>" +
-			"to be preferred over walking or other transports",
-		position = 55,
-		section = sectionThresholds
-	)
-	default int costQuetzals()
-	{
-		return 0;
-	}
-
-	@Range(
-		max = 10000
-	)
-	@ConfigItem(
-		keyName = "costQuetzalWhistle",
-		name = "Quetzal whistle threshold",
-		description = "How many extra tiles a quetzal whistle teleport must save<br>" +
-			"to be preferred over using a landing site",
-		position = 56,
-		section = sectionThresholds
-	)
-	default int costQuetzalWhistle()
 	{
 		return 15;
 	}
@@ -788,16 +806,48 @@ public interface ShortestPathConfig extends Config
 		max = 10000
 	)
 	@ConfigItem(
+		keyName = "costQuetzals",
+		name = "Quetzal weight",
+		description = "Extra steps added when the route uses a quetzal.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
+		position = 55,
+		section = sectionThresholds
+	)
+	default int costQuetzals()
+	{
+		return 20;
+	}
+
+	@Range(
+		max = 10000
+	)
+	@ConfigItem(
+		keyName = "costQuetzalWhistle",
+		name = "Quetzal whistle weight",
+		description = "Extra steps added when the route uses a quetzal whistle teleport.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
+		position = 56,
+		section = sectionThresholds
+	)
+	default int costQuetzalWhistle()
+	{
+		return 20;
+	}
+
+	@Range(
+		max = 10000
+	)
+	@ConfigItem(
 		keyName = "costSpiritTrees",
-		name = "Spirit tree threshold",
-		description = "How many extra tiles a spirit tree must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Spirit tree weight",
+		description = "Extra steps added when the route uses a spirit tree.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 57,
 		section = sectionThresholds
 	)
 	default int costSpiritTrees()
 	{
-		return 0;
+		return 20;
 	}
 
 	@Range(
@@ -805,15 +855,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costNonConsumableTeleportationItems",
-		name = "Teleportation item (non-consumable) threshold",
-		description = "How many extra tiles a non-consumable (permanent) teleportation item<br>" +
-			"must save to be preferred over walking or other transports",
+		name = "Teleport item (reusable) weight",
+		description = "Extra steps added when the route uses a reusable (permanent) teleport item.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 58,
 		section = sectionThresholds
 	)
 	default int costNonConsumableTeleportationItems()
 	{
-		return 0;
+		return 20;
 	}
 
 	@Range(
@@ -821,15 +871,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costConsumableTeleportationItems",
-		name = "Teleportation item (consumable) threshold",
-		description = "How many extra tiles a consumable (non-permanent) teleportation item<br>" +
-			"must save to be preferred over walking or other transports",
+		name = "Teleport item (consumable) weight",
+		description = "Extra steps added when the route uses a consumable (one-use) teleport item.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 59,
 		section = sectionThresholds
 	)
 	default int costConsumableTeleportationItems()
 	{
-		return 0;
+		return 25;
 	}
 
 	@Range(
@@ -837,15 +887,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costTeleportationBoxes",
-		name = "Teleportation box threshold",
-		description = "How many extra tiles a teleportation box must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Jewellery box weight",
+		description = "Extra steps added when the route uses a jewellery box.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 60,
 		section = sectionThresholds
 	)
 	default int costTeleportationBoxes()
 	{
-		return 0;
+		return 15;
 	}
 
 	@Range(
@@ -853,15 +903,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costTeleportationLevers",
-		name = "Teleportation lever threshold",
-		description = "How many extra tiles a teleportation lever must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Teleport lever weight",
+		description = "Extra steps added when the route uses a teleport lever.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 61,
 		section = sectionThresholds
 	)
 	default int costTeleportationLevers()
 	{
-		return 0;
+		return 15;
 	}
 
 	@Range(
@@ -869,9 +919,9 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costTeleportationPortals",
-		name = "Teleportation portal threshold",
-		description = "How many extra tiles a teleportation portal must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Teleport portal weight",
+		description = "Extra steps added when the route uses a teleport portal.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 62,
 		section = sectionThresholds
 	)
@@ -885,15 +935,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costTeleportationSpells",
-		name = "Teleportation spell threshold",
-		description = "How many extra tiles a teleportation spell must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Teleport spell weight",
+		description = "Extra steps added when the route uses a teleport spell.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 63,
 		section = sectionThresholds
 	)
 	default int costTeleportationSpells()
 	{
-		return 0;
+		return 15;
 	}
 
 	@Range(
@@ -901,15 +951,15 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costTeleportationMinigames",
-		name = "Teleportation to minigame threshold",
-		description = "How many extra tiles a minigame teleport must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Minigame teleport weight",
+		description = "Extra steps added when the route uses a minigame teleport.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 64,
 		section = sectionThresholds
 	)
 	default int costTeleportationMinigames()
 	{
-		return 0;
+		return 20;
 	}
 
 	@Range(
@@ -917,13 +967,29 @@ public interface ShortestPathConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "costWildernessObelisks",
-		name = "Wilderness obelisk threshold",
-		description = "How many extra tiles a wilderness obelisk must save<br>" +
-			"to be preferred over walking or other transports",
+		name = "Wilderness obelisk weight",
+		description = "Extra steps added when the route uses a wilderness obelisk.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
 		position = 65,
 		section = sectionThresholds
 	)
 	default int costWildernessObelisks()
+	{
+		return 20;
+	}
+
+	@Range(
+		max = 10000
+	)
+	@ConfigItem(
+		keyName = "costSeasonalTransports",
+		name = "Seasonal transport weight",
+		description = "Extra steps added when the route uses a seasonal (Leagues) transport.<br>" +
+			"The path avoids it unless it saves more than this many tiles of walking.",
+		position = 66,
+		section = sectionThresholds
+	)
+	default int costSeasonalTransports()
 	{
 		return 0;
 	}
@@ -932,16 +998,17 @@ public interface ShortestPathConfig extends Config
 		max = 10000
 	)
 	@ConfigItem(
-		keyName = "costSeasonalTransports",
-		name = "Seasonal transport threshold",
-		description = "How many extra tiles a seasonal transport must save<br>" +
-			"to be preferred over walking or other transports",
-		position = 66,
+		keyName = "costBankPickup",
+		name = "Bank pickup weight",
+		description = "Extra steps added when a route detours through a bank to withdraw a<br>" +
+			"teleport item (Owned: inventory + bank mode). The path only banks when it<br>" +
+			"saves more than this many tiles overall.",
+		position = 67,
 		section = sectionThresholds
 	)
-	default int costSeasonalTransports()
+	default int costBankPickup()
 	{
-		return 0;
+		return 50;
 	}
 
 	@ConfigSection(
@@ -990,13 +1057,25 @@ public interface ShortestPathConfig extends Config
 	@ConfigItem(
 		keyName = "pathStyle",
 		name = "Path style",
-		description = "Whether to display the path as tiles or a segmented line",
+		description = "Whether to display the path as tiles, a segmented line, or a line with direction arrows",
 		position = 71,
 		section = sectionDisplay
 	)
 	default TileStyle pathStyle()
 	{
-		return TileStyle.TILES;
+		return TileStyle.ARROW_LINE;
+	}
+
+	@ConfigItem(
+		keyName = "showTeleportPulse",
+		name = "Teleport pulse",
+		description = "Animate a pulsing highlight on the tile when the path tells you to use a teleport",
+		position = 72,
+		section = sectionDisplay
+	)
+	default boolean showTeleportPulse()
+	{
+		return true;
 	}
 
 	@ConfigSection(
@@ -1016,7 +1095,7 @@ public interface ShortestPathConfig extends Config
 	)
 	default Color colourPath()
 	{
-		return new Color(255, 0, 0);
+		return new Color(0, 255, 255);
 	}
 
 	@Alpha
@@ -1083,6 +1162,18 @@ public interface ShortestPathConfig extends Config
 	default Color colourText()
 	{
 		return Color.WHITE;
+	}
+
+	@ConfigItem(
+		keyName = "colourTeleportPulse",
+		name = "Teleport pulse",
+		description = "Colour of the pulsing teleport highlight (defaults to the path colour)",
+		position = 79,
+		section = sectionColours
+	)
+	default Color colourTeleportPulse()
+	{
+		return new Color(0, 255, 255);
 	}
 
 	@ConfigSection(

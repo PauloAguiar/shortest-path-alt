@@ -31,8 +31,8 @@ public class VisitedTilesTest
 	{
 		VisitedTiles visited = new VisitedTiles(collisionMap());
 		NodeGraph graph = new NodeGraph(16);
-		int banked = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, NodeGraph.NO_NODE, true);
-		int unbanked = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, NodeGraph.NO_NODE, false);
+		int banked = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, NodeGraph.NO_NODE, true, 0);
+		int unbanked = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, NodeGraph.NO_NODE, false, 0);
 
 		assertTrue(visited.set(banked, graph));
 
@@ -47,8 +47,8 @@ public class VisitedTilesTest
 		VisitedTiles visited = new VisitedTiles(collisionMap());
 		int tile = WorldPointUtil.packWorldPoint(3200, 3200, 0);
 		NodeGraph graph = new NodeGraph(16);
-		int unbanked = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, NodeGraph.NO_NODE, false);
-		int banked = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, NodeGraph.NO_NODE, true);
+		int unbanked = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, NodeGraph.NO_NODE, false, 0);
+		int banked = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, NodeGraph.NO_NODE, true, 0);
 
 		assertTrue(visited.set(tile, false));
 		assertTrue(visited.get(tile, false));

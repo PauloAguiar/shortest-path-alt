@@ -123,15 +123,16 @@ public class NodeGraph
 	/**
 	 * A concrete walkable tile. Travel cost is the walking distance from the previous node, but
 	 * only when the previous node is itself a tile (mirrors the old {@code Node.cost}); reaching a
-	 * tile from an abstract node adds no travel cost.
+	 * tile from an abstract node adds no travel cost. {@code extraCost} is a one-off surcharge on this
+	 * edge (used to charge the bank-pickup penalty on the step that first enters the banked state).
 	 */
-	public int createTile(int packedPosition, int previous, boolean bankVisited)
+	public int createTile(int packedPosition, int previous, boolean bankVisited, int extraCost)
 	{
 		final int travelTime = (previous != NO_NODE && isTile(previous))
 			? WorldPointUtil.distanceBetween(this.packedPosition[previous], packedPosition)
 			: 0;
 		final byte flagBits = bankVisited ? FLAG_BANK_VISITED : 0;
-		return append(packedPosition, previous, costOf(previous) + travelTime, 0, flagBits, (byte) 0);
+		return append(packedPosition, previous, costOf(previous) + travelTime + extraCost, 0, flagBits, (byte) 0);
 	}
 
 	/**
@@ -156,16 +157,18 @@ public class NodeGraph
 
 	/**
 	 * An abstract search-state node (global teleports). Has no world position and inherits the
-	 * previous node's cost (mirrors the old {@code Node.abstractNode}).
+	 * previous node's cost (mirrors the old {@code Node.abstractNode}). {@code extraCost} is a one-off
+	 * surcharge (the bank-pickup penalty when this abstract state is first entered via a bank tile), so
+	 * global teleports expanded from it inherit the penalty.
 	 */
-	public int createAbstract(AbstractNodeKind abstractKind, int previous, boolean bankVisited)
+	public int createAbstract(AbstractNodeKind abstractKind, int previous, boolean bankVisited, int extraCost)
 	{
 		byte flagBits = FLAG_ABSTRACT;
 		if (bankVisited)
 		{
 			flagBits |= FLAG_BANK_VISITED;
 		}
-		return append(WorldPointUtil.UNDEFINED, previous, costOf(previous), 0, flagBits,
+		return append(WorldPointUtil.UNDEFINED, previous, costOf(previous) + extraCost, 0, flagBits,
 			(byte) abstractKind.ordinal());
 	}
 

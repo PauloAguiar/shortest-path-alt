@@ -69,17 +69,22 @@ public class ShortestPathPanel extends PluginPanel
 	private final ShortestPathPlugin plugin;
 	private final JLabel statusLabel = new JLabel();
 	private final JPanel listPanel = new JPanel();
-	private JButton availableButton;
-	private JButton bankButton;
+	private JButton ownedButton;
 	private JButton allButton;
+	private JButton variantOneButton;
+	private JButton variantTwoButton;
 
 	// Cached last render input so expand/collapse can re-render without a round-trip to the plugin.
 	private List<RouteOption> cachedRoutes = List.of();
 	private List<TeleportMethod> cachedCatalog = List.of();
+	private Map<TeleportMethod, MethodAvailability> cachedUnavailable = Map.of();
 	private Set<TeleportMethod> cachedExclusions = Set.of();
 	private boolean cachedCalculating = false;
 	private boolean cachedHasTarget = false;
 	private final Set<String> expandedCategories = new HashSet<>();
+	// Whether the whole "Teleport methods" catalog section (shown at the top) is expanded. Collapsed
+	// by default so the routes stay the focus; the user opens it to browse/toggle methods.
+	private boolean catalogExpanded = false;
 
 	public ShortestPathPanel(ShortestPathPlugin plugin)
 	{
@@ -132,31 +137,69 @@ public class ShortestPathPanel extends PluginPanel
 		JPanel bottom = new JPanel(new BorderLayout());
 		bottom.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-		JPanel modeRow = new JPanel(new GridLayout(1, 3, 4, 0));
-		modeRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		modeRow.setBorder(new EmptyBorder(8, 0, 0, 0));
-		availableButton = new JButton("Available");
-		availableButton.setToolTipText("Same as before — follows your Shortest Path teleport-item settings");
-		availableButton.setFocusPainted(false);
-		availableButton.addActionListener(e -> plugin.setRoutesMode(AlternativeRoutesMode.AVAILABLE));
-		bankButton = new JButton("Bank");
-		bankButton.setToolTipText("Only teleports you own — inventory, equipment and bank — routing through a bank to grab bank items");
-		bankButton.setFocusPainted(false);
-		bankButton.addActionListener(e -> plugin.setRoutesMode(AlternativeRoutesMode.AVAILABLE_WITH_BANK));
+		// Two-level mode picker: family (Owned / All) on top, its two variants indented beneath so they
+		// read as sub-options of whichever family is selected.
+		JPanel modeRows = new JPanel(new BorderLayout(0, 4));
+		modeRows.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		modeRows.setBorder(new EmptyBorder(8, 0, 0, 0));
+
+		JPanel familyRow = new JPanel(new GridLayout(1, 2, 4, 0));
+		familyRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		ownedButton = new JButton("Owned");
+		ownedButton.setToolTipText("Only methods whose items you actually possess");
+		ownedButton.setFocusPainted(false);
+		ownedButton.addActionListener(e -> plugin.setRoutesMode(
+			plugin.getRoutesMode().isSecondVariant()
+				? AlternativeRoutesMode.OWNED_WITH_BANK : AlternativeRoutesMode.OWNED_INVENTORY));
 		allButton = new JButton("All");
-		allButton.setToolTipText("Every teleport in the game, even ones you don't own");
+		allButton.setToolTipText("Ignore item possession");
 		allButton.setFocusPainted(false);
-		allButton.addActionListener(e -> plugin.setRoutesMode(AlternativeRoutesMode.ALL_TELEPORTS));
-		modeRow.add(availableButton);
-		modeRow.add(bankButton);
-		modeRow.add(allButton);
-		bottom.add(modeRow, BorderLayout.NORTH);
+		allButton.addActionListener(e -> plugin.setRoutesMode(
+			plugin.getRoutesMode().isSecondVariant()
+				? AlternativeRoutesMode.ALL_EVERYTHING : AlternativeRoutesMode.ALL_UNLOCKED));
+		familyRow.add(ownedButton);
+		familyRow.add(allButton);
+		modeRows.add(familyRow, BorderLayout.NORTH);
+
+		JPanel variantRow = new JPanel(new GridLayout(1, 2, 4, 0));
+		variantRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		variantOneButton = new JButton();
+		variantOneButton.setFont(FontManager.getRunescapeSmallFont());
+		variantOneButton.setFocusPainted(false);
+		variantOneButton.addActionListener(e -> plugin.setRoutesMode(
+			plugin.getRoutesMode().isOwned()
+				? AlternativeRoutesMode.OWNED_INVENTORY : AlternativeRoutesMode.ALL_UNLOCKED));
+		variantTwoButton = new JButton();
+		variantTwoButton.setFont(FontManager.getRunescapeSmallFont());
+		variantTwoButton.setFocusPainted(false);
+		variantTwoButton.addActionListener(e -> plugin.setRoutesMode(
+			plugin.getRoutesMode().isOwned()
+				? AlternativeRoutesMode.OWNED_WITH_BANK : AlternativeRoutesMode.ALL_EVERYTHING));
+		variantRow.add(variantOneButton);
+		variantRow.add(variantTwoButton);
+
+		// Nest the variants under the family row: a short left indent, a vertical rail acting as the
+		// "belongs to" connector, then the two variant buttons.
+		JPanel variantNest = new JPanel(new BorderLayout());
+		variantNest.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		JPanel rail = new JPanel();
+		rail.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
+		rail.setPreferredSize(new Dimension(2, 1));
+		JPanel railWrap = new JPanel(new BorderLayout());
+		railWrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		railWrap.setBorder(new EmptyBorder(0, 10, 0, 6));
+		railWrap.add(rail, BorderLayout.CENTER);
+		variantNest.add(railWrap, BorderLayout.WEST);
+		variantNest.add(variantRow, BorderLayout.CENTER);
+		modeRows.add(variantNest, BorderLayout.CENTER);
+
+		bottom.add(modeRows, BorderLayout.NORTH);
 
 		JPanel lower = new JPanel(new BorderLayout());
 		lower.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-		JButton findButton = new JButton("Find routes to target");
-		findButton.setToolTipText("Calculate alternative routes to the destination Shortest Path is currently set to");
+		JButton findButton = new JButton("Refresh routes to target");
+		findButton.setToolTipText("Recalculate alternative routes to the destination Shortest Path is currently set to");
 		findButton.setFocusPainted(false);
 		findButton.addActionListener(e -> plugin.recomputeAlternatives());
 		JPanel findWrap = new JPanel(new BorderLayout());
@@ -182,10 +225,12 @@ public class ShortestPathPanel extends PluginPanel
 	 * Stores the latest data and re-renders. Must be called on the Swing EDT.
 	 */
 	public void displayRoutes(List<RouteOption> routes, List<TeleportMethod> catalog,
-		Set<TeleportMethod> exclusions, boolean calculating, boolean hasTarget)
+		Map<TeleportMethod, MethodAvailability> unavailable, Set<TeleportMethod> exclusions,
+		boolean calculating, boolean hasTarget)
 	{
 		cachedRoutes = routes != null ? routes : List.of();
 		cachedCatalog = catalog != null ? catalog : List.of();
+		cachedUnavailable = unavailable != null ? unavailable : Map.of();
 		cachedExclusions = exclusions != null ? exclusions : Set.of();
 		cachedCalculating = calculating;
 		cachedHasTarget = hasTarget;
@@ -197,35 +242,51 @@ public class ShortestPathPanel extends PluginPanel
 		updateModeButtons();
 		listPanel.removeAll();
 
+		String status;
 		if (cachedCalculating)
 		{
-			statusLabel.setText(cachedRoutes.isEmpty()
+			status = cachedRoutes.isEmpty()
 				? "Calculating routes…"
-				: ("Calculating… (" + cachedRoutes.size() + " so far)"));
+				: ("Calculating… (" + cachedRoutes.size() + " so far)");
 		}
 		else if (!cachedRoutes.isEmpty())
 		{
-			statusLabel.setText(cachedRoutes.size() + (cachedRoutes.size() == 1 ? " route found" : " routes found"));
+			status = cachedRoutes.size() + (cachedRoutes.size() == 1 ? " route found" : " routes found");
 		}
 		else if (cachedHasTarget)
 		{
 			// A search ran for the current target but produced nothing — distinct from "no target set".
-			statusLabel.setText("<html>No routes found to the target."
-				+ (plugin.getRoutesMode() == AlternativeRoutesMode.ALL_TELEPORTS ? "" : "<br>Try the \"Bank\" or \"All\" mode.")
-				+ "</html>");
+			status = "No routes found to the target."
+				+ (plugin.getRoutesMode() == AlternativeRoutesMode.ALL_EVERYTHING ? "" : "<br>Try a broader mode (Inv + bank, or All).");
 		}
 		else
 		{
 			// Shortest Path has no active target. (Quest Helper draws its own line for some steps and
 			// doesn't hand Shortest Path a destination — set one on the map to find routes.)
-			statusLabel.setText("<html>No Shortest Path destination set."
+			status = "No Shortest Path destination set."
 				+ "<br>Quest Helper draws its own line for some steps."
-				+ "<br>Set a target on the map, then press \"Find routes\".</html>");
+				+ "<br>Set a target on the map, then press \"Refresh routes\".";
+		}
+		// The bank container is only populated once the bank has been opened this session; without it
+		// Bank mode cannot see banked teleports (same constraint as Shortest Path itself).
+		if (plugin.getRoutesMode() == AlternativeRoutesMode.OWNED_WITH_BANK && !plugin.isBankContentsKnown())
+		{
+			status += "<br><b>Bank contents unknown</b> — open your bank once so banked teleports can be found.";
+		}
+		statusLabel.setText("<html>" + status + "</html>");
+
+		// The teleport-methods catalog sits at the top (collapsed by default), so browsing/toggling
+		// methods is always one click away above the routes.
+		if (!cachedCatalog.isEmpty())
+		{
+			listPanel.add(buildCatalogSection());
+			listPanel.add(verticalGap(8));
 		}
 
 		// Routes are shown as they stream in (even while still calculating). The previous list was
-		// cleared when this generation started, so only the new routes appear.
-		RouteOption selected = plugin.getSelectedRoute();
+		// cleared when this generation started, so only the new routes appear. The highlighted card is
+		// the route actually drawn on the map — the explicitly selected one, or route 1 by default.
+		RouteOption selected = plugin.getDisplayedRoute();
 		for (int i = 0; i < cachedRoutes.size(); i++)
 		{
 			listPanel.add(buildRouteCard(i, cachedRoutes.get(i), cachedRoutes.get(i) == selected));
@@ -238,11 +299,6 @@ public class ShortestPathPanel extends PluginPanel
 			listPanel.add(verticalGap(4));
 		}
 
-		if (!cachedCatalog.isEmpty())
-		{
-			listPanel.add(buildCatalogSection());
-		}
-
 		listPanel.revalidate();
 		listPanel.repaint();
 	}
@@ -253,9 +309,9 @@ public class ShortestPathPanel extends PluginPanel
 		wrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
 		wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-		JButton more = new JButton("Show 5 more routes");
+		JButton more = new JButton("Show more routes");
 		more.setFocusPainted(false);
-		more.setToolTipText("Search for 5 more alternative routes");
+		more.setToolTipText("Search for more alternative routes");
 		more.addActionListener(e -> plugin.loadMoreRoutes());
 		wrap.add(more, BorderLayout.CENTER);
 		return wrap;
@@ -276,6 +332,7 @@ public class ShortestPathPanel extends PluginPanel
 
 		JLabel name = new JLabel("Route " + (index + 1)
 			+ (route.isWalkOnly() ? " · walk" : "")
+			+ (route.isViaBank() ? " · bank" : "")
 			+ (route.isReached() ? "" : " · closest"));
 		name.setFont(FontManager.getRunescapeBoldFont());
 		name.setForeground(selected ? ColorScheme.BRAND_ORANGE : ColorScheme.LIGHT_GRAY_COLOR);
@@ -301,9 +358,14 @@ public class ShortestPathPanel extends PluginPanel
 		methods.setLayout(new BoxLayout(methods, BoxLayout.Y_AXIS));
 		methods.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		methods.setBorder(new EmptyBorder(2, 6, 4, 4));
+		if (route.isViaBank())
+		{
+			methods.add(noteRow("<i>Walks to a bank first to withdraw the item</i>",
+				"A required teleport item is in your bank — the drawn path includes the walk to a bank to pick it up before teleporting"));
+		}
 		if (route.isWalkOnly())
 		{
-			methods.add(wrappedLabel("<i>No teleports — walking the whole way</i>"));
+			methods.add(noteRow("<i>No teleports — walking the whole way</i>", null));
 		}
 		else
 		{
@@ -332,7 +394,19 @@ public class ShortestPathPanel extends PluginPanel
 		dot.setVerticalAlignment(SwingConstants.TOP);
 		dot.setBorder(new EmptyBorder(2, 0, 0, 0));
 		dot.setToolTipText(method.category());
-		row.add(dot, BorderLayout.WEST);
+		MethodAvailability status = cachedUnavailable.get(method);
+		if (status != null)
+		{
+			JPanel west = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+			west.setOpaque(false);
+			west.add(dot);
+			west.add(statusLabel(status));
+			row.add(west, BorderLayout.WEST);
+		}
+		else
+		{
+			row.add(dot, BorderLayout.WEST);
+		}
 
 		JLabel text = wrappedLabel(escapeHtml(method.label()));
 		text.setToolTipText(methodTooltip(method));
@@ -353,15 +427,38 @@ public class ShortestPathPanel extends PluginPanel
 		JPanel section = new JPanel();
 		section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
 		section.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		section.setBorder(new EmptyBorder(10, 0, 0, 0));
+		section.setBorder(new EmptyBorder(0, 0, 0, 0));
 		section.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-		JLabel title = new JLabel("Teleport methods");
+		// Collapsible section header: chevron + title + method count.
+		JPanel titleRow = new JPanel(new BorderLayout(5, 0));
+		titleRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		titleRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+		titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+		titleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		JLabel title = new JLabel("Teleport methods (" + cachedCatalog.size() + ")");
 		title.setFont(FontManager.getRunescapeBoldFont());
 		title.setForeground(ColorScheme.BRAND_ORANGE);
-		title.setAlignmentX(Component.LEFT_ALIGNMENT);
-		title.setBorder(new EmptyBorder(0, 0, 4, 0));
-		section.add(title);
+		titleRow.add(title, BorderLayout.CENTER);
+		titleRow.add(control(new JLabel(catalogExpanded ? RouteIcons.CHEVRON_DOWN : RouteIcons.CHEVRON_RIGHT)),
+			BorderLayout.EAST);
+		titleRow.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		titleRow.setToolTipText(catalogExpanded ? "Collapse the methods list" : "Expand the methods list");
+		addClickRecursively(titleRow, new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				catalogExpanded = !catalogExpanded;
+				render();
+			}
+		});
+		section.add(titleRow);
+
+		if (!catalogExpanded)
+		{
+			return section;
+		}
 
 		Map<String, List<TeleportMethod>> grouped = new TreeMap<>();
 		for (TeleportMethod method : cachedCatalog)
@@ -476,10 +573,18 @@ public class ShortestPathPanel extends PluginPanel
 				"Excluded — click to include", () -> plugin.includeMethod(item))
 			: new IconActionLabel(RouteIcons.CHECK, RouteIcons.CHECK_HOVER,
 				"Included — click to exclude", () -> plugin.excludeMethod(item));
-		JPanel toggleWrap = new JPanel(new BorderLayout());
-		toggleWrap.setOpaque(false);
-		toggleWrap.add(control(toggle), BorderLayout.NORTH);
-		row.add(toggleWrap, BorderLayout.WEST);
+		JPanel west = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+		west.setOpaque(false);
+		west.add(control(toggle));
+		MethodAvailability status = cachedUnavailable.get(item);
+		if (status != null)
+		{
+			west.add(control(statusLabel(status)));
+		}
+		JPanel westWrap = new JPanel(new BorderLayout());
+		westWrap.setOpaque(false);
+		westWrap.add(west, BorderLayout.NORTH);
+		row.add(westWrap, BorderLayout.WEST);
 
 		JLabel text = wrappedLabel(escapeHtml(item.label()));
 		text.setToolTipText(methodTooltip(item));
@@ -490,6 +595,35 @@ public class ShortestPathPanel extends PluginPanel
 		row.add(text, BorderLayout.CENTER);
 
 		return row;
+	}
+
+	/**
+	 * Marker for a method the player can't use in the current mode: a bank glyph for an item that's only
+	 * in the bank, a padlock for everything else, each with a reason tooltip.
+	 */
+	private static JLabel statusLabel(MethodAvailability status)
+	{
+		JLabel label = new JLabel(status == MethodAvailability.IN_BANK ? RouteIcons.IN_BANK : RouteIcons.LOCKED);
+		label.setToolTipText(statusReason(status));
+		return label;
+	}
+
+	private static String statusReason(MethodAvailability status)
+	{
+		switch (status)
+		{
+			case IN_BANK:
+				return "In your bank — switch to \"Inventory + bank\" or withdraw it";
+			case MISSING_ITEM:
+				return "You don't have the required item";
+			case MISSING_LEVEL:
+				return "Your skill level is too low";
+			case MISSING_QUEST:
+				return "Requires an unfinished quest";
+			case LOCKED:
+			default:
+				return "Not unlocked yet (diary, minigame, purchase or setting)";
+		}
 	}
 
 	private void toggleCategory(String category)
@@ -549,9 +683,25 @@ public class ShortestPathPanel extends PluginPanel
 	private void updateModeButtons()
 	{
 		AlternativeRoutesMode mode = plugin.getRoutesMode();
-		styleModeButton(availableButton, mode == AlternativeRoutesMode.AVAILABLE);
-		styleModeButton(bankButton, mode == AlternativeRoutesMode.AVAILABLE_WITH_BANK);
-		styleModeButton(allButton, mode == AlternativeRoutesMode.ALL_TELEPORTS);
+		boolean owned = mode.isOwned();
+		styleModeButton(ownedButton, owned);
+		styleModeButton(allButton, !owned);
+		if (owned)
+		{
+			variantOneButton.setText("Inventory");
+			variantOneButton.setToolTipText("Only items you carry (inventory + equipment)");
+			variantTwoButton.setText("Inv + bank");
+			variantTwoButton.setToolTipText("Also items in your bank — routes walk to a bank to withdraw them");
+		}
+		else
+		{
+			variantOneButton.setText("Available");
+			variantOneButton.setToolTipText("Ignore item possession, but only methods your character has unlocked (skills, quests, diaries)");
+			variantTwoButton.setText("Everything");
+			variantTwoButton.setToolTipText("Every method in the game, including ones your character can't use yet");
+		}
+		styleModeButton(variantOneButton, !mode.isSecondVariant());
+		styleModeButton(variantTwoButton, mode.isSecondVariant());
 	}
 
 	private static void styleModeButton(JButton button, boolean active)
@@ -561,6 +711,24 @@ public class ShortestPathPanel extends PluginPanel
 		button.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createLineBorder(active ? ColorScheme.BRAND_ORANGE : ColorScheme.MEDIUM_GRAY_COLOR),
 			new EmptyBorder(3, 0, 3, 0)));
+	}
+
+	/**
+	 * A full-width, left-aligned note row for a route card. Bare JLabels must not be added straight
+	 * into the vertical BoxLayout: they don't stretch and default to centred alignment, which floats
+	 * them into odd positions and clips them at the card edge.
+	 */
+	private JPanel noteRow(String innerHtml, String tooltip)
+	{
+		JPanel row = new JPanel(new BorderLayout());
+		row.setOpaque(false);
+		JLabel text = wrappedLabel(innerHtml);
+		if (tooltip != null)
+		{
+			text.setToolTipText(tooltip);
+		}
+		row.add(text, BorderLayout.WEST);
+		return row;
 	}
 
 	private JLabel wrappedLabel(String innerHtml)

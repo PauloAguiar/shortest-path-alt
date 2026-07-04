@@ -33,6 +33,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.ItemContainer;
 import net.runelite.api.KeyCode;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
@@ -85,10 +86,12 @@ import shortestpath.transport.TransportType;
 
 @Slf4j
 @SuppressWarnings("SameParameterValue")
-@PluginDescriptor(name = "Shortest Path", description = "Draws the shortest path to a chosen destination on the map<br>"
+@PluginDescriptor(name = "Shortest Path ALT", description = "Alternative-routes explorer built on Shortest Path:<br>"
+	+
+	"draws the shortest path to a destination and lists alternative teleport routes with a browsable method catalog.<br>"
 	+
 	"Right click on the world map or shift right click a tile to use", tags = {"pathfinder", "map", "waypoint",
-	"navigation"})
+	"navigation", "alternative", "routes", "teleport"})
 public class ShortestPathPlugin extends Plugin
 {
 	protected static final String CONFIG_GROUP = "shortestpath";
@@ -132,6 +135,8 @@ public class ShortestPathPlugin extends Plugin
 	Color colourPathUnreachable;
 	Color colourText;
 	Color colourTransports;
+	Color colourTeleportPulse;
+	boolean showTeleportPulse;
 	int tileCounterStep;
 	int unreachableTargetDistance;
 	String unreachableText;
@@ -177,21 +182,30 @@ public class ShortestPathPlugin extends Plugin
 	private AlternativeRoutesService altRoutesService;
 	private static final String CONFIG_KEY_EXCLUSIONS = "alternativeRoutesExclusions";
 	private static final String CONFIG_KEY_MODE = "alternativeRoutesMode";
-	private static final int ROUTE_LIMIT_STEP = 5;
 	private final Set<TeleportMethod> userExclusions = ConcurrentHashMap.newKeySet();
 	// Which methods the alternatives consider: carried (default), carried + bank, or every teleport.
-	private volatile AlternativeRoutesMode routesMode = AlternativeRoutesMode.AVAILABLE;
+	private volatile AlternativeRoutesMode routesMode = AlternativeRoutesMode.OWNED_INVENTORY;
 	// How many alternative routes to generate; grows when the user asks for more.
+	// Initialised from config in startUp (config is not injected at field-init time).
 	private int routeLimit = AlternativeRoutesService.MAX_ROUTES;
 	// Whether the last generation hit the limit (so more routes may exist).
 	private volatile boolean moreRoutesLikely = false;
 	private volatile List<RouteOption> alternativeRoutes = new ArrayList<>();
 	private volatile List<TeleportMethod> teleportCatalog = new ArrayList<>();
+	// Catalog methods the player can't use in the current mode, mapped to why (for the panel markers).
+	private volatile Map<TeleportMethod, MethodAvailability> unavailableMethods = Map.of();
 	private volatile RouteOption selectedRoute;
 	// Start/targets the alternatives were last generated from, reused by exclusion/mode/show-more edits
 	// so they re-run against the same destination. Volatile: read/written from client thread + Swing EDT.
 	private volatile int lastAltStart = WorldPointUtil.UNDEFINED;
 	private volatile Set<Integer> lastAltTargets = Set.of();
+	// Whether the client knows the bank's contents this session (the bank container is only populated
+	// once the bank has been opened). Used by the panel to explain why Bank mode finds nothing.
+	private volatile boolean bankContentsKnown = false;
+	// True while a generation is computing for the current target. Used to suppress the classic-path
+	// fallback on the map until the first alternative streams in, so the displayed path never flashes
+	// a route that the mode's list won't contain (the classic path follows the SP config, not the mode).
+	private volatile boolean altGenerationInFlight = false;
 	private Point lastMenuOpenedPoint;
 	private WorldMapPoint marker;
 	private int lastLocation = WorldPointUtil.packWorldPoint(0, 0, 0);
@@ -352,19 +366,31 @@ public class ShortestPathPlugin extends Plugin
 
 		loadExclusions();
 		loadRoutesMode();
+		routeLimit = defaultRouteLimit();
 		altPanel = new ShortestPathPanel(this);
 		altRoutesService = new AlternativeRoutesService(clientThread, pathfinderConfig.copyForPlanning());
 		navButton = NavigationButton.builder()
-			.tooltip("Shortest Path routes")
+			.tooltip("Shortest Path ALT routes")
 			.icon(MARKER_IMAGE)
 			.priority(70)
 			.panel(altPanel)
 			.build();
 		clientToolbar.addNavigation(navButton);
 
-		// Populate the teleport-methods catalog so it's visible before any target is set.
+		// Populate the teleport-methods catalog so it's visible before any target is set, and check
+		// whether the bank contents are already known this session.
 		if (GameState.LOGGED_IN.equals(client.getGameState()))
 		{
+			clientThread.invokeLater(() ->
+			{
+				ItemContainer liveBank = client.getItemContainer(InventoryID.BANK);
+				if (liveBank != null && liveBank.getItems().length > 0)
+				{
+					pathfinderConfig.bank = liveBank;
+					pathfinderConfig.setBankSnapshot(liveBank.getItems());
+					bankContentsKnown = true;
+				}
+			});
 			triggerAlternatives(WorldPointUtil.UNDEFINED, new HashSet<>());
 		}
 
@@ -419,6 +445,9 @@ public class ShortestPathPlugin extends Plugin
 
 		getClientThread().invokeLater(() ->
 		{
+			// The panel's method catalog is the single customization surface: methods the user has
+			// excluded there are also excluded from the classic path.
+			pathfinderConfig.setExcludedMethods(getUserExclusions());
 			pathfinderConfig.refresh();
 			pathfinderConfig.filterLocations(ends, canReviveFiltered);
 			synchronized (pathfinderMutex)
@@ -529,6 +558,11 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		// Transport option changed; rerun pathfinding
+		if ("defaultRouteCount".equals(event.getKey()))
+		{
+			routeLimit = defaultRouteLimit();
+		}
+
 		if (TRANSPORT_OPTIONS_REGEX.matcher(event.getKey()).find())
 		{
 			if (pathfinder != null)
@@ -848,6 +882,10 @@ public class ShortestPathPlugin extends Plugin
 			return;
 		}
 		pathfinderConfig.bank = event.getItemContainer();
+		// Snapshot the items now, while the bank is open: the client may empty the live container
+		// (and thereby every reference to it) once the interface closes.
+		pathfinderConfig.setBankSnapshot(event.getItemContainer().getItems());
+		bankContentsKnown = true;
 	}
 
 	@Subscribe
@@ -1336,6 +1374,7 @@ public class ShortestPathPlugin extends Plugin
 		colourPathUnreachable = override("colourPathUnreachable", config.colourPathUnreachable());
 		colourText = override("colourText", config.colourText());
 		colourTransports = override("colourTransports", config.colourTransports());
+		colourTeleportPulse = override("colourTeleportPulse", config.colourTeleportPulse());
 
 		tileCounterStep = override("tileCounterStep", config.tileCounterStep());
 		unreachableTargetDistance = override("unreachableTargetDistanceThreshold", config.unreachableTargetDistance());
@@ -1343,6 +1382,7 @@ public class ShortestPathPlugin extends Plugin
 
 		showTileCounter = override("showTileCounter", config.showTileCounter());
 		pathStyle = override("pathStyle", config.pathStyle());
+		showTeleportPulse = override("showTeleportPulse", config.showTeleportPulse());
 	}
 
 	private String simplify(String text)
@@ -1428,7 +1468,7 @@ public class ShortestPathPlugin extends Plugin
 			marker = null;
 			startPointSet = false;
 			selectedRoute = null;
-			routeLimit = AlternativeRoutesService.MAX_ROUTES;
+			routeLimit = defaultRouteLimit();
 			// Keep the teleport-methods catalog visible with no target selected.
 			triggerAlternatives(WorldPointUtil.UNDEFINED, new HashSet<>());
 		}
@@ -1483,17 +1523,53 @@ public class ShortestPathPlugin extends Plugin
 	}
 
 	/**
-	 * The path the overlays should draw: the selected alternative route if one is chosen (so it
-	 * replaces the original shortest path on the map/tiles/minimap), otherwise the live pathfinder path.
+	 * The route currently being displayed: the explicitly selected one, or — when the alternatives
+	 * were computed for the pathfinder's current destination — the first (best) route of the list
+	 * under the currently selected mode. Null when neither applies (falls back to the classic path).
 	 */
-	public List<PathStep> getDisplayPath()
+	public RouteOption getDisplayedRoute()
 	{
 		RouteOption route = selectedRoute;
 		if (route != null)
 		{
+			return route;
+		}
+		List<RouteOption> routes = alternativeRoutes;
+		if (routes.isEmpty())
+		{
+			return null;
+		}
+		// Only substitute the first alternative when it was computed for the current destination;
+		// a stale list (target changed since "Find routes") must not override the live path.
+		Pathfinder current = pathfinder;
+		if (current == null || !lastAltTargets.equals(current.getTargets()))
+		{
+			return null;
+		}
+		return routes.get(0);
+	}
+
+	/**
+	 * The path the overlays should draw: the displayed alternative route if any (the selected one,
+	 * or by default the first route of the current alternatives list, so the drawn path reflects the
+	 * chosen mode/exclusions), otherwise the classic live pathfinder path.
+	 */
+	public List<PathStep> getDisplayPath()
+	{
+		RouteOption route = getDisplayedRoute();
+		if (route != null)
+		{
 			return route.getPath();
 		}
-		return pathfinder != null ? pathfinder.getPath() : List.of();
+		// While the alternatives for the current destination are still computing, draw nothing rather
+		// than the classic path: the classic path follows the SP config (not the panel's mode) and can
+		// use methods the list will never contain. The first streamed route replaces it in <1s.
+		Pathfinder current = pathfinder;
+		if (altGenerationInFlight && current != null && lastAltTargets.equals(current.getTargets()))
+		{
+			return List.of();
+		}
+		return current != null ? current.getPath() : List.of();
 	}
 
 	public List<RouteOption> getAlternativeRoutes()
@@ -1596,7 +1672,7 @@ public class ShortestPathPlugin extends Plugin
 					WorldPointUtil.unpackWorldPoint(current.getStart()),
 					WorldPointUtil.unpackWorldPoint(start),
 					WorldPointUtil.unpackWorldPoint(current.getTargets().iterator().next()));
-				routeLimit = AlternativeRoutesService.MAX_ROUTES;
+				routeLimit = defaultRouteLimit();
 				triggerAlternatives(start, new HashSet<>(current.getTargets()));
 			}
 			else
@@ -1623,6 +1699,15 @@ public class ShortestPathPlugin extends Plugin
 		return current.getStart();
 	}
 
+	/**
+	 * The configured number of routes to search for per query (clamped to the service's hard cap).
+	 */
+	private int defaultRouteLimit()
+	{
+		int configured = override("defaultRouteCount", config.defaultRouteCount());
+		return Math.max(1, Math.min(configured, 25));
+	}
+
 	public boolean canLoadMoreRoutes()
 	{
 		return moreRoutesLikely;
@@ -1634,13 +1719,24 @@ public class ShortestPathPlugin extends Plugin
 		{
 			return;
 		}
-		routeLimit += ROUTE_LIMIT_STEP;
+		int step = Math.max(1, Math.min(override("routeCountStep", config.routeCountStep()), 25));
+		routeLimit += step;
 		triggerAlternatives(lastAltStart, new HashSet<>(lastAltTargets));
 	}
 
 	public AlternativeRoutesMode getRoutesMode()
 	{
 		return routesMode;
+	}
+
+	/**
+	 * Whether the bank's contents are known this session (false until the bank has been opened once).
+	 * Bank mode cannot see banked teleports until this is true — same constraint as Shortest Path's
+	 * own INVENTORY_AND_BANK setting.
+	 */
+	public boolean isBankContentsKnown()
+	{
+		return bankContentsKnown;
 	}
 
 	public void setRoutesMode(AlternativeRoutesMode mode)
@@ -1673,7 +1769,7 @@ public class ShortestPathPlugin extends Plugin
 		{
 			return;
 		}
-		routeLimit = AlternativeRoutesService.MAX_ROUTES;
+		routeLimit = defaultRouteLimit();
 		triggerAlternatives(altStart(current), new HashSet<>(targets));
 	}
 
@@ -1686,26 +1782,37 @@ public class ShortestPathPlugin extends Plugin
 		Set<Integer> ends = (targets == null) ? new HashSet<>() : new HashSet<>(targets);
 		lastAltStart = start;
 		lastAltTargets = Set.copyOf(ends);
+
 		// Clear the previous routes immediately (the catalog stays); the new routes stream in one by
 		// one as they are found. With no target this still streams just the teleport-methods catalog.
 		alternativeRoutes = new ArrayList<>();
 		moreRoutesLikely = false;
+		altGenerationInFlight = !ends.isEmpty();
 		final List<TeleportMethod> catalog = teleportCatalog;
 		final boolean hasTarget = !ends.isEmpty();
 		if (altPanel != null)
 		{
-			SwingUtilities.invokeLater(() -> altPanel.displayRoutes(List.of(), catalog, getUserExclusions(), true, hasTarget));
+			final Map<TeleportMethod, MethodAvailability> unavailable = unavailableMethods;
+			SwingUtilities.invokeLater(() ->
+				altPanel.displayRoutes(List.of(), catalog, unavailable, getUserExclusions(), true, hasTarget));
 		}
 		altRoutesService.generate(start, ends, userExclusions, routesMode, routeLimit, this::onAlternativeRoutesUpdate);
 	}
 
-	private void onAlternativeRoutesUpdate(List<RouteOption> routes, List<TeleportMethod> catalog, boolean done)
+	private void onAlternativeRoutesUpdate(List<RouteOption> routes, List<TeleportMethod> catalog,
+		Map<TeleportMethod, MethodAvailability> unavailable, boolean done)
 	{
 		alternativeRoutes = routes;
 		teleportCatalog = catalog;
+		unavailableMethods = unavailable;
 		if (done)
 		{
-			moreRoutesLikely = !routes.isEmpty() && routes.size() >= routeLimit;
+			// If walking there is already on the list we've stopped at it, so there's nothing more to
+			// find; otherwise "more likely" when the generation filled every requested slot.
+			boolean stoppedAtWalk = routes.stream().anyMatch(RouteOption::isWalkOnly);
+			moreRoutesLikely = !stoppedAtWalk && !routes.isEmpty() && routes.size() >= routeLimit;
+			// Generation finished; if it produced nothing the classic path may draw again as fallback.
+			altGenerationInFlight = false;
 		}
 		final boolean hasTarget = !lastAltTargets.isEmpty();
 		SwingUtilities.invokeLater(() ->
@@ -1716,10 +1823,11 @@ public class ShortestPathPlugin extends Plugin
 			}
 			if (altPanel != null)
 			{
-				altPanel.displayRoutes(routes, catalog, getUserExclusions(), !done, hasTarget);
+				altPanel.displayRoutes(routes, catalog, unavailable, getUserExclusions(), !done, hasTarget);
 			}
 		});
 	}
+
 
 	private void refreshPanel(boolean calculating)
 	{
@@ -1727,7 +1835,8 @@ public class ShortestPathPlugin extends Plugin
 		if (altPanel != null)
 		{
 			SwingUtilities.invokeLater(() ->
-				altPanel.displayRoutes(alternativeRoutes, teleportCatalog, getUserExclusions(), calculating, hasTarget));
+				altPanel.displayRoutes(alternativeRoutes, teleportCatalog, unavailableMethods,
+					getUserExclusions(), calculating, hasTarget));
 		}
 	}
 
@@ -1789,7 +1898,22 @@ public class ShortestPathPlugin extends Plugin
 		}
 		catch (IllegalArgumentException e)
 		{
-			log.warn("Unknown alternative-routes mode '{}'", value);
+			// Legacy 3-mode names from before the Owned/All split.
+			switch (value)
+			{
+				case "AVAILABLE":
+					routesMode = AlternativeRoutesMode.OWNED_INVENTORY;
+					break;
+				case "AVAILABLE_WITH_BANK":
+					routesMode = AlternativeRoutesMode.OWNED_WITH_BANK;
+					break;
+				case "ALL_TELEPORTS":
+					routesMode = AlternativeRoutesMode.ALL_UNLOCKED;
+					break;
+				default:
+					log.warn("Unknown alternative-routes mode '{}'", value);
+					break;
+			}
 		}
 	}
 
