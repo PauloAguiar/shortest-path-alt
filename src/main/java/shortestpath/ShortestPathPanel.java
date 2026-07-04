@@ -107,6 +107,10 @@ public class ShortestPathPanel extends PluginPanel
 			ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setBorder(BorderFactory.createEmptyBorder());
 		scroll.getVerticalScrollBar().setUnitIncrement(16);
+		// The sidebar scrollbar overlays the content (it doesn't shrink the viewport), so it clips the
+		// right edge of full-width cards. Reserve a matching gutter on the scrolling content for it.
+		int scrollbarWidth = scroll.getVerticalScrollBar().getPreferredSize().width;
+		listPanel.setBorder(new EmptyBorder(0, 0, 0, scrollbarWidth > 0 ? scrollbarWidth : 12));
 		add(scroll, BorderLayout.CENTER);
 
 		render();

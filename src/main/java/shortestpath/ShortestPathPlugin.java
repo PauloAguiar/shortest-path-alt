@@ -492,6 +492,15 @@ public class ShortestPathPlugin extends Plugin
 
 	public Color getPathColor()
 	{
+		// A displayed alternative route is a static snapshot: colour it by whether it reached the target,
+		// never by the classic pathfinder's background re-anchoring (which would otherwise flash the drawn
+		// route blue every time you walk far enough to trigger a recalculation).
+		RouteOption displayed = getDisplayedRoute();
+		if (displayed != null)
+		{
+			return displayed.isReached() ? colourPath : colourPathUnreachable;
+		}
+
 		if (pathfinder == null || !pathfinder.isDone())
 		{
 			return colourPathCalculating;

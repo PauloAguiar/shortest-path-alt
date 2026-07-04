@@ -1,6 +1,7 @@
 package shortestpath.pathfinder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.MockitoJUnitRunner;
 import shortestpath.AlternativeRoutesMode;
 import shortestpath.AlternativeRoutesService;
+import shortestpath.MethodAvailability;
 import shortestpath.RouteOption;
 import shortestpath.ShortestPathConfig;
 import shortestpath.TeleportMethod;
@@ -256,5 +258,135 @@ public class AlternativeRoutesServiceTest
 
 		assertTrue("Excluded spell must not be seeded back in",
 			secondRoutes.get().stream().noneMatch(r -> r.getMethods().stream().anyMatch(spellMethods::contains)));
+	}
+
+	@Test
+	public void inBankMethodFlaggedUnavailableOnlyOutsideBankMode() throws Exception
+	{
+		// Cowbell amulet only in the bank: Owned/Inventory must flag its method IN_BANK in the
+		// unavailable map, while Owned/Inv+bank treats it as usable (its routes walk to a bank), so it
+		// must NOT be flagged there. The catalog contains the method either way.
+		int cowbellDestination = WorldPointUtil.packWorldPoint(3259, 3277, 0);
+		PathfinderConfig base = new TestPathfinderConfig(client, config);
+		base.setBankSnapshot(new Item[]{new Item(33104, 1)});
+		PathfinderConfig planning = base.copyForPlanning();
+		planning.setPlanningMode(false);
+		planning.setConsiderBank(false);
+		AlternativeRoutesService service = new AlternativeRoutesService(clientThread, planning);
+
+		Map<TeleportMethod, MethodAvailability> inventoryUnavailable =
+			finalUnavailable(service, AlternativeRoutesMode.OWNED_INVENTORY);
+		Map<TeleportMethod, MethodAvailability> bankUnavailable =
+			finalUnavailable(service, AlternativeRoutesMode.OWNED_WITH_BANK);
+		service.shutdown();
+
+		TeleportMethod cowbell = planning.getMethodCatalog().stream()
+			.filter(m -> m.getType() == TransportType.TELEPORTATION_ITEM && m.getDestination() == cowbellDestination)
+			.findFirst()
+			.orElseThrow(() -> new AssertionError("Cowbell amulet method missing from the catalog"));
+		assertTrue("Inventory mode must flag the banked item as IN_BANK",
+			inventoryUnavailable.get(cowbell) == MethodAvailability.IN_BANK);
+		assertTrue("Inv+bank mode must treat the banked item as usable (not flagged)",
+			!bankUnavailable.containsKey(cowbell));
+	}
+
+	/**
+	 * Runs one generation in the given mode and returns the final update's unavailable map.
+	 */
+	private Map<TeleportMethod, MethodAvailability> finalUnavailable(
+		AlternativeRoutesService service, AlternativeRoutesMode mode) throws Exception
+	{
+		CountDownLatch done = new CountDownLatch(1);
+		AtomicReference<Map<TeleportMethod, MethodAvailability>> result = new AtomicReference<>(Map.of());
+		service.generate(START, Set.of(TARGET), Set.of(), mode, 10,
+			(routes, catalog, unavailable, isDone) ->
+			{
+				if (isDone)
+				{
+					result.set(unavailable);
+					done.countDown();
+				}
+			});
+		assertTrue("Generation should complete", done.await(120, TimeUnit.SECONDS));
+		return result.get();
+	}
+
+	@Test
+	public void bankPickupWeightChargedExactlyOnceIntoBankedRouteCost() throws Exception
+	{
+		// Run the same bank-pickup scenario twice: first with no bank-pickup weight, then with a
+		// 60-step weight (small enough that banking still beats the ~147-tile walk, so the route isn't
+		// dropped by the stop-at-walk rule). The banked route's cost must rise by exactly the weight —
+		// charged once on entering the banked state, not per edge.
+		when(config.costBankPickup()).thenReturn(0, 60);
+		int varrockCentre = WorldPointUtil.packWorldPoint(3213, 3424, 0);
+		int cowbellDestination = WorldPointUtil.packWorldPoint(3259, 3277, 0);
+		doReturn(new Item[]{new Item(33104, 1)}).when(bank).getItems();
+		PathfinderConfig base = new TestPathfinderConfig(client, config);
+		base.bank = bank;
+		PathfinderConfig planning = base.copyForPlanning();
+		planning.setPlanningMode(false);
+		planning.setConsiderBank(true);
+		AlternativeRoutesService service = new AlternativeRoutesService(clientThread, planning);
+
+		int baseline = bankedRouteCost(service, varrockCentre, cowbellDestination);
+		int weighted = bankedRouteCost(service, varrockCentre, cowbellDestination);
+		service.shutdown();
+
+		assertTrue("Baseline banked route should cost something, got " + baseline, baseline > 0);
+		assertTrue("Banked route must carry the 60-step bank-pickup weight exactly once ("
+				+ baseline + " -> " + weighted + ")",
+			weighted == baseline + 60);
+	}
+
+	/**
+	 * Runs one Owned/Inv+bank generation and returns the via-bank route's total cost.
+	 */
+	private int bankedRouteCost(AlternativeRoutesService service, int start, int target) throws Exception
+	{
+		CountDownLatch done = new CountDownLatch(1);
+		AtomicReference<List<RouteOption>> finalRoutes = new AtomicReference<>(List.of());
+		service.generate(start, Set.of(target), Set.of(), AlternativeRoutesMode.OWNED_WITH_BANK, 10,
+			(routes, catalog, unavailable, isDone) ->
+			{
+				if (isDone)
+				{
+					finalRoutes.set(routes);
+					done.countDown();
+				}
+			});
+		assertTrue("Generation should complete", done.await(120, TimeUnit.SECONDS));
+		RouteOption bankedRoute = finalRoutes.get().stream()
+			.filter(RouteOption::isViaBank)
+			.findFirst().orElse(null);
+		assertTrue("A route via the bank should exist", bankedRoute != null);
+		return bankedRoute.getTotalCost();
+	}
+
+	@Test
+	public void everythingModeSurfacesTeleportsWithoutOwnedItems() throws Exception
+	{
+		// No inventory at all: the Owned modes could only walk, but "Everything" bypasses possession,
+		// so teleport routes must still be offered.
+		when(client.getItemContainer(InventoryID.INV)).thenReturn(null);
+		PathfinderConfig planning = new TestPathfinderConfig(client, config).copyForPlanning();
+		AlternativeRoutesService service = new AlternativeRoutesService(clientThread, planning);
+
+		CountDownLatch done = new CountDownLatch(1);
+		AtomicReference<List<RouteOption>> finalRoutes = new AtomicReference<>(List.of());
+		service.generate(FAR_START, Set.of(TARGET), Set.of(), AlternativeRoutesMode.ALL_EVERYTHING, 10,
+			(routes, catalog, unavailable, isDone) ->
+			{
+				if (isDone)
+				{
+					finalRoutes.set(routes);
+					done.countDown();
+				}
+			});
+		assertTrue("Generation should complete", done.await(120, TimeUnit.SECONDS));
+		service.shutdown();
+
+		assertTrue("Everything mode must offer teleport routes despite owning no items",
+			finalRoutes.get().stream().anyMatch(r -> !r.getMethods().isEmpty()));
 	}
 }
