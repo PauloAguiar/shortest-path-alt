@@ -330,10 +330,7 @@ public class ShortestPathPanel extends PluginPanel
 		topRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		topRow.setBorder(new EmptyBorder(3, 6, 3, 4));
 
-		JLabel name = new JLabel("Route " + (index + 1)
-			+ (route.isWalkOnly() ? " · walk" : "")
-			+ (route.isViaBank() ? " · bank" : "")
-			+ (route.isReached() ? "" : " · closest"));
+		JLabel name = new JLabel("Route " + (index + 1));
 		name.setFont(FontManager.getRunescapeBoldFont());
 		name.setForeground(selected ? ColorScheme.BRAND_ORANGE : ColorScheme.LIGHT_GRAY_COLOR);
 		if (!route.isReached())
