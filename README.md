@@ -1,6 +1,7 @@
-# GPS
+# Rune GPS Plugin
+![GPS directions panel](docs/screenshots/gps-directions.png)
 
-**GPS** is turn-by-turn navigation for Old School RuneScape. Set a destination and it draws the fastest route, lists the steps to follow — walk here, open this door, dial this fairy ring, ride this carpet — tracks your progress live with an ETA, and tells you when you've arrived. And because the fastest route isn't always *your* route, it also surfaces several alternative ways to get there, each using different teleports and transports, so you can pick the one that suits what you actually carry.
+**Rune GPS Plugin** is turn-by-turn navigation for Old School RuneScape. Set a destination and it draws the fastest route, lists the steps to follow and tracks your progress live with an ETA, and tells you when you've arrived. And because the fastest route isn't always *your* route, it also surfaces several alternative ways to get there, each using different teleports and transports, so you can pick the one that suits what you actually carry.
 
 It grew out of, and supersedes, a fork of the original [Shortest Path](https://github.com/Skretzo/shortest-path): the classic "draw the shortest path" behaviour is all still here, with a navigation layer and an alternative-routes explorer built on top.
 
@@ -9,9 +10,8 @@ It grew out of, and supersedes, a fork of the original [Shortest Path](https://g
 ### Navigation
 - **Turn-by-turn directions** — a movable GPS panel lists the route as numbered steps: walking legs, "Open Door" for doors on the way, teleports and transports to use, bank detours with what to withdraw, and climbs. The step being executed is highlighted; completed steps grey out and collapse.
 - **Live progress and ETA** — progress is tracked from your actual position (including mid-flight on carpets, canoes and gliders, where the ETA counts down through the ride), with a per-step time and a floating ETA badge.
-- **Arrival** — a green "Arrived!" lingers when you get there; click the panel to dismiss it.
 - **Closed-door awareness** — the collision map assumes doors are open, so GPS carries a registry of every openable door and gate in the game (2,977 of them): doors on your route become their own step, and a world label appears on a door ahead while it is actually closed, disappearing the moment you open it.
-- **Flowing route line** — the path is drawn as a directional arrowed line with a gentle glow flowing toward the destination, section markers where each step ends, a pulsing highlight on teleport tiles, and a growing pulse on the destination itself.
+- **Flowing route line** — the path is drawn as a directional arrowed line toward the destination, with section markers where each step ends.
 
 ### Alternative routes
 - **Routes panel** — a side panel (the blue pin icon) lists up to 25 alternative routes to the current destination, each using a *different* travel method, ordered by cost and streamed in as they are found.
@@ -25,26 +25,16 @@ It grew out of, and supersedes, a fork of the original [Shortest Path](https://g
 - Picks up destinations set by **Quest Helper** (and any other plugin using the `shortestpath` plugin-message API), and shows who set the current destination.
 - Right click a spot on the **world map**, or shift + right click a tile in the scene, to set a destination yourself.
 
-## Screenshots
-
-**GPS directions with live progress and ETA**
-
-![GPS directions panel](docs/screenshots/gps-directions.png)
-
 **Alternative-routes panel with the teleport-method catalog**
 
 ![Alternative-routes panel with the teleport-method catalog](docs/screenshots/panel.png)
-
-**A selected route previewed on the world map**
-
-![A selected route previewed on map](docs/screenshots/route-preview.png)
 
 ## Getting started
 
 1. Enable **GPS** from the Plugin Hub.
 2. Set a destination: **right click** a spot on the world map, or **shift + right click** a tile in the scene — or let Quest Helper set one.
-3. Follow the directions panel; drag it wherever you like.
-4. For alternatives, open the side panel (the blue pin icon) and press **Refresh routes to target**, then click a route to travel it instead.
+3. Follow the GPS panel; drag it wherever you like.
+4. For alternatives, open the side panel (the blue pin icon), then click a route to travel it instead.
 
 ## Availability modes
 
@@ -63,18 +53,9 @@ The panel has two families, each with two variants. Switching family keeps your 
 - **Routes to find** — how many alternatives to compute by default (1–25); a *Show more routes* button fetches more on demand.
 - **Travel method weights** — a collapsed section with a per-method-type "extra steps" weight (and a bank-pickup weight). Raise a weight to avoid that method unless it saves that many tiles; set `0` to treat it as free.
 
-Method include/exclude is done in the panel catalog rather than the config menu.
-
 ## Credits
 
-GPS is built on **[Shortest Path](https://github.com/Skretzo/shortest-path)** by Runemoro, Skretzo, FIrgolitsch, wvanderp and contributors, used under the BSD 2-Clause licence (see [LICENSE](LICENSE)). The pathfinding engine, collision data and transport/destination data all come from that project; GPS adds the turn-by-turn navigation (directions, progress, ETA, arrival), the door registry and hints, the alternative-routes explorer, the method catalog with availability modes and markers, the travel-method weights, and the route rendering (arrow line, flowing glow, pulses and markers).
-
-Additional attributions:
-
-- The path arrowheads are adapted from **[Quest Helper](https://github.com/Zoinkwiz/quest-helper)**'s `DirectionArrow.drawLineArrowHead` (Copyright © 2021, [Zoinkwiz](https://github.com/Zoinkwiz), BSD 2-Clause), as also used by the port-tasks plugin.
-- The side-panel UI takes its styling cues from the RuneLite **tile-packs** plugin, and the arrow-line path rendering was modelled on the **port-tasks** plugin.
-- The door registry is dumped from the OSRS cache archived by **[OpenRS2](https://archive.openrs2.org/)**.
-- Built for [RuneLite](https://runelite.net/).
+GPS is built on **[Shortest Path](https://github.com/Skretzo/shortest-path)** by Runemoro, Skretzo, FIrgolitsch, wvanderp and contributors, used under the BSD 2-Clause licence (see [LICENSE](LICENSE)). The pathfinding engine, collision data and transport/destination data all come from that project; Rune GPS adds the turn-by-turn navigation (directions, progress, ETA, arrival), the door registry and hints, the alternative-routes explorer, the method catalog with availability modes and markers, the travel-method weights, and the route rendering (arrow line, flowing glow, pulses and markers).
 
 ## Issues, bugs, suggestions and help
 |Problem|Link|
@@ -87,5 +68,4 @@ Additional attributions:
 OSRS cache dumpers (collision map, bank tiles, the door registry) and pathfinding dashboards live in [shortest-path-tooling](https://github.com/osrs-pathfinding/shortest-path-tooling).
 
 ## License
-
 BSD 2-Clause — see [LICENSE](LICENSE).
