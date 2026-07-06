@@ -22,6 +22,18 @@ public final class RouteOption
 	 */
 	private final List<TeleportMethod> methods;
 	/**
+	 * Path index of the edge each method sits on, parallel to {@link #methods}: the index of the path
+	 * step the method arrives at. Authoritative method positions for the directions overlay — the
+	 * route was computed with the planning config's availability, so its methods cannot be reliably
+	 * re-derived against the main config's.
+	 */
+	private final List<Integer> methodEdgeIndexes;
+	/**
+	 * Travel time of each method's transport in game ticks, parallel to {@link #methods} — for the
+	 * directions overlay's time estimates.
+	 */
+	private final List<Integer> methodDurations;
+	/**
 	 * Blended search cost (walk distance + transport ticks/penalties); lower is shorter.
 	 */
 	private final int totalCost;
@@ -51,11 +63,14 @@ public final class RouteOption
 	 */
 	private final int trailingWalkSteps;
 
-	public RouteOption(List<PathStep> path, List<TeleportMethod> methods, int totalCost, int rawCost,
-		boolean reached, Set<TeleportMethod> bankMethods, List<Integer> walkBeforeSteps, int trailingWalkSteps)
+	public RouteOption(List<PathStep> path, List<TeleportMethod> methods, List<Integer> methodEdgeIndexes,
+		List<Integer> methodDurations, int totalCost, int rawCost, boolean reached, Set<TeleportMethod> bankMethods,
+		List<Integer> walkBeforeSteps, int trailingWalkSteps)
 	{
 		this.path = path;
 		this.methods = methods;
+		this.methodEdgeIndexes = methodEdgeIndexes;
+		this.methodDurations = methodDurations;
 		this.totalCost = totalCost;
 		this.rawCost = rawCost;
 		this.reached = reached;

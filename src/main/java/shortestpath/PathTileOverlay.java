@@ -8,19 +8,23 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.Stroke;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import net.runelite.api.Client;
+import net.runelite.api.GameObject;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
 import net.runelite.api.Tile;
+import net.runelite.api.WallObject;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -231,6 +235,14 @@ public class PathTileOverlay extends Overlay
 				}
 			}
 
+			// GPS decorations for the displayed route: a small waypoint dot where each section ends
+			// (walk up to here, then do the next step) and a growing green pulse on the destination.
+			RouteOption displayedRoute = plugin.getDisplayedRoute();
+			if (displayedRoute != null && plugin.showDirections)
+			{
+				drawGpsMarkers(graphics, displayedRoute);
+			}
+
 			if (plugin.isPathUnreachable())
 			{
 				playerTileLabelOffset += drawLabelOnPlayerTile(graphics, plugin.unreachableText, playerTileLabelOffset);
@@ -238,6 +250,195 @@ public class PathTileOverlay extends Overlay
 		}
 
 		return null;
+	}
+
+	/**
+	 * The hint for a door/gate transport on the path, shown only while it needs opening: when the
+	 * closed door object (whose id is the trailing token of the objectInfo, e.g. "Open Door 9398")
+	 * is still standing at either end of the edge. Opening the door replaces the object, so the hint
+	 * disappears by itself. Null for non-door transports and doors that are already open.
+	 */
+	private String closedDoorText(Transport transport)
+	{
+		String objectInfo = transport.getObjectInfo();
+		if (objectInfo == null || !objectInfo.startsWith("Open "))
+		{
+			return null;
+		}
+		int lastSpace = objectInfo.lastIndexOf(' ');
+		if (lastSpace <= 0)
+		{
+			return null;
+		}
+		String idText = objectInfo.substring(lastSpace + 1);
+		if (idText.isEmpty() || !idText.chars().allMatch(Character::isDigit))
+		{
+			return null;
+		}
+		int objectId = Integer.parseInt(idText);
+		if (objectPresent(transport.getOrigin(), objectId) || objectPresent(transport.getDestination(), objectId))
+		{
+			return objectInfo.substring(0, lastSpace);
+		}
+		return null;
+	}
+
+	/**
+	 * Whether an object with this id currently stands on the tile (wall objects cover doors; gates
+	 * and double doors can be game objects). Only tiles inside the loaded scene can match — which is
+	 * fine, the hint matters when the player is close enough to see the door.
+	 */
+	private boolean objectPresent(int packedLocation, int objectId)
+	{
+		PrimitiveIntList points = WorldPointUtil.toLocalInstance(client, packedLocation);
+		for (int i = 0; i < points.size(); i++)
+		{
+			LocalPoint lp = WorldPointUtil.toLocalPoint(client, points.get(i));
+			if (lp == null)
+			{
+				continue;
+			}
+			int plane = WorldPointUtil.unpackWorldPlane(points.get(i));
+			Tile[][][] tiles = client.getTopLevelWorldView().getScene().getTiles();
+			if (plane < 0 || plane >= tiles.length)
+			{
+				continue;
+			}
+			int sceneX = lp.getSceneX();
+			int sceneY = lp.getSceneY();
+			if (sceneX < 0 || sceneY < 0 || sceneX >= tiles[plane].length || sceneY >= tiles[plane][sceneX].length)
+			{
+				continue;
+			}
+			Tile tile = tiles[plane][sceneX][sceneY];
+			if (tile == null)
+			{
+				continue;
+			}
+			WallObject wall = tile.getWallObject();
+			if (wall != null && wall.getId() == objectId)
+			{
+				return true;
+			}
+			GameObject[] gameObjects = tile.getGameObjects();
+			if (gameObjects != null)
+			{
+				for (GameObject gameObject : gameObjects)
+				{
+					if (gameObject != null && gameObject.getId() == objectId)
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	private void drawGpsMarkers(Graphics2D graphics, RouteOption route)
+	{
+		List<RouteDirections.Step> steps = plugin.getRouteDirections(route);
+		List<PathStep> path = route.getPath();
+		if (steps.isEmpty() || path.isEmpty())
+		{
+			return;
+		}
+		int destinationIndex = path.size() - 1;
+		Set<Integer> marked = new HashSet<>();
+		for (RouteDirections.Step step : steps)
+		{
+			int end = step.getEndIndex();
+			if (end <= 0 || end >= destinationIndex)
+			{
+				continue; // the destination gets the pulse, not a dot
+			}
+			int packed = path.get(end).getPackedPosition();
+			if (marked.add(packed))
+			{
+				drawSectionMarker(graphics, packed);
+			}
+		}
+		drawDestinationPulse(graphics, path.get(destinationIndex).getPackedPosition());
+	}
+
+	/**
+	 * A small waypoint dot on the tile where a route section ends: white ring with a path-coloured
+	 * core, so the "walk up to here" points stand out along the drawn line.
+	 */
+	private void drawSectionMarker(Graphics2D graphics, int location)
+	{
+		PrimitiveIntList points = WorldPointUtil.toLocalInstance(client, location);
+		for (int i = 0; i < points.size(); i++)
+		{
+			LocalPoint lp = WorldPointUtil.toLocalPoint(client, points.get(i));
+			if (lp == null)
+			{
+				continue;
+			}
+			Polygon poly = Perspective.getCanvasTilePoly(client, lp);
+			if (poly == null)
+			{
+				continue;
+			}
+			final double cx = poly.getBounds().getCenterX();
+			final double cy = poly.getBounds().getCenterY();
+			graphics.setColor(Color.WHITE);
+			graphics.fill(new Ellipse2D.Double(cx - 4.5, cy - 4.5, 9, 9));
+			Color pathColour = plugin.getPathColor();
+			graphics.setColor(new Color(pathColour.getRed(), pathColour.getGreen(), pathColour.getBlue()));
+			graphics.fill(new Ellipse2D.Double(cx - 3, cy - 3, 6, 6));
+		}
+	}
+
+	/**
+	 * The journey's end: a green circle growing out of the destination tile and fading, looping —
+	 * the same rhythm as the teleport pulse. The flattening follows the camera: a circle drawn on
+	 * the ground plane projects to an ellipse with the same height/width ratio as the projected
+	 * tile itself (the yaw factor cancels out of a square tile's bounding box, leaving only the
+	 * pitch compression) — so it's a perfect circle seen top-down and flattens as the camera drops.
+	 */
+	private void drawDestinationPulse(Graphics2D graphics, int location)
+	{
+		PrimitiveIntList points = WorldPointUtil.toLocalInstance(client, location);
+		for (int i = 0; i < points.size(); i++)
+		{
+			LocalPoint lp = WorldPointUtil.toLocalPoint(client, points.get(i));
+			if (lp == null)
+			{
+				continue;
+			}
+			Polygon poly = Perspective.getCanvasTilePoly(client, lp);
+			if (poly == null)
+			{
+				continue;
+			}
+			final double cx = poly.getBounds().getCenterX();
+			final double cy = poly.getBounds().getCenterY();
+			final double tileWidth = Math.max(8, poly.getBounds().getWidth());
+			// Ground-plane flattening from the tile's own projection; clamped for degenerate polys.
+			final double flatten = Math.min(1.0, Math.max(0.1,
+				poly.getBounds().getHeight() / Math.max(1.0, poly.getBounds().getWidth())));
+
+			final long period = 1400L;
+			final int rings = 2;
+			final Stroke previousStroke = graphics.getStroke();
+			graphics.setStroke(new BasicStroke(2.2f));
+			for (int r = 0; r < rings; r++)
+			{
+				double phase = ((System.currentTimeMillis() + (long) (r * period / (double) rings)) % period)
+					/ (double) period;
+				double radius = tileWidth * (0.25 + phase * 1.1);
+				int alpha = (int) Math.round(180 * (1.0 - phase));
+				if (alpha <= 0)
+				{
+					continue;
+				}
+				graphics.setColor(new Color(0, 220, 90, alpha));
+				graphics.draw(new Ellipse2D.Double(
+					cx - radius, cy - radius * flatten, radius * 2, radius * 2 * flatten));
+			}
+			graphics.setStroke(previousStroke);
+		}
 	}
 
 	private Point tileCenter(int b)
@@ -645,10 +846,25 @@ public class PathTileOverlay extends Overlay
 			drawTeleportPulse(graphics, location);
 		}
 
+		Set<String> shownTexts = new HashSet<>();
 		for (Transport transport : transportsToShow)
 		{
 			String text = transport.getDisplayInfo();
 			if (text == null || text.isEmpty())
+			{
+				// Stairs/ladders (and other climbs) have no display info, so the drawn line just ends
+				// at them with no cue. Fall back to their menu text ("Climb-up Staircase") so the
+				// player is told to use them.
+				text = RouteDirections.climbText(transport);
+			}
+			if (text == null || text.isEmpty())
+			{
+				// Doors/gates: hint only while the door is actually closed (the closed object still
+				// stands in the scene) — an open door needs no cue, and labelling every doorway on
+				// the path would be noise.
+				text = closedDoorText(transport);
+			}
+			if (text == null || text.isEmpty() || !shownTexts.add(text))
 			{
 				continue;
 			}
@@ -664,4 +880,5 @@ public class PathTileOverlay extends Overlay
 			playerTileLabelOffset = drawLabelAtPackedLocation(graphics, location, text, playerTileLabelOffset);
 		}
 	}
+
 }

@@ -245,8 +245,8 @@ public class AlternativeRoutesService
 			{
 				break;
 			}
-			routes.add(new RouteOption(path, methods, result.getTotalCost(), scan.rawCost, reached,
-				scan.bankGated, scan.walkBefore, scan.trailingWalk));
+			routes.add(new RouteOption(path, methods, scan.methodEdges, scan.methodDurations,
+				result.getTotalCost(), scan.rawCost, reached, scan.bankGated, scan.walkBefore, scan.trailingWalk));
 			// Stream the route we just found so the panel shows it immediately.
 			emit(gen, listener, new ArrayList<>(routes), catalog, unavailable, false);
 
@@ -392,9 +392,10 @@ public class AlternativeRoutesService
 				{
 					continue;
 				}
-				routes.add(new RouteOption(seedResult.path, seedResult.scan.methods,
-					seedResult.totalCost, seedResult.scan.rawCost, seedResult.reached,
-					seedResult.scan.bankGated, seedResult.scan.walkBefore, seedResult.scan.trailingWalk));
+				routes.add(new RouteOption(seedResult.path, seedResult.scan.methods, seedResult.scan.methodEdges,
+					seedResult.scan.methodDurations, seedResult.totalCost, seedResult.scan.rawCost,
+					seedResult.reached, seedResult.scan.bankGated, seedResult.scan.walkBefore,
+					seedResult.scan.trailingWalk));
 				emit(gen, listener, new ArrayList<>(routes), catalog, unavailable, false);
 			}
 		}
@@ -586,10 +587,12 @@ public class AlternativeRoutesService
 	private MethodScan scanMethods(PathfinderConfig config, List<PathStep> path)
 	{
 		List<TeleportMethod> methods = new ArrayList<>();
+		List<Integer> methodEdges = new ArrayList<>();
+		List<Integer> methodDurations = new ArrayList<>();
 		Set<TeleportMethod> bankGated = new LinkedHashSet<>();
 		if (path == null)
 		{
-			return new MethodScan(methods, bankGated, 0, new ArrayList<>(), 0);
+			return new MethodScan(methods, methodEdges, methodDurations, bankGated, 0, new ArrayList<>(), 0);
 		}
 		int rawCost = 0;
 		// Walking-leg lengths: tiles walked before each method (parallel to `methods`), and after the
@@ -606,6 +609,8 @@ public class AlternativeRoutesService
 			{
 				TeleportMethod method = TeleportMethod.fromTransport(chosen);
 				methods.add(method);
+				methodEdges.add(i);
+				methodDurations.add(chosen.getDuration());
 				walkBefore.add(legSteps);
 				legSteps = 0;
 				// Bank-gated: used in the post-bank state and not available without the bank.
@@ -629,7 +634,7 @@ public class AlternativeRoutesService
 				legSteps += edgeCost;
 			}
 		}
-		return new MethodScan(methods, bankGated, rawCost, walkBefore, legSteps);
+		return new MethodScan(methods, methodEdges, methodDurations, bankGated, rawCost, walkBefore, legSteps);
 	}
 
 	private static boolean availableWithoutBank(PathfinderConfig config, int origin, Transport transport)
@@ -655,6 +660,12 @@ public class AlternativeRoutesService
 	private static final class MethodScan
 	{
 		private final List<TeleportMethod> methods;
+		// Path index of the edge each method sits on (parallel to methods): the index of the step the
+		// method arrives at. Authoritative for the directions overlay, which cannot re-derive methods
+		// against the main config (the route came from the planning config's availability).
+		private final List<Integer> methodEdges;
+		// Travel time of each method's transport in game ticks (parallel to methods), for ETAs.
+		private final List<Integer> methodDurations;
 		private final Set<TeleportMethod> bankGated;
 		// Path cost without any configured weights: walk distance plus transport travel times only.
 		private final int rawCost;
@@ -662,10 +673,12 @@ public class AlternativeRoutesService
 		private final List<Integer> walkBefore;
 		private final int trailingWalk;
 
-		MethodScan(List<TeleportMethod> methods, Set<TeleportMethod> bankGated, int rawCost,
-			List<Integer> walkBefore, int trailingWalk)
+		MethodScan(List<TeleportMethod> methods, List<Integer> methodEdges, List<Integer> methodDurations,
+			Set<TeleportMethod> bankGated, int rawCost, List<Integer> walkBefore, int trailingWalk)
 		{
 			this.methods = methods;
+			this.methodEdges = methodEdges;
+			this.methodDurations = methodDurations;
 			this.bankGated = bankGated;
 			this.rawCost = rawCost;
 			this.walkBefore = walkBefore;

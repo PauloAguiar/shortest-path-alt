@@ -1078,6 +1078,19 @@ public interface ShortestPathConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		keyName = "showDirections",
+		name = "Directions overlay",
+		description = "Show a movable step-by-step directions panel for the route currently shown on the map<br>" +
+			"(walking legs, teleports to use, bank withdrawals and climbs)",
+		position = 75,
+		section = sectionDisplay
+	)
+	default boolean showDirections()
+	{
+		return true;
+	}
+
 	@ConfigSection(
 		name = "Colours",
 		description = "Colours for the path map, minimap and scene tiles",

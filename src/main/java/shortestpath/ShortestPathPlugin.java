@@ -108,6 +108,7 @@ public class ShortestPathPlugin extends Plugin
 	private static final String PLUGIN_MESSAGE_TARGET = "target";
 	private static final String PLUGIN_MESSAGE_CONFIG_OVERRIDE = "config";
 	private static final String PLUGIN_MESSAGE_TRANSPORTS = "transports";
+	private static final String PLUGIN_MESSAGE_SOURCE = "source";
 	private static final String CLEAR = "Clear";
 	private static final String PATH = ColorUtil.wrapWithColorTag("Path", JagexColors.MENU_TARGET);
 	private static final String SET = "Set";
@@ -137,6 +138,7 @@ public class ShortestPathPlugin extends Plugin
 	Color colourTransports;
 	Color colourTeleportPulse;
 	boolean showTeleportPulse;
+	boolean showDirections;
 	int tileCounterStep;
 	int unreachableTargetDistance;
 	String unreachableText;
@@ -168,6 +170,8 @@ public class ShortestPathPlugin extends Plugin
 	@Inject
 	private DebugOverlayPanel debugOverlayPanel;
 	@Inject
+	private RouteDirectionsOverlay routeDirectionsOverlay;
+	@Inject
 	private SpriteManager spriteManager;
 	@Inject
 	private WorldMapPointManager worldMapPointManager;
@@ -186,6 +190,9 @@ public class ShortestPathPlugin extends Plugin
 	// The exclusions the current route list was generated with; diverging from userExclusions means
 	// the list is stale until the user refreshes (method toggles no longer auto-recalculate).
 	private volatile Set<TeleportMethod> generatedExclusions = Set.of();
+	// Where the current destination came from, for the GPS header: "map pin" for manual targets, the
+	// sender's self-declared "source" for plugin messages (else "another plugin"), null when unset.
+	private volatile String targetSource;
 	// Which methods the alternatives consider: carried (default), carried + bank, or every teleport.
 	private volatile AlternativeRoutesMode routesMode = AlternativeRoutesMode.OWNED_INVENTORY;
 	// How many alternative routes to generate; grows when the user asks for more.
@@ -361,6 +368,7 @@ public class ShortestPathPlugin extends Plugin
 		overlayManager.add(pathMinimapOverlay);
 		overlayManager.add(pathMapOverlay);
 		overlayManager.add(pathMapTooltipOverlay);
+		overlayManager.add(routeDirectionsOverlay);
 
 		if (config.drawDebugPanel())
 		{
@@ -407,6 +415,7 @@ public class ShortestPathPlugin extends Plugin
 		overlayManager.remove(pathMinimapOverlay);
 		overlayManager.remove(pathMapOverlay);
 		overlayManager.remove(pathMapTooltipOverlay);
+		overlayManager.remove(routeDirectionsOverlay);
 		overlayManager.remove(debugOverlayPanel);
 
 		if (navButton != null)
@@ -731,6 +740,14 @@ public class ShortestPathPlugin extends Plugin
 				}
 			}
 
+			// Attribute the destination for the GPS header. PluginMessage doesn't identify its sender,
+			// so honour an optional "source" string in the data (a convention senders can adopt, e.g.
+			// "Quest Helper"); otherwise all we can say is that a plugin asked for it.
+			Object objSource = data.getOrDefault(PLUGIN_MESSAGE_SOURCE, null);
+			targetSource = (objSource instanceof String && !((String) objSource).isEmpty())
+				? (String) objSource
+				: "another plugin";
+
 			boolean useOld = targets.isEmpty() && pathfinder != null;
 			Set<Integer> ends = useOld ? new HashSet<>(pathfinder.getTargets()) : targets;
 			// Alternatives are computed manually (the panel's "Find routes" button reads the current
@@ -741,6 +758,7 @@ public class ShortestPathPlugin extends Plugin
 		{
 			configOverride.clear();
 			cacheConfigValues();
+			targetSource = null;
 			setTarget(WorldPointUtil.UNDEFINED);
 		}
 	}
@@ -1428,6 +1446,7 @@ public class ShortestPathPlugin extends Plugin
 		showTileCounter = override("showTileCounter", config.showTileCounter());
 		pathStyle = override("pathStyle", config.pathStyle());
 		showTeleportPulse = override("showTeleportPulse", config.showTeleportPulse());
+		showDirections = override("showDirections", config.showDirections());
 	}
 
 	private String simplify(String text)
@@ -1442,11 +1461,13 @@ public class ShortestPathPlugin extends Plugin
 	{
 		if (entry.getOption().equals(SET) && entry.getTarget().equals(TARGET))
 		{
+			targetSource = "map pin";
 			setTarget(getSelectedWorldPoint());
 		}
 		else if (entry.getOption().equals(SET) && pathfinder != null && entry.getTarget().equals(TARGET +
 			ColorUtil.wrapWithColorTag(" " + (pathfinder.getTargets().size() + 1), JagexColors.MENU_TARGET)))
 		{
+			targetSource = "map pin";
 			setTarget(getSelectedWorldPoint(), true);
 		}
 		else if (entry.getOption().equals(SET) && entry.getTarget().equals(START))
@@ -1455,10 +1476,12 @@ public class ShortestPathPlugin extends Plugin
 		}
 		else if (entry.getOption().equals(CLEAR) && entry.getTarget().equals(PATH))
 		{
+			targetSource = null;
 			setTarget(WorldPointUtil.UNDEFINED);
 		}
 		else if (entry.getOption().equals(FIND_CLOSEST))
 		{
+			targetSource = "map pin";
 			setTargets(pathfinderConfig.getDestinations(simplify(entry.getTarget())), true);
 		}
 	}
@@ -1786,6 +1809,32 @@ public class ShortestPathPlugin extends Plugin
 		int step = Math.max(1, Math.min(override("routeCountStep", config.routeCountStep()), 25));
 		routeLimit += step;
 		triggerAlternatives(lastAltStart, new HashSet<>(lastAltTargets));
+	}
+
+	// Directions for the currently displayed route, built once per route (the overlay renders every
+	// frame; the path scan only reruns when the displayed route object changes).
+	private RouteOption directionsRoute;
+	private List<RouteDirections.Step> directions = List.of();
+
+	/**
+	 * The step-by-step directions for {@code route}, cached per route instance.
+	 */
+	public List<RouteDirections.Step> getRouteDirections(RouteOption route)
+	{
+		if (route != directionsRoute)
+		{
+			directions = RouteDirections.build(this, route);
+			directionsRoute = route;
+		}
+		return directions;
+	}
+
+	/**
+	 * Where the current destination came from ("map pin", "Quest Helper", ...) or null when unknown.
+	 */
+	public String getTargetSource()
+	{
+		return targetSource;
 	}
 
 	/**
