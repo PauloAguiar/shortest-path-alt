@@ -3,15 +3,13 @@
 
 **Rune GPS Plugin** is turn-by-turn navigation for Old School RuneScape. Set a destination and it draws the fastest route, lists the steps to follow and tracks your progress live with an ETA, and tells you when you've arrived. And because the fastest route isn't always *your* route, it also surfaces several alternative ways to get there, each using different teleports and transports, so you can pick the one that suits what you actually carry.
 
-It grew out of, and supersedes, a fork of the original [Shortest Path](https://github.com/Skretzo/shortest-path): the classic "draw the shortest path" behaviour is all still here, with a navigation layer and an alternative-routes explorer built on top.
+It grew out of a fork of [Shortest Path](https://github.com/Skretzo/shortest-path): the classic "draw the shortest path" behaviour is all still here, with a navigation layer and an alternative-routes explorer built on top.
 
 ## Features
 
 ### Navigation
 - **Turn-by-turn directions** — a movable GPS panel lists the route as numbered steps: walking legs, "Open Door" for doors on the way, teleports and transports to use, bank detours with what to withdraw, and climbs. The step being executed is highlighted; completed steps grey out and collapse.
 - **Live progress and ETA** — progress is tracked from your actual position (including mid-flight on carpets, canoes and gliders, where the ETA counts down through the ride), with a per-step time and a floating ETA badge.
-- **Closed-door awareness** — the collision map assumes doors are open, so GPS carries a registry of every openable door and gate in the game (2,977 of them): doors on your route become their own step, and a world label appears on a door ahead while it is actually closed, disappearing the moment you open it.
-- **Flowing route line** — the path is drawn as a directional arrowed line toward the destination, with section markers where each step ends.
 
 ### Alternative routes
 - **Routes panel** — a side panel (the blue pin icon) lists up to 25 alternative routes to the current destination, each using a *different* travel method, ordered by cost and streamed in as they are found.
