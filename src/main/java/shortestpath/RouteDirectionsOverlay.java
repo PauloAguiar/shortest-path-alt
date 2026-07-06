@@ -259,6 +259,14 @@ public class RouteDirectionsOverlay extends OverlayPanel
 				.build());
 		for (Line line : lines)
 		{
+			if (line.centred)
+			{
+				// Reserve the row with a spacer in the same font; the text itself is drawn
+				// centred over the panel afterwards.
+				panelComponent.getChildren().add(
+					LineComponent.builder().left(" ").leftFont(line.font).build());
+				continue;
+			}
 			LineComponent.LineComponentBuilder builder = LineComponent.builder()
 				.left(ellipsize(graphics, line.font, line.left, panelWidth - rightWidth(graphics, line) - PANEL_PADDING))
 				.leftColor(line.colour)
@@ -276,8 +284,38 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		if (dimension != null)
 		{
 			drawTitle(graphics, dimension);
+			drawCentredLines(graphics, dimension, lines);
 		}
 		return dimension;
+	}
+
+	/**
+	 * Draws the trailing centred lines over their reserved spacer rows, anchored bottom-up to the
+	 * panel's bottom edge. TextLayout's tight glyph bounds centre the text properly — the
+	 * RuneScape fonts' metrics don't match their visual size (see {@link #drawEtaBadge}).
+	 */
+	private void drawCentredLines(Graphics2D graphics, Dimension panelSize, List<Line> lines)
+	{
+		int first = lines.size();
+		while (first > 0 && lines.get(first - 1).centred)
+		{
+			first--;
+		}
+		float bottom = panelSize.height - 7;
+		for (int i = lines.size() - 1; i >= first; i--)
+		{
+			Line line = lines.get(i);
+			TextLayout layout = new TextLayout(line.left, line.font, graphics.getFontRenderContext());
+			Rectangle2D bounds = layout.getBounds();
+			float x = (float) ((panelSize.width - bounds.getWidth()) / 2 - bounds.getX());
+			// Place the glyph box's bottom on the anchor, then move the anchor up past it.
+			float baseline = (float) (bottom - bounds.getHeight() - bounds.getY());
+			graphics.setColor(Color.BLACK);
+			layout.draw(graphics, x + 1, baseline + 1);
+			graphics.setColor(line.colour);
+			layout.draw(graphics, x, baseline);
+			bottom -= bounds.getHeight() + 5;
+		}
 	}
 
 	/**
@@ -352,14 +390,23 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		private final Color colour;
 		private final String right;
 		private final Color rightColour;
+		// Centred lines are reserved as spacer rows and custom-drawn centred over the panel
+		// afterwards — LineComponent only aligns left/right. Only trailing lines may be centred.
+		private final boolean centred;
 
 		private Line(String left, Font font, Color colour, String right, Color rightColour)
+		{
+			this(left, font, colour, right, rightColour, false);
+		}
+
+		private Line(String left, Font font, Color colour, String right, Color rightColour, boolean centred)
 		{
 			this.left = left;
 			this.font = font;
 			this.colour = colour;
 			this.right = right;
 			this.rightColour = rightColour;
+			this.centred = centred;
 		}
 	}
 
@@ -434,8 +481,8 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		{
 			lines.add(new Line("… " + (steps.size() - shown) + " more", FONT_OTHER, DONE, null, null));
 		}
-		lines.add(new Line("Arrived!", FONT_CURRENT, ARRIVED, null, null));
-		lines.add(new Line("(click to dismiss)", FONT_OTHER, DONE, null, null));
+		lines.add(new Line("Arrived!", FONT_CURRENT, ARRIVED, null, null, true));
+		lines.add(new Line("(click to dismiss)", FONT_OTHER, DONE, null, null, true));
 		return renderPanel(graphics, lines);
 	}
 

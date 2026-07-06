@@ -91,7 +91,7 @@ final class RouteDirections
 				banked = true;
 				if (route.isViaBank())
 				{
-					steps.add(new Step(walkText(walk, "the bank"), legStart, i, walkTicks(walk)));
+					steps.add(new Step(walkText("the bank"), legStart, i, walkTicks(walk)));
 					walk = 0;
 					legStart = i;
 					steps.add(new Step("Withdraw item for: " + joinLabels(route.getBankMethods()), i, i,
@@ -129,7 +129,7 @@ final class RouteDirections
 		}
 		if (walk > 0)
 		{
-			steps.add(new Step(walkText(walk, "the destination"), legStart, path.size() - 1, walkTicks(walk)));
+			steps.add(new Step(walkText("the destination"), legStart, path.size() - 1, walkTicks(walk)));
 		}
 		return steps;
 	}
@@ -161,14 +161,15 @@ final class RouteDirections
 		{
 			return;
 		}
-		// No coordinates: they mean nothing to the player. The leg's endpoint is marked in the
-		// world instead (section marker / destination pulse), and the next step names what's there.
-		steps.add(new Step("Walk (" + walk + ")", legStart, endIndex, walkTicks(walk)));
+		// No coordinates or tile counts: they mean nothing to the player. The leg's endpoint is
+		// marked in the world instead (section marker / destination pulse), the next step names
+		// what's there, and the time column already sizes the leg.
+		steps.add(new Step("Walk", legStart, endIndex, walkTicks(walk)));
 	}
 
-	private static String walkText(int tiles, String target)
+	private static String walkText(String target)
 	{
-		return "Walk to " + target + " (" + tiles + ")";
+		return "Walk to " + target;
 	}
 
 	private static String joinLabels(Set<TeleportMethod> methods)
