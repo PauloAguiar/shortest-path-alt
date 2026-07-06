@@ -30,7 +30,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	// The panel grows to fit its widest line between these bounds; only beyond MAX_WIDTH do lines
 	// get ellipsized (clipping "Use Rat Pits M…" is worse than a wider panel).
 	private static final int MIN_WIDTH = 140;
-	private static final int MAX_WIDTH = 280;
+	private static final int MAX_WIDTH = 360;
 	// Component insets plus the gap between the left text and the right-aligned time.
 	private static final int PANEL_PADDING = 18;
 
