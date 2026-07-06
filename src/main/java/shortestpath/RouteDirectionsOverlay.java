@@ -50,11 +50,10 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private final Client client;
 	private final ShortestPathPlugin plugin;
 
-	// Progress along the displayed route. Each frame the player's position is scored against EVERY
-	// path tile as (run time to the tile + remaining route time from it) and the minimum wins: this
-	// makes the ETA behave everywhere — it counts down smoothly mid-transport (a carpet ride's best
-	// rejoin point shifts from origin to destination), grows again when backtracking or straying off
-	// the path, and never charges a phantom "walk back" for travel the route itself performs.
+	// Progress along the displayed route: each frame the marker moves to the eligible path tile
+	// nearest the player, and the ETA is (walk time to that tile + remaining route time from it).
+	// It counts down as the player travels, grows again when backtracking or straying off the
+	// path, and mid-ride transports are interpolated separately (see the riding branch).
 	private RouteOption progressRoute;
 	private int reachedIndex;
 	// Remaining route time (ticks) from each path index, precomputed per route.
@@ -490,11 +489,11 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	}
 
 	/**
-	 * Scores every same-plane path tile as (run time to it + remaining route time from it) and moves
-	 * the progress marker to the minimum. A small hysteresis window prefers a candidate near the
-	 * previous position when its score is close to the global best, so standing where the path
-	 * crosses itself doesn't teleport the highlight to the other pass. No same-plane tile at all
-	 * (e.g. an off-route dungeon detour) freezes the estimate.
+	 * Moves the progress marker to the eligible path tile nearest the player, preferring the one
+	 * closest to the previous position on ties — so standing where the path crosses itself doesn't
+	 * teleport the highlight to the other pass. The ETA is then (walk time to that tile + remaining
+	 * route time from it). No same-plane tile at all (e.g. an off-route dungeon detour) freezes the
+	 * estimate.
 	 */
 	private void updateProgress(RouteOption route, List<RouteDirections.Step> steps)
 	{
@@ -573,8 +572,15 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			}
 		}
 
+		// Progress = the eligible path tile NEAREST the player (ties broken toward the current
+		// position). Scoring by (walk time + remaining) instead had a systematic forward bias —
+		// remaining falls slightly faster per index than distance charges per tile — so the
+		// marker rode the eligibility cap ~10 tiles ahead of the player, ending walk legs and
+		// announcing "Open Door" while still crossing the room. The ETA is derived from the
+		// selected tile afterwards, keeping its walk-back charge without steering the selection.
 		int best = -1;
-		double bestScore = Double.MAX_VALUE;
+		int bestDistance = Integer.MAX_VALUE;
+		int bestOffset = Integer.MAX_VALUE;
 		for (int i = 0; i < path.size(); i++)
 		{
 			int packed = path.get(i).getPackedPosition();
@@ -593,11 +599,12 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			{
 				continue;
 			}
-			double score = distance / 2.0 + remainingTicksAt[i];
-			if (score < bestScore)
+			int offset = Math.abs(i - reachedIndex);
+			if (distance < bestDistance || (distance == bestDistance && offset < bestOffset))
 			{
-				bestScore = score;
 				best = i;
+				bestDistance = distance;
+				bestOffset = offset;
 			}
 		}
 		if (best < 0)
@@ -606,7 +613,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			return;
 		}
 		reachedIndex = best;
-		liveRemainingTicks = bestScore;
+		liveRemainingTicks = bestDistance / 2.0 + remainingTicksAt[best];
 	}
 
 	/**
