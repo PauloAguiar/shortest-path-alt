@@ -74,7 +74,15 @@ final class RouteIcons
 
 	static BufferedImage gpsPin()
 	{
-		return pin(GPS_BLUE);
+		// The sidebar tab needs presence: scale the pin up to fill the 16px tile (the panel's
+		// row pins stay smaller so they read as buttons next to text).
+		return render(g ->
+		{
+			g.translate(8.0, 8.0);
+			g.scale(1.3, 1.3);
+			g.translate(-8.0, -8.5);
+			drawPin(g, GPS_BLUE);
+		});
 	}
 
 	private RouteIcons()
@@ -100,22 +108,24 @@ final class RouteIcons
 
 	private static BufferedImage pin(Color colour)
 	{
-		return render(g ->
-		{
-			final double cx = 8, cy = 6.4, r = 4.0;
-			Path2D body = new Path2D.Double();
-			body.moveTo(cx - 3.0, cy + 1.6);
-			body.curveTo(cx - 2.0, cy + 4.4, cx - 0.5, cy + 5.4, cx, 14.6);
-			body.curveTo(cx + 0.5, cy + 5.4, cx + 2.0, cy + 4.4, cx + 3.0, cy + 1.6);
-			body.closePath();
-			g.setColor(colour);
-			g.fill(new Ellipse2D.Double(cx - r, cy - r, 2 * r, 2 * r));
-			g.fill(body);
-			g.setComposite(AlphaComposite.Clear);
-			final double hr = 1.65;
-			g.fill(new Ellipse2D.Double(cx - hr, cy - hr, 2 * hr, 2 * hr));
-			g.setComposite(AlphaComposite.SrcOver);
-		});
+		return render(g -> drawPin(g, colour));
+	}
+
+	private static void drawPin(Graphics2D g, Color colour)
+	{
+		final double cx = 8, cy = 6.4, r = 4.0;
+		Path2D body = new Path2D.Double();
+		body.moveTo(cx - 3.0, cy + 1.6);
+		body.curveTo(cx - 2.0, cy + 4.4, cx - 0.5, cy + 5.4, cx, 14.6);
+		body.curveTo(cx + 0.5, cy + 5.4, cx + 2.0, cy + 4.4, cx + 3.0, cy + 1.6);
+		body.closePath();
+		g.setColor(colour);
+		g.fill(new Ellipse2D.Double(cx - r, cy - r, 2 * r, 2 * r));
+		g.fill(body);
+		g.setComposite(AlphaComposite.Clear);
+		final double hr = 1.65;
+		g.fill(new Ellipse2D.Double(cx - hr, cy - hr, 2 * hr, 2 * hr));
+		g.setComposite(AlphaComposite.SrcOver);
 	}
 
 	private static BufferedImage ban(Color colour)
