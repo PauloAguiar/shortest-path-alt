@@ -121,15 +121,20 @@ final class RouteDirections
 				continue;
 			}
 
-			Transport climb = findClimb(plugin, from, to);
-			ClosedDoors.Door door = climb == null
+			Transport object = findObjectTransport(plugin, from, to);
+			ClosedDoors.Door door = object == null
 				? ClosedDoors.doorBetween(from.getPackedPosition(), to.getPackedPosition())
 				: null;
-			if (climb != null)
+			if (object != null)
 			{
+				// Any transport with menu-style object info becomes its own step: climbs
+				// ("Climb-up Staircase"), agility shortcuts ("Walk-across Log balance"),
+				// mapped doors ("Open Door" — flagged so the door progress gate applies), ...
 				flushWalk(steps, walk, legStart, i - 1);
 				walk = 0;
-				steps.add(new Step(climbText(climb), i - 1, i, Math.max(1, climb.getDuration())));
+				String text = objectText(object);
+				steps.add(new Step(text, i - 1, i, Math.max(1, object.getDuration()),
+					false, text.startsWith("Open ")));
 				legStart = i;
 			}
 			else if (door != null)
@@ -166,12 +171,12 @@ final class RouteDirections
 		return (tiles + 1) / 2;
 	}
 
-	private static Transport findClimb(ShortestPathPlugin plugin, PathStep from, PathStep to)
+	private static Transport findObjectTransport(ShortestPathPlugin plugin, PathStep from, PathStep to)
 	{
 		Set<Transport> candidates = plugin.transportsForEdge(from, to);
 		for (Transport transport : candidates)
 		{
-			if (climbText(transport) != null)
+			if (objectText(transport) != null)
 			{
 				return transport;
 			}
@@ -253,8 +258,19 @@ final class RouteDirections
 	 */
 	static String climbText(Transport transport)
 	{
+		String text = objectText(transport);
+		return text != null && text.startsWith("Climb") ? text : null;
+	}
+
+	/**
+	 * The menu-style instruction carried by an object transport's data ("Climb-up Staircase",
+	 * "Walk-across Log balance", "Open Door"), with the trailing object id stripped. Null when
+	 * the transport carries no object info.
+	 */
+	static String objectText(Transport transport)
+	{
 		String objectInfo = transport.getObjectInfo();
-		if (objectInfo == null || !objectInfo.startsWith("Climb"))
+		if (objectInfo == null || objectInfo.isEmpty())
 		{
 			return null;
 		}

@@ -852,10 +852,16 @@ public class PathTileOverlay extends Overlay
 			String text = transport.getDisplayInfo();
 			if (text == null || text.isEmpty())
 			{
-				// Stairs/ladders (and other climbs) have no display info, so the drawn line just ends
-				// at them with no cue. Fall back to their menu text ("Climb-up Staircase") so the
-				// player is told to use them.
-				text = RouteDirections.climbText(transport);
+				// Stairs, ladders, agility shortcuts and other object transports have no display
+				// info, so the drawn line just ends at them with no cue. Fall back to their menu
+				// text ("Climb-up Staircase", "Walk-across Log balance") so the player is told to
+				// use them. Doors are left to the closed-door hint below — an open door needs no
+				// label.
+				String objectText = RouteDirections.objectText(transport);
+				if (objectText != null && !objectText.startsWith("Open "))
+				{
+					text = objectText;
+				}
 			}
 			if (text == null || text.isEmpty())
 			{
