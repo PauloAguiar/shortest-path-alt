@@ -1055,18 +1055,6 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "pathStyle",
-		name = "Path style",
-		description = "Whether to display the path as tiles, a segmented line, or a line with direction arrows",
-		position = 71,
-		section = sectionDisplay
-	)
-	default TileStyle pathStyle()
-	{
-		return TileStyle.ARROW_LINE;
-	}
-
-	@ConfigItem(
 		keyName = "showTeleportPulse",
 		name = "Teleport pulse",
 		description = "Animate a pulsing highlight on the tile when the path tells you to use a teleport",
@@ -1136,6 +1124,20 @@ public interface ShortestPathConfig extends Config
 	default Color colourPath()
 	{
 		return new Color(0, 255, 255);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "colourPathBlocked",
+		name = "Blocked by door",
+		description = "Colour of the path beyond a door that has not been seen open yet:<br>" +
+			"the route assumes doors are passable, so this marks the part you can't walk yet",
+		position = 73,
+		section = sectionColours
+	)
+	default Color colourPathBlocked()
+	{
+		return new Color(224, 62, 62);
 	}
 
 	@Alpha

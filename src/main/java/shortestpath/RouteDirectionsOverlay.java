@@ -650,6 +650,15 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		return reachedIndex;
 	}
 
+	/**
+	 * The tracked progress along {@code route}, or 0 when that route isn't the one being
+	 * tracked (different selection, or nothing tracked yet).
+	 */
+	int reachedIndexFor(RouteOption route)
+	{
+		return route == progressRoute ? reachedIndex : 0;
+	}
+
 	double getLiveRemainingTicks()
 	{
 		return liveRemainingTicks;

@@ -116,25 +116,8 @@ public class PathMapOverlay extends Overlay
 			Color colour = plugin.getPathColor();
 			java.util.List<PathStep> path = plugin.getDisplayPath();
 			Point cursorPos = client.getMouseCanvasPosition();
-			if (TileStyle.ARROW_LINE.equals(plugin.pathStyle))
-			{
-				graphics.setColor(colour);
-				drawArrowPath(graphics, path);
-			}
-			else
-			{
-				for (int i = 0; i < path.size(); i++)
-				{
-					graphics.setColor(colour);
-					int point = path.get(i).getPackedPosition();
-					int lastPoint = (i > 0) ? path.get(i - 1).getPackedPosition() : point;
-					if (WorldPointUtil.distanceBetween(point, lastPoint) > 1)
-					{
-						drawOnMap(graphics, lastPoint, point, true, cursorPos);
-					}
-					drawOnMap(graphics, point, true, cursorPos);
-				}
-			}
+			graphics.setColor(colour);
+			drawArrowPath(graphics, path);
 			for (int target : plugin.getPathfinder().getTargets())
 			{
 				if (!path.isEmpty() && target != path.get(path.size() - 1).getPackedPosition())

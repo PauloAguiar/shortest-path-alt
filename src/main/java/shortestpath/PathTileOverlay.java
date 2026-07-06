@@ -183,71 +183,45 @@ public class PathTileOverlay extends Overlay
 
 		if (plugin.drawTiles && plugin.getPathfinder() != null && !plugin.getDisplayPath().isEmpty())
 		{
-			Color colorCalculating = new Color(
-				plugin.colourPathCalculating.getRed(),
-				plugin.colourPathCalculating.getGreen(),
-				plugin.colourPathCalculating.getBlue(),
-				plugin.colourPathCalculating.getAlpha() / 2);
 			Color pathColor = plugin.getPathColor();
 			Color color = new Color(
 				pathColor.getRed(),
 				pathColor.getGreen(),
 				pathColor.getBlue(),
 				pathColor.getAlpha() / 2);
+			Color blockedColor = new Color(
+				plugin.colourPathBlocked.getRed(),
+				plugin.colourPathBlocked.getGreen(),
+				plugin.colourPathBlocked.getBlue(),
+				plugin.colourPathBlocked.getAlpha() / 2);
 
 			List<PathStep> path = plugin.getDisplayPath();
+			// The path beyond the first door not yet seen open renders in the blocked colour: the
+			// route assumes doors are passable, this marks the part the player can't walk yet.
+			int blockedFrom = blockedFromIndex(path);
 			int counter = 0;
-			if (TileStyle.LINES.equals(plugin.pathStyle) || TileStyle.ARROW_LINE.equals(plugin.pathStyle))
+			// Repeating ripples flow along the line towards the destination: each edge's glow is
+			// its proximity to the nearest ripple centre in a train spaced WAVE_SPACING apart.
+			double waveOffset = ((System.currentTimeMillis() % 600_000L) / 1000.0 * WAVE_TILES_PER_SECOND)
+				% WAVE_SPACING;
+			for (int i = 1; i < path.size(); i++)
 			{
-				boolean arrows = TileStyle.ARROW_LINE.equals(plugin.pathStyle);
-				// Repeating ripples flow along the line towards the destination: each edge's glow is
-				// its proximity to the nearest ripple centre in a train spaced WAVE_SPACING apart.
-				double waveOffset = ((System.currentTimeMillis() % 600_000L) / 1000.0 * WAVE_TILES_PER_SECOND)
-					% WAVE_SPACING;
-				for (int i = 1; i < path.size(); i++)
+				PathStep currentStep = path.get(i - 1);
+				PathStep nextStep = path.get(i);
+				// Arrowheads only where they carry information: at direction changes and the end.
+				boolean head = i == path.size() - 1
+					|| directionChanges(currentStep.getPackedPosition(), nextStep.getPackedPosition(),
+						path.get(i + 1).getPackedPosition());
+				double phase = (i - waveOffset) % WAVE_SPACING;
+				if (phase < 0)
 				{
-					PathStep currentStep = path.get(i - 1);
-					PathStep nextStep = path.get(i);
-					// Arrowheads only where they carry information: at direction changes and the end.
-					boolean head = arrows && (i == path.size() - 1
-						|| directionChanges(currentStep.getPackedPosition(), nextStep.getPackedPosition(),
-							path.get(i + 1).getPackedPosition()));
-					double phase = (i - waveOffset) % WAVE_SPACING;
-					if (phase < 0)
-					{
-						phase += WAVE_SPACING;
-					}
-					double waveDistance = Math.min(phase, WAVE_SPACING - phase);
-					double glow = Math.max(0, 1 - waveDistance / WAVE_HALF_WIDTH);
-					drawLine(graphics, currentStep.getPackedPosition(), nextStep.getPackedPosition(), color,
-						1 + counter++, head, glow);
-					drawTransportInfo(graphics, currentStep, nextStep, path, i - 1);
+					phase += WAVE_SPACING;
 				}
-			}
-			else
-			{
-				boolean showTiles = TileStyle.TILES.equals(plugin.pathStyle);
-				for (int i = 0; i < path.size(); i++)
-				{
-					// Skip drawing tiles inside POH (no collision data, tiles render at wrong positions)
-					PathStep currentStep = path.get(i);
-					int pathPoint = currentStep.getPackedPosition();
-					int pathX = WorldPointUtil.unpackWorldX(pathPoint);
-					int pathY = WorldPointUtil.unpackWorldY(pathPoint);
-					if (!ShortestPathPlugin.isInsidePoh(pathX, pathY))
-					{
-						drawTile(graphics, pathPoint, color, counter, showTiles);
-					}
-					counter++;
-					drawTransportInfo(graphics, currentStep, plugin.nextPathStep(path, i), path, i);
-				}
-				for (int target : plugin.getPathfinder().getTargets())
-				{
-					if (!path.isEmpty() && target != path.get(path.size() - 1).getPackedPosition())
-					{
-						drawTile(graphics, target, colorCalculating, -1, showTiles);
-					}
-				}
+				double waveDistance = Math.min(phase, WAVE_SPACING - phase);
+				double glow = Math.max(0, 1 - waveDistance / WAVE_HALF_WIDTH);
+				drawLine(graphics, currentStep.getPackedPosition(), nextStep.getPackedPosition(),
+					i >= blockedFrom ? blockedColor : color, 1 + counter++, head, glow);
+				drawTransportInfo(graphics, currentStep, nextStep, path, i - 1);
 			}
 
 			// GPS decorations for the displayed route: a small waypoint dot where each section ends
@@ -265,6 +239,58 @@ public class PathTileOverlay extends Overlay
 		}
 
 		return null;
+	}
+
+	// Doors along the displayed path (registry matches per edge), cached per path reference so
+	// the scan runs once per (re)calculated path rather than every frame.
+	private List<PathStep> doorScanPath;
+	private int[] doorEdgeIndexes;
+	private ClosedDoors.Door[] doorEdgeDoors;
+
+	/**
+	 * The first path index the player cannot reach yet: everything at or beyond the first door
+	 * ahead of route progress that has not been SEEN open (closed in the scene, or too far away
+	 * to know — regular doors shut themselves, so unseen means assume closed). Doors verified
+	 * open pass the boundary on to the next door, and doors already crossed don't count.
+	 */
+	private int blockedFromIndex(List<PathStep> path)
+	{
+		if (path != doorScanPath)
+		{
+			doorScanPath = path;
+			List<Integer> indexes = new ArrayList<>();
+			List<ClosedDoors.Door> doors = new ArrayList<>();
+			for (int i = 1; i < path.size(); i++)
+			{
+				ClosedDoors.Door door = ClosedDoors.doorBetween(
+					path.get(i - 1).getPackedPosition(), path.get(i).getPackedPosition());
+				if (door != null)
+				{
+					indexes.add(i);
+					doors.add(door);
+				}
+			}
+			doorEdgeIndexes = new int[indexes.size()];
+			for (int i = 0; i < indexes.size(); i++)
+			{
+				doorEdgeIndexes[i] = indexes.get(i);
+			}
+			doorEdgeDoors = doors.toArray(new ClosedDoors.Door[0]);
+		}
+		int progress = plugin.displayedRouteProgress();
+		for (int k = 0; k < doorEdgeIndexes.length; k++)
+		{
+			if (doorEdgeIndexes[k] <= progress)
+			{
+				continue;
+			}
+			ClosedDoors.Door door = doorEdgeDoors[k];
+			if (SceneObjects.presence(client, door.packedPosition, door.id) != SceneObjects.Presence.ABSENT)
+			{
+				return doorEdgeIndexes[k];
+			}
+		}
+		return Integer.MAX_VALUE;
 	}
 
 	/**

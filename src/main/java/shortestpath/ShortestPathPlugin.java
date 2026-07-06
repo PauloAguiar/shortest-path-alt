@@ -140,6 +140,7 @@ public class ShortestPathPlugin extends Plugin
 	boolean showBankPickupInfo;
 	Color colourCollisionMap;
 	Color colourPath;
+	Color colourPathBlocked;
 	Color colourPathCalculating;
 	Color colourPathUnreachable;
 	Color colourText;
@@ -153,7 +154,6 @@ public class ShortestPathPlugin extends Plugin
 	int unreachableTargetDistance;
 	String unreachableText;
 	TileCounter showTileCounter;
-	TileStyle pathStyle;
 	@Inject
 	private Client client;
 	@Getter
@@ -527,6 +527,17 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		return false;
+	}
+
+	/**
+	 * Progress (path index) along the currently displayed route, from the directions overlay's
+	 * tracker — 0 when that route isn't the one being tracked.
+	 */
+	public int displayedRouteProgress()
+	{
+		RouteOption displayed = getDisplayedRoute();
+		return displayed == null || routeDirectionsOverlay == null
+			? 0 : routeDirectionsOverlay.reachedIndexFor(displayed);
 	}
 
 	public Color getPathColor()
@@ -1440,23 +1451,6 @@ public class ShortestPathPlugin extends Plugin
 		return defaultValue;
 	}
 
-	private TileStyle override(String configOverrideKey, TileStyle defaultValue)
-	{
-		if (!configOverride.isEmpty())
-		{
-			Object value = configOverride.get(configOverrideKey);
-			if (value instanceof String)
-			{
-				TileStyle tileStyle = TileStyle.fromType((String) value);
-				if (tileStyle != null)
-				{
-					return tileStyle;
-				}
-			}
-		}
-		return defaultValue;
-	}
-
 	private void cacheConfigValues()
 	{
 		drawCollisionMap = override("drawCollisionMap", config.drawCollisionMap());
@@ -1469,6 +1463,7 @@ public class ShortestPathPlugin extends Plugin
 
 		colourCollisionMap = override("colourCollisionMap", config.colourCollisionMap());
 		colourPath = override("colourPath", config.colourPath());
+		colourPathBlocked = override("colourPathBlocked", config.colourPathBlocked());
 		colourPathCalculating = override("colourPathCalculating", config.colourPathCalculating());
 		colourPathUnreachable = override("colourPathUnreachable", config.colourPathUnreachable());
 		colourText = override("colourText", config.colourText());
@@ -1480,7 +1475,6 @@ public class ShortestPathPlugin extends Plugin
 		unreachableText = config.unreachableText();
 
 		showTileCounter = override("showTileCounter", config.showTileCounter());
-		pathStyle = override("pathStyle", config.pathStyle());
 		showTeleportPulse = override("showTeleportPulse", config.showTeleportPulse());
 		showDirections = override("showDirections", config.showDirections());
 		arrivalAutoDismiss = override("arrivalAutoDismiss", config.arrivalAutoDismiss());
