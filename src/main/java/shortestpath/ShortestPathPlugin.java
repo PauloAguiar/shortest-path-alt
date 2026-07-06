@@ -1252,11 +1252,20 @@ public class ShortestPathPlugin extends Plugin
 			}
 		}
 		int edgeDistance = WorldPointUtil.distanceBetween2D(currentStep.getPackedPosition(), nextStep.getPackedPosition());
+		boolean samePlane = WorldPointUtil.unpackWorldPlane(currentStep.getPackedPosition())
+			== WorldPointUtil.unpackWorldPlane(nextStep.getPackedPosition());
 		stepTransports.removeIf(t ->
 		{
 			if (t.getOrigin() != Transport.UNDEFINED_ORIGIN || t.getType() == null)
 			{
 				return false; // keep local transports
+			}
+			// A same-plane adjacent edge is a plain walking step — the pathfinder never spends a
+			// teleport on a one-tile hop. Any anywhere-teleport matching it is the path merely
+			// walking across that teleport's landing tile, so it must not be hinted.
+			if (samePlane && edgeDistance <= 1)
+			{
+				return true;
 			}
 			TransportType sharedType = t.getType().sharesDestinationsWith();
 			if (sharedType == null)

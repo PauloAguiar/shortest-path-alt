@@ -75,6 +75,13 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private int speedSamplePosition = WorldPointUtil.UNDEFINED;
 	private double speedTilesPerSecond;
 
+	// Doors along the route (from the ClosedDoors registry), precomputed per route:
+	// doorPathIndexes[k] is the path index of the tile just beyond door k. The step list shows
+	// the next one ahead on the current leg while it is actually closed in the scene — walking
+	// legs assume doors are open, and a closed one is a real action the list otherwise hides.
+	private int[] doorPathIndexes;
+	private ClosedDoors.Door[] doorsOnPath;
+
 	// Arrival lingering: the plugin clears the target the moment the destination is reached, which
 	// would vanish the panel mid-glance. When the route disappears right after progress was at the
 	// end, an "Arrived!" panel lingers instead — until clicked or the timer runs out.
@@ -203,6 +210,15 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			}
 			lines.add(new Line(text, font, colour,
 				formatTime((int) Math.ceil(step.getTicks() * RouteDirections.SECONDS_PER_TICK)), colour));
+			if (i == current)
+			{
+				String doorText = nextClosedDoorText(step);
+				if (doorText != null)
+				{
+					lines.add(new Line("→ " + doorText, FONT_NEXT, NEXT, null, null));
+					shown++;
+				}
+			}
 		}
 		if (i < steps.size())
 		{
@@ -442,6 +458,59 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		return true;
 	}
 
+	private void scanDoors(List<shortestpath.pathfinder.PathStep> path)
+	{
+		List<Integer> indexes = new ArrayList<>();
+		List<ClosedDoors.Door> doors = new ArrayList<>();
+		for (int i = 1; i < path.size(); i++)
+		{
+			ClosedDoors.Door door = ClosedDoors.doorBetween(
+				path.get(i - 1).getPackedPosition(), path.get(i).getPackedPosition());
+			if (door != null)
+			{
+				indexes.add(i);
+				doors.add(door);
+			}
+		}
+		doorPathIndexes = new int[indexes.size()];
+		for (int i = 0; i < indexes.size(); i++)
+		{
+			doorPathIndexes[i] = indexes.get(i);
+		}
+		doorsOnPath = doors.toArray(new ClosedDoors.Door[0]);
+	}
+
+	/**
+	 * The next door ahead on the current leg that is still closed in the scene, as an "Open X"
+	 * instruction, or null (no door ahead on this leg, or it already stands open). Doors on
+	 * later legs surface when their leg becomes current.
+	 */
+	private String nextClosedDoorText(RouteDirections.Step current)
+	{
+		if (doorPathIndexes == null)
+		{
+			return null;
+		}
+		for (int k = 0; k < doorPathIndexes.length; k++)
+		{
+			int beyond = doorPathIndexes[k];
+			if (beyond <= reachedIndex)
+			{
+				continue;
+			}
+			if (beyond > current.getEndIndex())
+			{
+				return null;
+			}
+			ClosedDoors.Door door = doorsOnPath[k];
+			if (SceneObjects.objectPresent(client, door.packedPosition, door.id))
+			{
+				return "Open " + door.name;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Scores every same-plane path tile as (run time to it + remaining route time from it) and moves
 	 * the progress marker to the minimum. A small hysteresis window prefers a candidate near the
@@ -458,6 +527,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			reachedIndex = 0;
 			remainingTicksAt = buildRemainingTicks(steps, path.size());
 			liveRemainingTicks = remainingTicksAt.length > 0 ? remainingTicksAt[0] : 0;
+			scanDoors(path);
 		}
 		Player player = client.getLocalPlayer();
 		if (player == null || remainingTicksAt.length != path.size())
