@@ -111,6 +111,9 @@ final class RouteDirections
 			}
 
 			Transport climb = findClimb(plugin, from, to);
+			ClosedDoors.Door door = climb == null
+				? ClosedDoors.doorBetween(from.getPackedPosition(), to.getPackedPosition())
+				: null;
 			if (climb != null)
 			{
 				flushWalk(steps, walk, legStart, i - 1);
@@ -118,9 +121,19 @@ final class RouteDirections
 				steps.add(new Step(climbText(climb), i - 1, i, Math.max(1, climb.getDuration())));
 				legStart = i;
 			}
+			else if (door != null)
+			{
+				// A doorway splits the walking leg: walk up to the door, open it, walk on. Whether
+				// it will actually be closed is live scene state the world overlay handles; as a
+				// step it is a stable landmark either way.
+				flushWalk(steps, walk, legStart, i - 1);
+				walk = 0;
+				steps.add(new Step("Open " + door.name, i - 1, i, 1));
+				legStart = i;
+			}
 			else
 			{
-				// Plain walking, or a small connector (door, shortcut, dungeon entrance). Cap the
+				// Plain walking, or a small connector (shortcut, dungeon entrance). Cap the
 				// contribution so an unrecognised transport edge can never inflate the leg with its
 				// coordinate distance.
 				int distance = WorldPointUtil.distanceBetween(from.getPackedPosition(), to.getPackedPosition());
