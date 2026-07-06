@@ -1091,6 +1091,33 @@ public interface ShortestPathConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		keyName = "arrivalAutoDismiss",
+		name = "Auto-dismiss arrival",
+		description = "Automatically hide the \"Arrived!\" panel after a delay.<br>" +
+			"When off it stays until clicked",
+		position = 76,
+		section = sectionDisplay
+	)
+	default boolean arrivalAutoDismiss()
+	{
+		return false;
+	}
+
+	@Range(min = 1, max = 300)
+	@Units(Units.SECONDS)
+	@ConfigItem(
+		keyName = "arrivalDismissSeconds",
+		name = "Arrival dismiss delay",
+		description = "How long the \"Arrived!\" panel lingers before auto-dismissing (when enabled)",
+		position = 77,
+		section = sectionDisplay
+	)
+	default int arrivalDismissSeconds()
+	{
+		return 10;
+	}
+
 	@ConfigSection(
 		name = "Colours",
 		description = "Colours for the path map, minimap and scene tiles",

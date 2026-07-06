@@ -147,6 +147,8 @@ public class ShortestPathPlugin extends Plugin
 	Color colourTeleportPulse;
 	boolean showTeleportPulse;
 	boolean showDirections;
+	boolean arrivalAutoDismiss;
+	int arrivalDismissSeconds;
 	int tileCounterStep;
 	int unreachableTargetDistance;
 	String unreachableText;
@@ -1481,6 +1483,8 @@ public class ShortestPathPlugin extends Plugin
 		pathStyle = override("pathStyle", config.pathStyle());
 		showTeleportPulse = override("showTeleportPulse", config.showTeleportPulse());
 		showDirections = override("showDirections", config.showDirections());
+		arrivalAutoDismiss = override("arrivalAutoDismiss", config.arrivalAutoDismiss());
+		arrivalDismissSeconds = override("arrivalDismissSeconds", config.arrivalDismissSeconds());
 	}
 
 	private String simplify(String text)

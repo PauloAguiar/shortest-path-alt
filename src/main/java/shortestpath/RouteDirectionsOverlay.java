@@ -76,8 +76,8 @@ public class RouteDirectionsOverlay extends OverlayPanel
 
 	// Arrival lingering: the plugin clears the target the moment the destination is reached, which
 	// would vanish the panel mid-glance. When the route disappears right after progress was at the
-	// end, an "Arrived!" panel lingers instead — until clicked or the timer runs out.
-	private static final long ARRIVAL_LINGER_MILLIS = 10_000;
+	// end, an "Arrived!" panel lingers instead — until clicked, or until the configurable
+	// auto-dismiss timer runs out (when enabled).
 	private static final long NEAR_END_GRACE_MILLIS = 4_000;
 	private long nearEndAtMillis = Long.MIN_VALUE / 2;
 	private boolean arrivalShowing;
@@ -116,7 +116,8 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			if (!arrivalShowing && now - nearEndAtMillis < NEAR_END_GRACE_MILLIS)
 			{
 				arrivalShowing = true;
-				arrivalUntilMillis = now + ARRIVAL_LINGER_MILLIS;
+				arrivalUntilMillis = plugin.arrivalAutoDismiss
+					? now + plugin.arrivalDismissSeconds * 1000L : Long.MAX_VALUE;
 				arrivalElapsedMillis = Math.max(0, now - journeyStartMillis);
 			}
 			nearEndAtMillis = Long.MIN_VALUE / 2;
