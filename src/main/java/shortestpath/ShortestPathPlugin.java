@@ -1593,6 +1593,27 @@ public class ShortestPathPlugin extends Plugin
 		setTarget(target, false);
 	}
 
+	/**
+	 * Sets the GPS destination to a searched place/amenity (from the panel search box), recording
+	 * where it came from for the directions header. Runs on the client thread.
+	 */
+	public void setDestination(int packedPosition, String source)
+	{
+		clientThread.invokeLater(() ->
+		{
+			targetSource = source;
+			setTarget(packedPosition);
+		});
+	}
+
+	/** The player's packed world position, or {@link WorldPointUtil#UNDEFINED} when not logged in. */
+	public int getPlayerLocation()
+	{
+		Player local = client.getLocalPlayer();
+		return local == null ? WorldPointUtil.UNDEFINED
+			: WorldPointUtil.fromLocalInstance(client, local.getLocalLocation());
+	}
+
 	private void setTarget(int target, boolean append)
 	{
 		Set<Integer> targets = new HashSet<>();

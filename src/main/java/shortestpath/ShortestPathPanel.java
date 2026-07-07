@@ -90,6 +90,10 @@ public class ShortestPathPanel extends PluginPanel
 	private Map<TeleportMethod, MethodAvailability> renderedUnavailable;
 	private boolean renderedCatalogExpanded;
 	private final JPanel listPanel = new JPanel();
+	// "Go to" destination search: type a place or amenity ("Falador bank", "nearest altar")
+	// and pick a result to set it as the GPS destination.
+	private final IconTextField destinationSearch = new IconTextField();
+	private final JPanel destinationResults = new JPanel();
 	private JButton ownedButton;
 	private JButton allButton;
 	private JButton variantOneButton;
@@ -239,7 +243,12 @@ public class ShortestPathPanel extends PluginPanel
 			"Re-include all excluded methods", plugin::clearExclusions)));
 		titleRow.add(actions, BorderLayout.EAST);
 
-		header.add(titleRow, BorderLayout.NORTH);
+		JPanel headerTop = new JPanel();
+		headerTop.setLayout(new BoxLayout(headerTop, BoxLayout.Y_AXIS));
+		headerTop.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		headerTop.add(titleRow);
+		headerTop.add(buildDestinationSearch());
+		header.add(headerTop, BorderLayout.NORTH);
 
 		JPanel bottom = new JPanel(new BorderLayout());
 		bottom.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -606,7 +615,7 @@ public class ShortestPathPanel extends PluginPanel
 		row.add(text, BorderLayout.CENTER);
 
 		IconActionLabel exclude = new IconActionLabel(RouteIcons.EXCLUDE, RouteIcons.EXCLUDE_HOVER,
-			"Exclude \"" + method.label() + "\" from the next search", () -> plugin.excludeMethod(method));
+			"Exclude \"" + method.label() + "\" from teleportation methods", () -> plugin.excludeMethod(method));
 		JPanel actionWrap = new JPanel(new BorderLayout());
 		actionWrap.setOpaque(false);
 		actionWrap.add(control(exclude), BorderLayout.NORTH);
@@ -1046,6 +1055,172 @@ public class ShortestPathPanel extends PluginPanel
 		label.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
 		label.setHorizontalAlignment(SwingConstants.CENTER);
 		return label;
+	}
+
+	// ── "Go to" destination search ──────────────────────────────────────
+	private static final int MAX_DESTINATION_RESULTS = 12;
+
+	private JPanel buildDestinationSearch()
+	{
+		JPanel wrap = new JPanel(new BorderLayout());
+		wrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		wrap.setBorder(new EmptyBorder(8, 0, 0, 0));
+
+		destinationSearch.setIcon(IconTextField.Icon.SEARCH);
+		destinationSearch.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		destinationSearch.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
+		destinationSearch.setToolTipText("Set a destination by name: a place, or nearest bank / altar / "
+			+ "water source / fairy ring / furnace / anvil / range");
+		destinationSearch.getDocument().addDocumentListener(new DocumentListener()
+		{
+			@Override
+			public void insertUpdate(DocumentEvent e)
+			{
+				renderDestinationResults();
+			}
+
+			@Override
+			public void removeUpdate(DocumentEvent e)
+			{
+				renderDestinationResults();
+			}
+
+			@Override
+			public void changedUpdate(DocumentEvent e)
+			{
+				renderDestinationResults();
+			}
+		});
+
+		destinationResults.setLayout(new BoxLayout(destinationResults, BoxLayout.Y_AXIS));
+		destinationResults.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		destinationResults.setBorder(new EmptyBorder(4, 0, 0, 0));
+		destinationResults.setVisible(false);
+
+		wrap.add(destinationSearch, BorderLayout.NORTH);
+		wrap.add(destinationResults, BorderLayout.CENTER);
+		return wrap;
+	}
+
+	private void renderDestinationResults()
+	{
+		destinationResults.removeAll();
+		String query = destinationSearch.getText().trim().toLowerCase(java.util.Locale.ROOT);
+		// "nearest bank" is just "bank" ranked by distance, which is what we do anyway.
+		if (query.startsWith("nearest "))
+		{
+			query = query.substring("nearest ".length()).trim();
+		}
+		if (query.isEmpty())
+		{
+			destinationResults.setVisible(false);
+			destinationResults.revalidate();
+			destinationResults.repaint();
+			return;
+		}
+
+		final int player = plugin.getPlayerLocation();
+		List<Destinations.Entry> matches = new ArrayList<>();
+		for (Destinations.Entry entry : Destinations.all(plugin.getTransports()))
+		{
+			if (entry.name.toLowerCase(java.util.Locale.ROOT).contains(query)
+				|| entry.category.replace('_', ' ').contains(query))
+			{
+				matches.add(entry);
+			}
+		}
+		// Nearest first when the player is known; the resource is coarse (a booth per bank), so
+		// dedup by name keeps one representative — the closest — of each distinct destination.
+		if (player != WorldPointUtil.UNDEFINED)
+		{
+			matches.sort(Comparator.comparingInt(e -> destinationDistance(player, e.packedPosition)));
+		}
+		else
+		{
+			matches.sort(Comparator.comparing(e -> e.name));
+		}
+
+		Set<String> seenNames = new HashSet<>();
+		int shown = 0;
+		for (Destinations.Entry entry : matches)
+		{
+			if (!seenNames.add(entry.name))
+			{
+				continue;
+			}
+			destinationResults.add(destinationRow(entry, player));
+			if (++shown >= MAX_DESTINATION_RESULTS)
+			{
+				break;
+			}
+		}
+		if (shown == 0)
+		{
+			JLabel none = new JLabel("No matching destinations");
+			none.setForeground(Color.GRAY);
+			none.setFont(FontManager.getRunescapeSmallFont());
+			none.setBorder(new EmptyBorder(2, 4, 2, 0));
+			destinationResults.add(none);
+		}
+		destinationResults.setVisible(true);
+		destinationResults.revalidate();
+		destinationResults.repaint();
+	}
+
+	private static int destinationDistance(int player, int destination)
+	{
+		int distance = WorldPointUtil.distanceBetween(player, destination);
+		// Cross-plane (MAX_VALUE) sinks to the bottom but stays ordered by name via the stable sort.
+		return distance;
+	}
+
+	private JPanel destinationRow(Destinations.Entry entry, int player)
+	{
+		JPanel row = new JPanel(new BorderLayout(6, 0));
+		row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		row.setBorder(new EmptyBorder(3, 4, 3, 4));
+		row.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+		JLabel name = new JLabel(entry.name, categoryDot(entry.category), SwingConstants.LEADING);
+		name.setIconTextGap(6);
+		name.setForeground(Color.WHITE);
+		name.setFont(FontManager.getRunescapeSmallFont());
+		row.add(name, BorderLayout.CENTER);
+
+		if (player != WorldPointUtil.UNDEFINED)
+		{
+			int distance = WorldPointUtil.distanceBetween(player, entry.packedPosition);
+			if (distance != Integer.MAX_VALUE)
+			{
+				JLabel dist = new JLabel(distance + " tiles");
+				dist.setForeground(Color.GRAY);
+				dist.setFont(FontManager.getRunescapeSmallFont());
+				row.add(dist, BorderLayout.EAST);
+			}
+		}
+
+		row.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				plugin.setDestination(entry.packedPosition, "search");
+				destinationSearch.setText("");
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				row.setBackground(ColorScheme.DARK_GRAY_HOVER_COLOR);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+			}
+		});
+		return row;
 	}
 
 	private static Icon categoryDot(String category)

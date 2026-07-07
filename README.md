@@ -19,6 +19,9 @@ It grew out of a fork of [Shortest Path](https://github.com/Skretzo/shortest-pat
 - **Availability modes** — only what you carry, what you carry plus your bank (routes will detour to withdraw), everything you've unlocked, or every teleport in the game.
 - **Travel-method weights** — each method type carries a configurable "extra steps" weight, so a teleport is only used when it saves more walking than it costs in fuss; a separate weight prices bank detours.
 
+### Finding destinations
+- **Search box** — type a place or amenity in the GPS panel ("Falador bank", "nearest altar", "water source") and pick a result to set it as your destination. Results are ranked by distance, so "bank" surfaces the nearest banks first. Covers major places plus curated amenities (banks, altars, water sources, furnaces, anvils, cooking ranges, spinning wheels) and every fairy ring and spirit tree.
+
 ### Integration
 - Picks up destinations set by **Quest Helper** (and any other plugin using the `shortestpath` plugin-message API), and shows who set the current destination.
 - Right click a spot on the **world map**, or shift + right click a tile in the scene, to set a destination yourself.
