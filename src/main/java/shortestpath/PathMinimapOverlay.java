@@ -67,15 +67,22 @@ public class PathMinimapOverlay extends Overlay
 
 		java.util.List<PathStep> pathPoints = plugin.getDisplayPath();
 		Color pathColor = plugin.getPathColor();
-		for (PathStep point : pathPoints)
+		Color doneColor = new Color(0x80, 0x80, 0x80);
+		// Same tri-state colouring as the scene: grey for the covered stretch, blocked colour past
+		// the first un-crossed obstacle, normal in between.
+		int progress = plugin.displayedRouteProgress();
+		int blockedFrom = plugin.blockedFromIndex(pathPoints);
+		for (int i = 0; i < pathPoints.size(); i++)
 		{
-			int pathPoint = point.getPackedPosition();
+			int pathPoint = pathPoints.get(i).getPackedPosition();
 			if (WorldPointUtil.unpackWorldPlane(pathPoint) != client.getTopLevelWorldView().getPlane())
 			{
 				continue;
 			}
 
-			drawOnMinimap(graphics, pathPoint, pathColor);
+			Color color = i <= progress ? doneColor
+				: (i >= blockedFrom ? plugin.colourPathBlocked : pathColor);
+			drawOnMinimap(graphics, pathPoint, color);
 		}
 		for (int target : plugin.getPathfinder().getTargets())
 		{

@@ -540,6 +540,41 @@ public class ShortestPathPlugin extends Plugin
 			? 0 : routeDirectionsOverlay.reachedIndexFor(displayed);
 	}
 
+	/**
+	 * The first path index the player cannot click-walk to yet: at or beyond the first obstacle
+	 * ahead of route progress they must interact with to cross — an agility shortcut, stairs, or a
+	 * door not seen open. The path from there is drawn blocked (in the scene and minimap). Only
+	 * meaningful for a displayed route; the classic path has no step data and is never blocked.
+	 */
+	public int blockedFromIndex(List<PathStep> path)
+	{
+		RouteOption route = getDisplayedRoute();
+		if (route == null || route.getPath() != path)
+		{
+			return Integer.MAX_VALUE;
+		}
+		int progress = displayedRouteProgress();
+		for (RouteDirections.Step step : getRouteDirections(route))
+		{
+			if (!step.gatesWalk() || step.getEndIndex() <= progress)
+			{
+				continue;
+			}
+			if (step.isDoor())
+			{
+				ClosedDoors.Door door = ClosedDoors.doorBetween(
+					path.get(step.getStartIndex()).getPackedPosition(),
+					path.get(step.getEndIndex()).getPackedPosition());
+				if (door == null || ClosedDoors.state(client, door) == ClosedDoors.State.OPEN)
+				{
+					continue;
+				}
+			}
+			return step.getEndIndex();
+		}
+		return Integer.MAX_VALUE;
+	}
+
 	public Color getPathColor()
 	{
 		// A displayed alternative route is a static snapshot: colour it from its own endpoint,

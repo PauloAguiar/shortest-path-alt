@@ -45,6 +45,9 @@ public class PathTileOverlay extends Overlay
 	private final Client client;
 	private final ShortestPathPlugin plugin;
 	private int playerTileLabelOffset = 0;
+	// Door tiles already hinted this frame — a door can sit on two path edges (a diagonal
+	// approach then the straight crossing), which would otherwise stack "Open Door" twice.
+	private final Set<Integer> hintedDoorTiles = new HashSet<>();
 
 	@Inject
 	public PathTileOverlay(Client client, ShortestPathPlugin plugin)
@@ -170,6 +173,7 @@ public class PathTileOverlay extends Overlay
 	public Dimension render(Graphics2D graphics)
 	{
 		playerTileLabelOffset = 0;
+		hintedDoorTiles.clear();
 
 		if (plugin.drawTransports)
 		{
@@ -200,7 +204,7 @@ public class PathTileOverlay extends Overlay
 			List<PathStep> path = plugin.getDisplayPath();
 			// The path beyond the first door not yet seen open renders in the blocked colour: the
 			// route assumes doors are passable, this marks the part the player can't walk yet.
-			int blockedFrom = blockedFromIndex(path);
+			int blockedFrom = plugin.blockedFromIndex(path);
 			// Progress along the displayed route: edges up to here are done (greyed).
 			int progress = plugin.displayedRouteProgress();
 			int counter = 0;
@@ -249,46 +253,6 @@ public class PathTileOverlay extends Overlay
 		}
 
 		return null;
-	}
-
-	// Doors along the displayed path (registry matches per edge), cached per path reference so
-	/**
-	 * The first path index the player cannot click-walk to yet: everything at or beyond the first
-	 * obstacle ahead of route progress that the player must interact with to cross — an agility
-	 * shortcut, stairs/ladder, or a door that hasn't been seen open. Clicking past such an
-	 * obstacle would misroute, so the path beyond it is drawn blocked until the obstacle is used
-	 * (progress passes it) or, for a door, seen open. Only meaningful for a displayed route; the
-	 * classic path (no step data) is never blocked.
-	 */
-	private int blockedFromIndex(List<PathStep> path)
-	{
-		RouteOption route = plugin.getDisplayedRoute();
-		if (route == null || route.getPath() != path)
-		{
-			return Integer.MAX_VALUE;
-		}
-		int progress = plugin.displayedRouteProgress();
-		for (RouteDirections.Step step : plugin.getRouteDirections(route))
-		{
-			if (!step.gatesWalk() || step.getEndIndex() <= progress)
-			{
-				continue;
-			}
-			if (step.isDoor())
-			{
-				// A door only blocks while it hasn't been seen open.
-				ClosedDoors.Door door = ClosedDoors.doorBetween(
-					path.get(step.getStartIndex()).getPackedPosition(),
-					path.get(step.getEndIndex()).getPackedPosition());
-				if (door == null || ClosedDoors.state(client, door) == ClosedDoors.State.OPEN)
-				{
-					continue;
-				}
-			}
-			// The first un-crossed obstacle (shortcut) or still-closed door blocks the rest.
-			return step.getEndIndex();
-		}
-		return Integer.MAX_VALUE;
 	}
 
 	/**
@@ -825,7 +789,8 @@ public class PathTileOverlay extends Overlay
 		if (candidateTransports.isEmpty())
 		{
 			ClosedDoors.Door door = ClosedDoors.doorBetween(location, locationEnd);
-			if (door != null && ClosedDoors.state(client, door) == ClosedDoors.State.CLOSED)
+			if (door != null && ClosedDoors.state(client, door) == ClosedDoors.State.CLOSED
+				&& hintedDoorTiles.add(door.packedPosition))
 			{
 				playerTileLabelOffset = drawLabelAtPackedLocation(
 					graphics, door.packedPosition, "Open " + door.name, playerTileLabelOffset);
