@@ -26,6 +26,7 @@ import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -1062,65 +1063,100 @@ public class ShortestPathPanel extends PluginPanel
 
 	private JPanel buildDestinationSearch()
 	{
-		JPanel wrap = new JPanel(new BorderLayout());
+		JPanel wrap = new JPanel();
+		wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
 		wrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		wrap.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-		JLabel heading = new JLabel("Go to destination");
-		heading.setFont(FontManager.getRunescapeSmallFont());
-		heading.setForeground(Color.WHITE);
-		heading.setBorder(new EmptyBorder(0, 0, 4, 0));
-
-		JPanel field = new JPanel(new BorderLayout());
-		field.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		field.add(heading, BorderLayout.NORTH);
+		wrap.add(fullWidth(sectionLabel("Go to a place")));
 
 		destinationSearch.setIcon(IconTextField.Icon.SEARCH);
 		destinationSearch.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		destinationSearch.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
-		destinationSearch.setToolTipText("Set a destination by name: a place, or nearest bank / altar / "
-			+ "water source / fairy ring / furnace / anvil / range");
+		destinationSearch.setToolTipText("Search for a city or town by name");
+		destinationSearch.setMaximumSize(new Dimension(Integer.MAX_VALUE, destinationSearch.getPreferredSize().height));
+		destinationSearch.setAlignmentX(LEFT_ALIGNMENT);
 		destinationSearch.getDocument().addDocumentListener(new DocumentListener()
 		{
 			@Override
 			public void insertUpdate(DocumentEvent e)
 			{
-				renderDestinationResults();
+				renderCityResults();
 			}
 
 			@Override
 			public void removeUpdate(DocumentEvent e)
 			{
-				renderDestinationResults();
+				renderCityResults();
 			}
 
 			@Override
 			public void changedUpdate(DocumentEvent e)
 			{
-				renderDestinationResults();
+				renderCityResults();
 			}
 		});
+		wrap.add(destinationSearch);
 
 		destinationResults.setLayout(new BoxLayout(destinationResults, BoxLayout.Y_AXIS));
 		destinationResults.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		destinationResults.setBorder(new EmptyBorder(4, 0, 0, 0));
+		destinationResults.setAlignmentX(LEFT_ALIGNMENT);
 		destinationResults.setVisible(false);
+		wrap.add(destinationResults);
 
-		field.add(destinationSearch, BorderLayout.CENTER);
-		wrap.add(field, BorderLayout.NORTH);
-		wrap.add(destinationResults, BorderLayout.CENTER);
+		// "Nearest X": routes to the closest of an amenity type using available teleports.
+		wrap.add(fullWidth(sectionLabel("Nearest amenity")));
+		wrap.add(buildNearestGrid());
 		return wrap;
 	}
 
-	private void renderDestinationResults()
+	private JLabel sectionLabel(String text)
+	{
+		JLabel label = new JLabel(text);
+		label.setFont(FontManager.getRunescapeSmallFont());
+		label.setForeground(Color.WHITE);
+		label.setBorder(new EmptyBorder(6, 0, 4, 0));
+		return label;
+	}
+
+	private JComponent fullWidth(JComponent component)
+	{
+		component.setAlignmentX(LEFT_ALIGNMENT);
+		component.setMaximumSize(new Dimension(Integer.MAX_VALUE, component.getPreferredSize().height));
+		return component;
+	}
+
+	private JPanel buildNearestGrid()
+	{
+		JPanel grid = new JPanel(new GridLayout(0, 2, 4, 4));
+		grid.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		grid.setAlignmentX(LEFT_ALIGNMENT);
+		for (Destinations.NearestOption option : Destinations.NEAREST_OPTIONS)
+		{
+			JButton button = new JButton(option.label, RouteIcons.destinationIcon(option.id));
+			button.setFont(FontManager.getRunescapeSmallFont());
+			button.setForeground(Color.WHITE);
+			button.setFocusPainted(false);
+			button.setHorizontalAlignment(SwingConstants.LEFT);
+			button.setIconTextGap(5);
+			button.setToolTipText("Route to the nearest " + option.label.toLowerCase(java.util.Locale.ROOT)
+				+ " using the teleports you have available");
+			button.addActionListener(e ->
+			{
+				Set<Integer> tiles = Destinations.tilesForCategory(option.id, plugin.getTransports());
+				plugin.setNearestCategory(tiles, "nearest " + option.label.toLowerCase(java.util.Locale.ROOT));
+				destinationSearch.setText("");
+			});
+			grid.add(button);
+		}
+		return grid;
+	}
+
+	private void renderCityResults()
 	{
 		destinationResults.removeAll();
 		String query = destinationSearch.getText().trim().toLowerCase(java.util.Locale.ROOT);
-		// "nearest bank" is just "bank" ranked by distance, which is what we do anyway.
-		if (query.startsWith("nearest "))
-		{
-			query = query.substring("nearest ".length()).trim();
-		}
 		if (query.isEmpty())
 		{
 			destinationResults.setVisible(false);
@@ -1131,33 +1167,25 @@ public class ShortestPathPanel extends PluginPanel
 
 		final int player = plugin.getPlayerLocation();
 		List<Destinations.Entry> matches = new ArrayList<>();
-		for (Destinations.Entry entry : Destinations.all(plugin.getTransports()))
+		for (Destinations.Entry entry : Destinations.places())
 		{
-			if (entry.name.toLowerCase(java.util.Locale.ROOT).contains(query)
-				|| entry.category.replace('_', ' ').contains(query))
+			if (entry.name.toLowerCase(java.util.Locale.ROOT).contains(query))
 			{
 				matches.add(entry);
 			}
 		}
-		// Nearest first when the player is known; the resource is coarse (a booth per bank), so
-		// dedup by name keeps one representative — the closest — of each distinct destination.
 		if (player != WorldPointUtil.UNDEFINED)
 		{
-			matches.sort(Comparator.comparingInt(e -> destinationDistance(player, e.packedPosition)));
+			matches.sort(Comparator.comparingInt(e -> WorldPointUtil.distanceBetween(player, e.packedPosition)));
 		}
 		else
 		{
 			matches.sort(Comparator.comparing(e -> e.name));
 		}
 
-		Set<String> seenNames = new HashSet<>();
 		int shown = 0;
 		for (Destinations.Entry entry : matches)
 		{
-			if (!seenNames.add(entry.name))
-			{
-				continue;
-			}
 			destinationResults.add(destinationRow(entry, player));
 			if (++shown >= MAX_DESTINATION_RESULTS)
 			{
@@ -1166,7 +1194,7 @@ public class ShortestPathPanel extends PluginPanel
 		}
 		if (shown == 0)
 		{
-			JLabel none = new JLabel("No matching destinations");
+			JLabel none = new JLabel("No matching place");
 			none.setForeground(Color.GRAY);
 			none.setFont(FontManager.getRunescapeSmallFont());
 			none.setBorder(new EmptyBorder(2, 4, 2, 0));
@@ -1175,13 +1203,6 @@ public class ShortestPathPanel extends PluginPanel
 		destinationResults.setVisible(true);
 		destinationResults.revalidate();
 		destinationResults.repaint();
-	}
-
-	private static int destinationDistance(int player, int destination)
-	{
-		int distance = WorldPointUtil.distanceBetween(player, destination);
-		// Cross-plane (MAX_VALUE) sinks to the bottom but stays ordered by name via the stable sort.
-		return distance;
 	}
 
 	private JPanel destinationRow(Destinations.Entry entry, int player)

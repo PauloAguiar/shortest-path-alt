@@ -1635,6 +1635,25 @@ public class ShortestPathPlugin extends Plugin
 		});
 	}
 
+	/**
+	 * Routes to the NEAREST of an amenity category (bank, altar, ...): sets every tile of the
+	 * category as a target and generates the ranked alternative routes, so the shortest paths —
+	 * with the teleports currently available — surface first, whichever site they reach.
+	 */
+	public void setNearestCategory(Set<Integer> tiles, String source)
+	{
+		if (tiles == null || tiles.isEmpty())
+		{
+			return;
+		}
+		clientThread.invokeLater(() ->
+		{
+			targetSource = source;
+			setTargets(new HashSet<>(tiles), false);
+			recomputeAlternatives();
+		});
+	}
+
 	/** The player's packed world position, or {@link WorldPointUtil#UNDEFINED} when not logged in. */
 	public int getPlayerLocation()
 	{

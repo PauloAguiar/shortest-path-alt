@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import shortestpath.transport.Transport;
 import shortestpath.transport.TransportType;
@@ -33,6 +35,68 @@ public final class Destinations
 			this.name = name;
 			this.packedPosition = packedPosition;
 		}
+	}
+
+	/** A "nearest X" amenity category offered as a quick option: its id and its display label. */
+	public static final class NearestOption
+	{
+		public final String id;
+		public final String label;
+
+		NearestOption(String id, String label)
+		{
+			this.id = id;
+			this.label = label;
+		}
+	}
+
+	/**
+	 * The amenity categories offered as "nearest X" options, in display order. Picking one routes
+	 * to ALL tiles of that category at once — the alternative-routes engine then ranks the shortest
+	 * paths (using available teleports), which may lead to different sites.
+	 */
+	public static final List<NearestOption> NEAREST_OPTIONS = List.of(
+		new NearestOption("bank", "Bank"),
+		new NearestOption("altar", "Altar"),
+		new NearestOption("water", "Water source"),
+		new NearestOption("furnace", "Furnace"),
+		new NearestOption("anvil", "Anvil"),
+		new NearestOption("range", "Cooking range"),
+		new NearestOption("spinning_wheel", "Spinning wheel"),
+		new NearestOption("pottery", "Potter's wheel"),
+		new NearestOption("fairy_ring", "Fairy ring"),
+		new NearestOption("spirit_tree", "Spirit tree"));
+
+	/** The named places (cities/towns) — the only entries offered by the text search. */
+	public static List<Entry> places()
+	{
+		List<Entry> places = new ArrayList<>();
+		for (Entry entry : resourceEntries())
+		{
+			if ("place".equals(entry.category))
+			{
+				places.add(entry);
+			}
+		}
+		return places;
+	}
+
+	/**
+	 * Every tile of an amenity category — the target set for its "nearest X" search. Fairy rings
+	 * and spirit trees come from the live transport data (their world objects carry no cache name).
+	 */
+	public static Set<Integer> tilesForCategory(String category, PrimitiveIntHashMap<Transport[]> transports)
+	{
+		Set<Integer> tiles = new HashSet<>();
+		boolean transportBacked = "fairy_ring".equals(category) || "spirit_tree".equals(category);
+		for (Entry entry : transportBacked ? all(transports) : resourceEntries())
+		{
+			if (category.equals(entry.category))
+			{
+				tiles.add(entry.packedPosition);
+			}
+		}
+		return tiles;
 	}
 
 	private static volatile List<Entry> resourceEntries;
