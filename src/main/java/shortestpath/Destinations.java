@@ -57,6 +57,7 @@ public final class Destinations
 	 */
 	public static final List<NearestOption> NEAREST_OPTIONS = List.of(
 		new NearestOption("bank", "Bank"),
+		new NearestOption("bank_round_trip", "Bank (and back)"),
 		new NearestOption("altar", "Altar"),
 		new NearestOption("water", "Water source"),
 		new NearestOption("furnace", "Furnace"),
@@ -107,11 +108,13 @@ public final class Destinations
 	 */
 	public static Set<Integer> tilesForCategory(String category, PrimitiveIntHashMap<Transport[]> transports)
 	{
+		// The round-trip variant targets the same sites; the routing mode differs, not the tiles.
+		String effective = "bank_round_trip".equals(category) ? "bank" : category;
 		Set<Integer> tiles = new HashSet<>();
-		boolean transportBacked = "fairy_ring".equals(category) || "spirit_tree".equals(category);
+		boolean transportBacked = "fairy_ring".equals(effective) || "spirit_tree".equals(effective);
 		for (Entry entry : transportBacked ? all(transports) : resourceEntries())
 		{
-			if (category.equals(entry.category))
+			if (effective.equals(entry.category))
 			{
 				addWithPerimeter(tiles, entry.packedPosition);
 			}

@@ -427,6 +427,53 @@ public class AlternativeRoutesServiceTest
 	}
 
 	@Test
+	public void roundTripRoutesGoOutAndComeBack() throws Exception
+	{
+		// "Bank (and back)": every produced route must end where it started, be flagged as a round
+		// trip, and the list must be ranked by the combined out-and-back cost.
+		int varrockCentre = WorldPointUtil.packWorldPoint(3213, 3424, 0);
+		Set<Integer> bankTiles = shortestpath.Destinations.tilesForCategory("bank_round_trip", null);
+		assertTrue("Round-trip category must resolve to the bank tiles",
+			bankTiles.equals(shortestpath.Destinations.tilesForCategory("bank", null)) && !bankTiles.isEmpty());
+
+		PathfinderConfig planning = new TestPathfinderConfig(client, config).copyForPlanning();
+		planning.setPlanningMode(false);
+		planning.setConsiderBank(false);
+		AlternativeRoutesService service = new AlternativeRoutesService(clientThread, planning);
+
+		CountDownLatch done = new CountDownLatch(1);
+		AtomicReference<List<RouteOption>> finalRoutes = new AtomicReference<>(List.of());
+		service.generate(varrockCentre, bankTiles, Set.of(), AlternativeRoutesMode.OWNED_INVENTORY, 5, true,
+			(routes, catalog, unavailable, isDone) ->
+			{
+				if (isDone)
+				{
+					finalRoutes.set(routes);
+					done.countDown();
+				}
+			});
+		assertTrue("Generation should complete", done.await(120, TimeUnit.SECONDS));
+		service.shutdown();
+
+		List<RouteOption> routes = finalRoutes.get();
+		assertTrue("Round-trip routes should be found", !routes.isEmpty());
+		int previousCost = -1;
+		for (RouteOption route : routes)
+		{
+			assertTrue("Every route must be flagged as a round trip", route.isRoundTrip());
+			assertTrue("Every route must reach", route.isReached());
+			int first = route.getPath().get(0).getPackedPosition();
+			int last = route.getPath().get(route.getPath().size() - 1).getPackedPosition();
+			assertTrue("The route must start at the player", first == varrockCentre);
+			assertTrue("The route must END back at the player (round trip), ended "
+					+ WorldPointUtil.distanceBetween(last, varrockCentre) + " tiles away",
+				last == varrockCentre);
+			assertTrue("Routes must be ranked by combined cost", route.getTotalCost() >= previousCost);
+			previousCost = route.getTotalCost();
+		}
+	}
+
+	@Test
 	public void everythingModeSurfacesTeleportsWithoutOwnedItems() throws Exception
 	{
 		// No inventory at all: the Owned modes could only walk, but "Everything" bypasses possession,

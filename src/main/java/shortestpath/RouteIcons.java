@@ -104,6 +104,7 @@ final class RouteIcons
 	// A coherent, meaningful set (one glyph per category) replacing the old hash-coloured dots.
 	private static final ImageIcon DEST_PLACE = new ImageIcon(place());
 	private static final ImageIcon DEST_BANK = new ImageIcon(coinStack());
+	private static final ImageIcon DEST_BANK_ROUND_TRIP = new ImageIcon(coinStackReturn());
 	private static final ImageIcon DEST_ALTAR = new ImageIcon(altar());
 	private static final ImageIcon DEST_WATER = new ImageIcon(droplet());
 	private static final ImageIcon DEST_FURNACE = new ImageIcon(flame(new Color(0xF2, 0x8A, 0x3B)));
@@ -132,6 +133,7 @@ final class RouteIcons
 		{
 			case "place": return DEST_PLACE;
 			case "bank": return DEST_BANK;
+			case "bank_round_trip": return DEST_BANK_ROUND_TRIP;
 			case "altar": return DEST_ALTAR;
 			case "water": return DEST_WATER;
 			case "furnace": return DEST_FURNACE;
@@ -184,6 +186,34 @@ final class RouteIcons
 				g.setStroke(new BasicStroke(1f));
 				g.draw(new Ellipse2D.Double(3, y, 10, 3.6));
 			}
+		});
+	}
+
+	private static BufferedImage coinStackReturn()
+	{
+		final Color gold = new Color(0xF2, 0xC1, 0x4E);
+		final Color edge = new Color(0xB8, 0x8E, 0x2A);
+		final Color arrow = new Color(0x8A, 0xB4, 0xF8);
+		return render(g ->
+		{
+			// A smaller coin stack, bottom-left, with a return arrow looping over it.
+			for (double y : new double[]{11, 8.5})
+			{
+				g.setColor(gold);
+				g.fill(new Ellipse2D.Double(1.5, y, 8, 3.2));
+				g.setColor(edge);
+				g.setStroke(new BasicStroke(1f));
+				g.draw(new Ellipse2D.Double(1.5, y, 8, 3.2));
+			}
+			g.setColor(arrow);
+			g.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.draw(new Arc2D.Double(4.5, 1.5, 9.5, 9, -20, 220, Arc2D.OPEN));   // out-and-back loop
+			Path2D head = new Path2D.Double();                                  // arrowhead pointing home
+			head.moveTo(3.2, 7.4);
+			head.lineTo(6.6, 6.2);
+			head.lineTo(5.8, 9.6);
+			head.closePath();
+			g.fill(head);
 		});
 	}
 

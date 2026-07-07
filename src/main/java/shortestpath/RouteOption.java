@@ -63,10 +63,24 @@ public final class RouteOption
 	 * Tiles walked after the last method to the destination; the whole walk for walk-only routes.
 	 */
 	private final int trailingWalkSteps;
+	/**
+	 * Whether this route is a round trip (out to the destination and back to the start): its path
+	 * ends where it began, so progress tracking and the arrival check must anchor on route progress
+	 * instead of the globally nearest path tile — the start and end tiles coincide.
+	 */
+	private final boolean roundTrip;
 
 	public RouteOption(List<PathStep> path, List<TeleportMethod> methods, List<Integer> methodEdgeIndexes,
 		List<Integer> methodDurations, int totalCost, int rawCost, boolean reached, Set<TeleportMethod> bankMethods,
 		List<Integer> walkBeforeSteps, int trailingWalkSteps)
+	{
+		this(path, methods, methodEdgeIndexes, methodDurations, totalCost, rawCost, reached, bankMethods,
+			walkBeforeSteps, trailingWalkSteps, false);
+	}
+
+	public RouteOption(List<PathStep> path, List<TeleportMethod> methods, List<Integer> methodEdgeIndexes,
+		List<Integer> methodDurations, int totalCost, int rawCost, boolean reached, Set<TeleportMethod> bankMethods,
+		List<Integer> walkBeforeSteps, int trailingWalkSteps, boolean roundTrip)
 	{
 		this.path = path;
 		this.methods = methods;
@@ -78,6 +92,7 @@ public final class RouteOption
 		this.bankMethods = bankMethods;
 		this.walkBeforeSteps = walkBeforeSteps;
 		this.trailingWalkSteps = trailingWalkSteps;
+		this.roundTrip = roundTrip;
 	}
 
 	/**

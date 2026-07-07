@@ -107,6 +107,18 @@ public class AlternativeRoutesService
 	public void generate(int start, Set<Integer> targets, Set<TeleportMethod> userExclusions,
 		AlternativeRoutesMode mode, int maxRoutes, ResultListener listener)
 	{
+		generate(start, targets, userExclusions, mode, maxRoutes, false, listener);
+	}
+
+	/**
+	 * Round-trip variant: every produced route goes out to a target AND back to the start, ranked
+	 * by the combined cost — the best round-trip destination is not necessarily the nearest one-way
+	 * one (a marginally farther bank with a cheap way home, or bank-unlocked teleports for the
+	 * return, can win).
+	 */
+	public void generate(int start, Set<Integer> targets, Set<TeleportMethod> userExclusions,
+		AlternativeRoutesMode mode, int maxRoutes, boolean roundTrip, ResultListener listener)
+	{
 		final int gen = generation.incrementAndGet();
 		final Set<Integer> targetsCopy = new HashSet<>(targets);
 		final Set<TeleportMethod> userExclusionsCopy = new HashSet<>(userExclusions);
@@ -114,7 +126,7 @@ public class AlternativeRoutesService
 		{
 			try
 			{
-				computeRoutes(gen, start, targetsCopy, userExclusionsCopy, mode, maxRoutes, listener);
+				computeRoutes(gen, start, targetsCopy, userExclusionsCopy, mode, maxRoutes, roundTrip, listener);
 			}
 			catch (Exception e)
 			{
@@ -135,7 +147,8 @@ public class AlternativeRoutesService
 	}
 
 	private void computeRoutes(int gen, int start, Set<Integer> targets,
-		Set<TeleportMethod> userExclusions, AlternativeRoutesMode mode, int maxRoutes, ResultListener listener)
+		Set<TeleportMethod> userExclusions, AlternativeRoutesMode mode, int maxRoutes, boolean roundTrip,
+		ResultListener listener)
 	{
 		final int limit = Math.max(1, Math.min(maxRoutes, MAX_ROUTES_CAP));
 		final Set<Integer> ends = new HashSet<>(targets);
@@ -280,8 +293,12 @@ public class AlternativeRoutesService
 			}
 			routes.add(new RouteOption(path, methods, scan.methodEdges, scan.methodDurations,
 				result.getTotalCost(), scan.rawCost, reached, scan.bankGated, scan.walkBefore, scan.trailingWalk));
-			// Stream the route we just found so the panel shows it immediately.
-			emit(gen, listener, new ArrayList<>(routes), catalog, unavailable, false);
+			// Stream the route we just found so the panel shows it immediately. Round-trip mode
+			// streams only the merged results — one-way costs would reorder once returns are added.
+			if (!roundTrip)
+			{
+				emit(gen, listener, new ArrayList<>(routes), catalog, unavailable, false);
+			}
 
 			TeleportMethod primary = methods.isEmpty() ? null : methods.get(0);
 			if (primary == null)
@@ -301,8 +318,8 @@ public class AlternativeRoutesService
 		if (!hasWalkOnly && routes.size() < limit && !routes.isEmpty())
 		{
 			seedTeleportRoutes(gen, start, ends, userExclusions, mode, limit,
-				seedCandidates, routes, seenSignatures, catalog, unavailable, listener, bestRemaining,
-				capOf(walkFuture), field, timer);
+				seedCandidates, routes, seenSignatures, catalog, unavailable, roundTrip ? null : listener,
+				bestRemaining, capOf(walkFuture), field, timer);
 		}
 
 		// The walk-only route from the concurrent search is the last resort: append it when the
@@ -335,6 +352,16 @@ public class AlternativeRoutesService
 				break;
 			}
 		}
+
+		// Round-trip mode: give every one-way route its return leg and re-rank by combined cost.
+		if (roundTrip && !routes.isEmpty() && gen == generation.get())
+		{
+			List<RouteOption> merged = buildRoundTrips(gen, start, userExclusions, routes,
+				catalog, unavailable, listener, timer);
+			routes.clear();
+			routes.addAll(merged);
+		}
+
 		synchronized (timer)
 		{
 			// Retained for the GPS debug snapshot:
@@ -745,6 +772,76 @@ public class AlternativeRoutesService
 	}
 
 	/**
+	 * Extends each one-way route with its return leg: one search from the route's endpoint back to
+	 * the start — all sharing a single start-rooted distance field — the two paths concatenated and
+	 * re-scanned so methods, directions and progress work on the whole loop, then re-ranked by
+	 * combined cost. The best round-trip destination is not necessarily the nearest one-way one.
+	 * In bank mode the return leg naturally gets the banked-state teleports: the leg starts ON a
+	 * bank tile, so the engine flips into the banked state immediately.
+	 */
+	private List<RouteOption> buildRoundTrips(int gen, int start, Set<TeleportMethod> userExclusions,
+		List<RouteOption> oneWays, List<TeleportMethod> catalog,
+		Map<TeleportMethod, MethodAvailability> unavailable, ResultListener listener, GenTimer timer)
+	{
+		final Set<Integer> home = Set.of(start);
+		long fieldStart = System.nanoTime();
+		final DistanceField returnField = DistanceField.buildIfCompact(planningConfig, home);
+		timer.fieldNanos += System.nanoTime() - fieldStart;
+
+		// Return searches run with the base availability (user exclusions only): the chain left
+		// planningConfig with its last exclusion set.
+		long rebuildStart = System.nanoTime();
+		planningConfig.rebuildAvailabilityWithExclusions(userExclusions);
+		timer.rebuildNanos += System.nanoTime() - rebuildStart;
+		final SearchHeuristic heuristic = SearchHeuristic.buildWithField(planningConfig, returnField);
+
+		final List<RouteOption> merged = new ArrayList<>();
+		final Set<String> signatures = new HashSet<>();
+		for (RouteOption oneWay : oneWays)
+		{
+			if (gen != generation.get())
+			{
+				return merged;
+			}
+			final List<PathStep> outPath = oneWay.getPath();
+			final int endpoint = outPath.get(outPath.size() - 1).getPackedPosition();
+			long searchStart = System.nanoTime();
+			Pathfinder back = new Pathfinder(planningConfig, endpoint, home, null, Integer.MAX_VALUE, heuristic);
+			back.run();
+			long searchNanos = System.nanoTime() - searchStart;
+			synchronized (timer)
+			{
+				timer.searchNanos += searchNanos;
+				timer.searches++;
+			}
+			record(timer, "return:" + WorldPointUtil.unpackWorldX(endpoint)
+				+ "," + WorldPointUtil.unpackWorldY(endpoint), searchNanos, back, Integer.MAX_VALUE);
+
+			PathfinderResult result = back.getResult();
+			List<PathStep> returnPath = (result != null) ? result.getPathSteps() : List.of();
+			if (result == null || returnPath.isEmpty() || !result.isReached())
+			{
+				continue;
+			}
+			// Concatenate, dropping the duplicated endpoint tile, and re-derive the method scan
+			// over the whole loop so edges/durations/legs are consistent for the overlay.
+			List<PathStep> fullPath = new ArrayList<>(outPath);
+			fullPath.addAll(returnPath.subList(Math.min(1, returnPath.size()), returnPath.size()));
+			MethodScan scan = scanMethods(planningConfig, fullPath);
+			if (!signatures.add(signature(scan.methods)))
+			{
+				continue;
+			}
+			merged.add(new RouteOption(fullPath, scan.methods, scan.methodEdges, scan.methodDurations,
+				oneWay.getTotalCost() + result.getTotalCost(), scan.rawCost, oneWay.isReached(),
+				scan.bankGated, scan.walkBefore, scan.trailingWalk, true));
+			merged.sort(Comparator.comparingInt(RouteOption::getTotalCost));
+			emit(gen, listener, new ArrayList<>(merged), catalog, unavailable, false);
+		}
+		return merged;
+	}
+
+	/**
 	 * The current search cap from the walk search, polled without blocking: MAX_VALUE (uncapped)
 	 * until the walk finishes — so the chain's first searches never wait on it — then the walk cost.
 	 */
@@ -843,7 +940,9 @@ public class AlternativeRoutesService
 	private void emit(int gen, ResultListener listener, List<RouteOption> routes,
 		List<TeleportMethod> catalog, Map<TeleportMethod, MethodAvailability> unavailable, boolean done)
 	{
-		if (gen == generation.get())
+		// A null listener means streaming is suppressed for this phase (round-trip mode streams
+		// only merged results).
+		if (listener != null && gen == generation.get())
 		{
 			listener.onUpdate(routes, catalog, unavailable, done);
 		}

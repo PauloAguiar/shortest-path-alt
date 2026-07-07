@@ -1535,7 +1535,9 @@ public class ShortestPathPanel extends PluginPanel
 			item.addActionListener(e ->
 			{
 				Set<Integer> tiles = Destinations.tilesForCategory(option.id, plugin.getTransports());
-				plugin.setNearestCategory(tiles, "nearest " + option.label.toLowerCase(java.util.Locale.ROOT));
+				boolean roundTrip = "bank_round_trip".equals(option.id);
+				plugin.setNearestCategory(tiles,
+					"nearest " + option.label.toLowerCase(java.util.Locale.ROOT), roundTrip);
 				destinationSearch.setText("");
 			});
 			menu.add(item);

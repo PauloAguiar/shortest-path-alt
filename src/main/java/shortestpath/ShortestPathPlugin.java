@@ -273,6 +273,10 @@ public class ShortestPathPlugin extends Plugin
 	// expansion is centred on (the searched bank booth), where the pin belongs. UNDEFINED = default
 	// behaviour (pin on a single target, none for multi-target sets).
 	private int markerTarget = WorldPointUtil.UNDEFINED;
+	// Whether the current destination is a round trip (out and back, e.g. "nearest bank (and
+	// back)"). Set by setNearestCategory after setTargets (which resets it), carried into every
+	// generation for this destination (refresh, show-more), cleared when a new target is set.
+	private volatile boolean altRoundTrip = false;
 	private final KeyListener clearPathKeylistener = new KeyListener()
 	{
 		@Override
@@ -983,7 +987,12 @@ public class ShortestPathPlugin extends Plugin
 	 */
 	private int pathTilesRemaining(int currentLocation, int limit)
 	{
-		List<PathStep> path = pathfinder.getPath();
+		// Round-trip routes end where they start, so the arrival scan must anchor on the route's
+		// earned progress: an unanchored nearest-tile scan would either match the start copy
+		// forever (arrival never fires) or the end copy immediately (instant false arrival).
+		RouteOption displayed = getDisplayedRoute();
+		boolean roundTrip = displayed != null && displayed.isRoundTrip();
+		List<PathStep> path = roundTrip ? displayed.getPath() : pathfinder.getPath();
 		if (path == null || path.isEmpty())
 		{
 			return Integer.MAX_VALUE;
@@ -992,13 +1001,14 @@ public class ShortestPathPlugin extends Plugin
 		// unreachable one. "Reached" here allows the end to be near the target rather than exactly
 		// on it (the same tolerance the plugin uses elsewhere) — object destinations like a bank
 		// booth or altar from the search aren't walkable, so the path ends on the tile beside them.
-		if (isPathUnreachable())
+		if (!roundTrip && isPathUnreachable())
 		{
 			return Integer.MAX_VALUE;
 		}
+		int scanFrom = roundTrip ? Math.max(0, displayedRouteProgress() - 8) : 0;
 		int best = -1;
 		int bestDistance = Integer.MAX_VALUE;
-		for (int i = 0; i < path.size(); i++)
+		for (int i = scanFrom; i < path.size(); i++)
 		{
 			int distance = WorldPointUtil.distanceBetween(path.get(i).getPackedPosition(), currentLocation);
 			if (distance < bestDistance)
@@ -1707,6 +1717,16 @@ public class ShortestPathPlugin extends Plugin
 	 */
 	public void setNearestCategory(Set<Integer> tiles, String source)
 	{
+		setNearestCategory(tiles, source, false);
+	}
+
+	/**
+	 * The round-trip variant additionally routes BACK to the current position: every produced
+	 * route goes out to a site and home again, ranked by the combined cost — the best round-trip
+	 * bank is not necessarily the nearest one-way bank.
+	 */
+	public void setNearestCategory(Set<Integer> tiles, String source, boolean roundTrip)
+	{
 		if (tiles == null || tiles.isEmpty())
 		{
 			return;
@@ -1715,6 +1735,8 @@ public class ShortestPathPlugin extends Plugin
 		{
 			targetSource = source;
 			setTargets(new HashSet<>(tiles), false);
+			// After setTargets: it resets the round-trip flag for ordinary destinations.
+			altRoundTrip = roundTrip;
 			recomputeAlternatives();
 		});
 	}
@@ -1749,6 +1771,8 @@ public class ShortestPathPlugin extends Plugin
 
 	private void setTargets(Set<Integer> targets, boolean append)
 	{
+		// Ordinary destinations are one-way; the round-trip entry point re-sets this after.
+		altRoundTrip = false;
 		if (targets == null || targets.isEmpty())
 		{
 			synchronized (pathfinderMutex)
@@ -2418,7 +2442,8 @@ public class ShortestPathPlugin extends Plugin
 			SwingUtilities.invokeLater(() ->
 				altPanel.displayRoutes(List.of(), catalog, unavailable, getUserExclusions(), true, hasTarget));
 		}
-		altRoutesService.generate(start, ends, userExclusions, routesMode, routeLimit, this::onAlternativeRoutesUpdate);
+		altRoutesService.generate(start, ends, userExclusions, routesMode, routeLimit, altRoundTrip,
+			this::onAlternativeRoutesUpdate);
 	}
 
 	private void onAlternativeRoutesUpdate(List<RouteOption> routes, List<TeleportMethod> catalog,
