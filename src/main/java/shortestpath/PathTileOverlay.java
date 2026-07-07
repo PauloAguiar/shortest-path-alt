@@ -285,7 +285,7 @@ public class PathTileOverlay extends Overlay
 				continue;
 			}
 			ClosedDoors.Door door = doorEdgeDoors[k];
-			if (SceneObjects.presence(client, door.packedPosition, door.id) != SceneObjects.Presence.ABSENT)
+			if (ClosedDoors.state(client, door) != ClosedDoors.State.OPEN)
 			{
 				return doorEdgeIndexes[k];
 			}
@@ -811,7 +811,7 @@ public class PathTileOverlay extends Overlay
 		if (candidateTransports.isEmpty())
 		{
 			ClosedDoors.Door door = ClosedDoors.doorBetween(location, locationEnd);
-			if (door != null && objectPresent(door.packedPosition, door.id))
+			if (door != null && ClosedDoors.state(client, door) == ClosedDoors.State.CLOSED)
 			{
 				playerTileLabelOffset = drawLabelAtPackedLocation(
 					graphics, door.packedPosition, "Open " + door.name, playerTileLabelOffset);

@@ -452,8 +452,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		ClosedDoors.Door door = ClosedDoors.doorBetween(
 			path.get(step.getStartIndex()).getPackedPosition(),
 			path.get(step.getEndIndex()).getPackedPosition());
-		if (door != null
-			&& SceneObjects.presence(client, door.packedPosition, door.id) == SceneObjects.Presence.ABSENT)
+		if (door != null && ClosedDoors.state(client, door) == ClosedDoors.State.OPEN)
 		{
 			return "Go through " + door.name;
 		}

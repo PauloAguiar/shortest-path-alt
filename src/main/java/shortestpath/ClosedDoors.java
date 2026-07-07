@@ -42,15 +42,42 @@ public class ClosedDoors
 		public final int packedPosition;
 		public final int type;
 		public final int orientation;
+		// True when the map data places this door in its OPEN state (its id has "Close").
+		// Then presence of the id means passable, absence means someone closed it — the
+		// inverse of the usual closed-variant test — and the recorded orientation is the
+		// swung-open position, not the doorway edge.
+		public final boolean placedOpen;
 
-		Door(int id, String name, int packedPosition, int type, int orientation)
+		Door(int id, String name, int packedPosition, int type, int orientation, boolean placedOpen)
 		{
 			this.id = id;
 			this.name = name;
 			this.packedPosition = packedPosition;
 			this.type = type;
 			this.orientation = orientation;
+			this.placedOpen = placedOpen;
 		}
+	}
+
+	/**
+	 * Live scene state of a door, from whichever variant the map places there.
+	 */
+	public enum State
+	{
+		OPEN,
+		CLOSED,
+		UNKNOWN
+	}
+
+	public static State state(net.runelite.api.Client client, Door door)
+	{
+		SceneObjects.Presence presence = SceneObjects.presence(client, door.packedPosition, door.id);
+		if (presence == SceneObjects.Presence.OUT_OF_SCENE)
+		{
+			return State.UNKNOWN;
+		}
+		boolean present = presence == SceneObjects.Presence.PRESENT;
+		return door.placedOpen == present ? State.OPEN : State.CLOSED;
 	}
 
 	private static volatile Map<Integer, List<Door>> doorsByTile;
@@ -124,8 +151,9 @@ public class ClosedDoors
 		for (Door door : doors)
 		{
 			// Straight walls sit on one edge; anything else (diagonal walls, corner pieces)
-			// blocks its whole tile, so every edge of the tile matches.
-			if (door.type != TYPE_WALL_STRAIGHT || door.orientation == facing)
+			// blocks its whole tile, so every edge of the tile matches. Open-placed doors
+			// match loosely too — their recorded orientation is the swung-open position.
+			if (door.type != TYPE_WALL_STRAIGHT || door.placedOpen || door.orientation == facing)
 			{
 				return door;
 			}
@@ -189,7 +217,7 @@ public class ClosedDoors
 			{
 				continue;
 			}
-			// id, name, x, y, plane, type, orientation, sizeX, sizeY
+			// id, name, x, y, plane, type, orientation, sizeX, sizeY, state
 			String[] fields = line.split("\t");
 			if (fields.length < 7)
 			{
@@ -206,8 +234,9 @@ public class ClosedDoors
 					Integer.parseInt(fields[4]));
 				int type = Integer.parseInt(fields[5]);
 				int orientation = Integer.parseInt(fields[6]);
+				boolean placedOpen = fields.length > 9 && "open".equals(fields[9]);
 				result.computeIfAbsent(packed, k -> new ArrayList<>(1))
-					.add(new Door(id, name, packed, type, orientation));
+					.add(new Door(id, name, packed, type, orientation, placedOpen));
 			}
 			catch (NumberFormatException e)
 			{

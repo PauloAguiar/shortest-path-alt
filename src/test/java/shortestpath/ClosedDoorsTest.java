@@ -60,6 +60,20 @@ public class ClosedDoorsTest
 		Assert.assertNull(ClosedDoors.doorBetween(pack(3108, 3353, 0), pack(3108, 3353, 0)));
 	}
 
+	// Canifis house door: the map places it OPEN (id 24368, action "Close") at (3480,3494),
+	// so it matches loosely on any edge of its tile and carries the placedOpen flag for the
+	// inverted presence test.
+	@Test
+	public void openPlacedDoorMatchesLooselyAndCarriesTheFlag()
+	{
+		ClosedDoors.Door door = ClosedDoors.doorBetween(pack(3480, 3494, 0), pack(3480, 3495, 0));
+		Assert.assertNotNull(door);
+		Assert.assertEquals(24368, door.id);
+		Assert.assertTrue(door.placedOpen);
+		// Loose: the other axis matches too.
+		Assert.assertNotNull(ClosedDoors.doorBetween(pack(3479, 3494, 0), pack(3480, 3494, 0)));
+	}
+
 	@Test
 	public void diagonalStepThroughADoorCornerMatches()
 	{
