@@ -1732,7 +1732,17 @@ public class ShortestPathPlugin extends Plugin
 		Set<Integer> targets = new HashSet<>();
 		if (target != WorldPointUtil.UNDEFINED)
 		{
-			targets.add(target);
+			// A pin on an unwalkable tile (furniture, a fence, an NPC's tile from Quest Helper) can
+			// never be settled by the search — it would explore the entire map and fall back to a
+			// closest-tile path (captured in-game: 11 exhausted searches, 8.2s). Target the nearest
+			// walkable ring instead; walkable pins stay exact, and the map pin stays on the tile.
+			Set<Integer> walkable = Destinations.walkableTargets(
+				pathfinderConfig != null ? pathfinderConfig.getMap() : null, target);
+			if (walkable.size() > 1)
+			{
+				markerTarget = target;
+			}
+			targets.addAll(walkable);
 		}
 		setTargets(targets, append);
 	}

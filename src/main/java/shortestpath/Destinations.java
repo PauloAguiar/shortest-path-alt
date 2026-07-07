@@ -139,6 +139,52 @@ public final class Destinations
 		}
 	}
 
+	/**
+	 * The target set for an arbitrary single tile (a map pin, a Quest Helper NPC tile): the tile
+	 * itself when it's walkable — exact semantics preserved — otherwise the tile plus the nearest
+	 * ring of walkable tiles around it (radius up to {@code MAX_WALKABLE_RING}). A pin dropped on a
+	 * fence, a piece of furniture or an NPC's own tile can never be settled by the search, which
+	 * otherwise explores the entire map and falls back to a closest-tile path (the same pathology
+	 * the amenity perimeter fixes). If no walkable tile exists within range (a pin mid-pond), the
+	 * original tile is returned alone and the search keeps the old closest-tile behaviour.
+	 */
+	public static Set<Integer> walkableTargets(shortestpath.pathfinder.CollisionMap map, int packed)
+	{
+		final int x = WorldPointUtil.unpackWorldX(packed);
+		final int y = WorldPointUtil.unpackWorldY(packed);
+		final int plane = WorldPointUtil.unpackWorldPlane(packed);
+		if (map == null || !map.isBlocked(x, y, plane))
+		{
+			return Set.of(packed);
+		}
+		for (int radius = 1; radius <= MAX_WALKABLE_RING; radius++)
+		{
+			Set<Integer> ring = new HashSet<>();
+			for (int dx = -radius; dx <= radius; dx++)
+			{
+				for (int dy = -radius; dy <= radius; dy++)
+				{
+					if (Math.max(Math.abs(dx), Math.abs(dy)) != radius)
+					{
+						continue;
+					}
+					if (!map.isBlocked(x + dx, y + dy, plane))
+					{
+						ring.add(WorldPointUtil.packWorldPoint(x + dx, y + dy, plane));
+					}
+				}
+			}
+			if (!ring.isEmpty())
+			{
+				ring.add(packed);
+				return ring;
+			}
+		}
+		return Set.of(packed);
+	}
+
+	private static final int MAX_WALKABLE_RING = 5;
+
 	private static volatile List<Entry> resourceEntries;
 
 	private Destinations()
