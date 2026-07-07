@@ -895,17 +895,11 @@ public class ShortestPathPlugin extends Plugin
 		{
 			return Integer.MAX_VALUE;
 		}
-		int end = path.get(path.size() - 1).getPackedPosition();
-		boolean reachesTarget = false;
-		for (int target : pathfinder.getTargets())
-		{
-			if (target == end)
-			{
-				reachesTarget = true;
-				break;
-			}
-		}
-		if (!reachesTarget)
+		// The path must actually reach the destination, not merely get close to a truly
+		// unreachable one. "Reached" here allows the end to be near the target rather than exactly
+		// on it (the same tolerance the plugin uses elsewhere) — object destinations like a bank
+		// booth or altar from the search aren't walkable, so the path ends on the tile beside them.
+		if (isPathUnreachable())
 		{
 			return Integer.MAX_VALUE;
 		}
