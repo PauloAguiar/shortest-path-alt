@@ -24,12 +24,15 @@ import java.util.Set;
 import java.util.TreeMap;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
@@ -112,8 +115,39 @@ public class ShortestPathPanel extends PluginPanel
 	// Whether the whole "Teleport methods" catalog section (shown at the top) is expanded. Collapsed
 	// by default so the routes stay the focus; the user opens it to browse/toggle methods.
 	private boolean catalogExpanded = false;
-	// Filter toggle (funnel next to the search): show only the currently-disabled (excluded) methods.
-	private boolean showOnlyDisabled = false;
+	// Funnel filter next to the catalog search: narrow the list to disabled methods or to a single
+	// kind of unavailability (missing item/level/quest, in bank, not unlocked).
+	private CatalogFilter catalogFilter = CatalogFilter.ALL;
+
+	/** The funnel-filter options for the teleport-methods catalog. */
+	private enum CatalogFilter
+	{
+		ALL("Show all methods", null, false),
+		DISABLED("Disabled (excluded)", null, true),
+		MISSING_ITEM("Missing an item", MethodAvailability.MISSING_ITEM, false),
+		IN_BANK("Item in the bank", MethodAvailability.IN_BANK, false),
+		MISSING_LEVEL("Missing a skill level", MethodAvailability.MISSING_LEVEL, false),
+		MISSING_QUEST("Missing a quest", MethodAvailability.MISSING_QUEST, false),
+		LOCKED("Not unlocked yet", MethodAvailability.LOCKED, false);
+
+		private final String label;
+		// The availability kind this filter keeps (null when it doesn't filter by availability).
+		private final MethodAvailability availability;
+		// True for the "disabled" filter, which keeps user-excluded methods regardless of availability.
+		private final boolean disabled;
+
+		CatalogFilter(String label, MethodAvailability availability, boolean disabled)
+		{
+			this.label = label;
+			this.availability = availability;
+			this.disabled = disabled;
+		}
+
+		boolean isActive()
+		{
+			return this != ALL;
+		}
+	}
 
 	public ShortestPathPanel(ShortestPathPlugin plugin)
 	{
@@ -618,6 +652,59 @@ public class ShortestPathPanel extends PluginPanel
 		return row;
 	}
 
+	/** The funnel icon that opens the catalog filter menu; orange while a filter is active. */
+	private JLabel buildCatalogFilter()
+	{
+		boolean active = catalogFilter.isActive();
+		JLabel funnel = new JLabel(active ? RouteIcons.FILTER_ACTIVE : RouteIcons.FILTER);
+		funnel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		funnel.setToolTipText("Filter: " + catalogFilter.label + " (click to change)");
+		funnel.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				showCatalogFilterMenu(funnel);
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				funnel.setIcon(active ? RouteIcons.FILTER_ACTIVE_HOVER : RouteIcons.FILTER_HOVER);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				funnel.setIcon(active ? RouteIcons.FILTER_ACTIVE : RouteIcons.FILTER);
+			}
+		});
+		return funnel;
+	}
+
+	private void showCatalogFilterMenu(JComponent anchor)
+	{
+		JPopupMenu menu = new JPopupMenu();
+		menu.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		menu.setBorder(BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR));
+		ButtonGroup group = new ButtonGroup();
+		for (CatalogFilter option : CatalogFilter.values())
+		{
+			JRadioButtonMenuItem item = new JRadioButtonMenuItem(option.label, option == catalogFilter);
+			item.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+			item.setForeground(Color.WHITE);
+			item.setFont(FontManager.getRunescapeSmallFont());
+			item.addActionListener(e ->
+			{
+				catalogFilter = option;
+				refreshCatalog();
+			});
+			group.add(item);
+			menu.add(item);
+		}
+		menu.show(anchor, 0, anchor.getHeight());
+	}
+
 	/** Rebuilds just the teleport-methods catalog slot (used on collapse/expand and dirty renders). */
 	private void refreshCatalog()
 	{
@@ -719,23 +806,13 @@ public class ShortestPathPanel extends PluginPanel
 		}
 
 		// Filter box (persistent component, see the field comment) — only mounted while expanded —
-		// with a funnel toggle to show only the currently-disabled methods.
+		// with a funnel that opens a menu to narrow by disabled/unavailability kind.
 		catalogSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
 		catalogSearch.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-		IconActionLabel filterToggle = new IconActionLabel(
-			showOnlyDisabled ? RouteIcons.FILTER_ACTIVE : RouteIcons.FILTER,
-			showOnlyDisabled ? RouteIcons.FILTER_ACTIVE_HOVER : RouteIcons.FILTER_HOVER,
-			showOnlyDisabled ? "Showing only disabled methods — click to show all"
-				: "Show only the disabled (excluded) methods",
-			() ->
-			{
-				showOnlyDisabled = !showOnlyDisabled;
-				refreshCatalog();
-			});
 		JPanel filterWrap = new JPanel(new BorderLayout());
 		filterWrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		filterWrap.setBorder(new EmptyBorder(0, 4, 0, 2));
-		filterWrap.add(control(filterToggle), BorderLayout.CENTER);
+		filterWrap.add(control(buildCatalogFilter()), BorderLayout.CENTER);
 		JPanel searchWrap = new JPanel(new BorderLayout());
 		searchWrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		searchWrap.setBorder(new EmptyBorder(0, 0, 4, 0));
@@ -788,8 +865,12 @@ public class ShortestPathPanel extends PluginPanel
 		Map<String, List<TeleportMethod>> grouped = new TreeMap<>();
 		for (TeleportMethod method : cachedCatalog)
 		{
-			// The funnel filter narrows to currently-disabled methods.
-			if (showOnlyDisabled && !cachedExclusions.contains(method))
+			// The funnel filter narrows to disabled methods or a single unavailability kind.
+			if (catalogFilter.disabled && !cachedExclusions.contains(method))
+			{
+				continue;
+			}
+			if (catalogFilter.availability != null && cachedUnavailable.get(method) != catalogFilter.availability)
 			{
 				continue;
 			}
@@ -808,7 +889,7 @@ public class ShortestPathPanel extends PluginPanel
 
 		if (grouped.isEmpty())
 		{
-			String message = showOnlyDisabled ? "No disabled methods"
+			String message = catalogFilter.isActive() ? "No methods — " + catalogFilter.label.toLowerCase()
 				: "No methods match \"" + escapeHtml(filter) + "\"";
 			JLabel none = wrappedLabel("<i>" + message + "</i>");
 			none.setBorder(new EmptyBorder(2, 4, 2, 0));
@@ -819,8 +900,8 @@ public class ShortestPathPanel extends PluginPanel
 		{
 			String category = entry.getKey();
 			List<TeleportMethod> items = entry.getValue();
-			// A filter or the disabled-only funnel force categories open so the matches are visible.
-			boolean expanded = filtering || showOnlyDisabled || expandedCategories.contains(category);
+			// A text filter or an active funnel filter force categories open so the matches show.
+			boolean expanded = filtering || catalogFilter.isActive() || expandedCategories.contains(category);
 			rows.add(buildCategoryHeader(category, items, expanded));
 			if (expanded)
 			{
