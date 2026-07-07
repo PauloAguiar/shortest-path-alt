@@ -76,14 +76,29 @@ class IntMinHeap
 		size = 0;
 	}
 
+	/**
+	 * Ordering: orderCost first, node id (creation order) as the tie-break. The stability matters
+	 * for path SHAPE: with a near-exact heuristic every tile on the optimal corridor shares the
+	 * same f value, and an unstable heap pops those in arbitrary order — tiles get claimed by
+	 * random parents and the reconstructed path zigzags between cardinal and diagonal steps. In
+	 * creation order the claims mirror the FIFO search's (cardinals are generated first), which
+	 * produces the long straight runs that match the game's own click-walk movement. It also makes
+	 * searches fully deterministic.
+	 */
+	private boolean less(int a, int b)
+	{
+		final int costA = graph.orderCost(a);
+		final int costB = graph.orderCost(b);
+		return costA < costB || (costA == costB && a < b);
+	}
+
 	private void siftUp(int index)
 	{
 		final int id = heap[index];
-		final int key = graph.orderCost(id);
 		while (index > 0)
 		{
 			final int parent = (index - 1) >> 1;
-			if (key >= graph.orderCost(heap[parent]))
+			if (!less(id, heap[parent]))
 			{
 				break;
 			}
@@ -96,23 +111,16 @@ class IntMinHeap
 	private void siftDown(int index)
 	{
 		final int id = heap[index];
-		final int key = graph.orderCost(id);
 		final int half = size >> 1;
 		while (index < half)
 		{
 			int child = (index << 1) + 1;
-			int childKey = graph.orderCost(heap[child]);
 			final int right = child + 1;
-			if (right < size)
+			if (right < size && less(heap[right], heap[child]))
 			{
-				final int rightKey = graph.orderCost(heap[right]);
-				if (rightKey < childKey)
-				{
-					child = right;
-					childKey = rightKey;
-				}
+				child = right;
 			}
-			if (key <= childKey)
+			if (!less(heap[child], id))
 			{
 				break;
 			}

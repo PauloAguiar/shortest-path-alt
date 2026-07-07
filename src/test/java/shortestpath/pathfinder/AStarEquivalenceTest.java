@@ -181,6 +181,50 @@ public class AStarEquivalenceTest
 			nodes[1] < nodes[0] / 20);
 	}
 
+	/** Direction changes along a path — the zigzag metric (a straight run changes direction once). */
+	private static int directionChanges(java.util.List<PathStep> path)
+	{
+		int changes = 0;
+		int lastDx = 99;
+		int lastDy = 99;
+		for (int i = 1; i < path.size(); i++)
+		{
+			int prev = path.get(i - 1).getPackedPosition();
+			int cur = path.get(i).getPackedPosition();
+			int dx = Integer.signum(WorldPointUtil.unpackWorldX(cur) - WorldPointUtil.unpackWorldX(prev));
+			int dy = Integer.signum(WorldPointUtil.unpackWorldY(cur) - WorldPointUtil.unpackWorldY(prev));
+			if (dx != lastDx || dy != lastDy)
+			{
+				changes++;
+				lastDx = dx;
+				lastDy = dy;
+			}
+		}
+		return changes;
+	}
+
+	@Test
+	public void fieldModePathShapeDoesNotZigzag()
+	{
+		// Equal-cost corridors make every tile share the same f value; without the heap's
+		// creation-order tie-break those pops are arbitrary and the path zigzags between cardinal
+		// and diagonal steps (in-game report: erratic drawn path vs the game's straight walk).
+		// The A* path must stay in the same shape class as the FIFO search's.
+		PathfinderConfig config = walkOnlyConfig();
+		Pathfinder dijkstra = run(config, LUMBRIDGE, Set.of(VARROCK), null);
+		DistanceField field = DistanceField.build(config, Set.of(VARROCK));
+		Pathfinder astar = run(config, LUMBRIDGE, Set.of(VARROCK),
+			SearchHeuristic.buildWithField(config, field));
+
+		int dijkstraChanges = directionChanges(dijkstra.getResult().getPathSteps());
+		int astarChanges = directionChanges(astar.getResult().getPathSteps());
+		System.out.println("shape: direction changes dijkstra=" + dijkstraChanges + " astar=" + astarChanges
+			+ " (path " + astar.getResult().getPathSteps().size() + " steps)");
+		assertTrue("A* path must not zigzag (direction changes " + astarChanges
+				+ " vs Dijkstra's " + dijkstraChanges + ")",
+			astarChanges <= dijkstraChanges + 5);
+	}
+
 	@Test
 	public void fieldModeTeleportRouteCostsAreIdentical()
 	{
