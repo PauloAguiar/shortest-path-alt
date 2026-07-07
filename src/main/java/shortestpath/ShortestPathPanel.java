@@ -625,7 +625,9 @@ public class ShortestPathPanel extends PluginPanel
 				bankMarker.setToolTipText("This method needs an item from your bank — the route walks to a bank to withdraw it first");
 				west.add(bankMarker);
 			}
-			if (status != null)
+			// The availability map now records IN_BANK in every mode; on a route it's already shown by
+			// the bank marker above, so only add the status marker for other, distinct reasons.
+			if (status != null && !bankGated)
 			{
 				west.add(statusLabel(status));
 			}
@@ -706,6 +708,19 @@ public class ShortestPathPanel extends PluginPanel
 		menu.show(anchor, 0, anchor.getHeight());
 	}
 
+	/**
+	 * Whether a method is usable in the CURRENT mode. The availability map is mode-independent
+	 * (a banked item is always recorded IN_BANK); a banked item counts as usable in the
+	 * "Inventory + bank" mode, whose route walks to a bank to withdraw it.
+	 */
+	private boolean isUsable(TeleportMethod method)
+	{
+		MethodAvailability status = cachedUnavailable.get(method);
+		return status == null
+			|| (status == MethodAvailability.IN_BANK
+				&& plugin.getRoutesMode() == AlternativeRoutesMode.OWNED_WITH_BANK);
+	}
+
 	/** Rebuilds just the teleport-methods catalog slot (used on collapse/expand and dirty renders). */
 	private void refreshCatalog()
 	{
@@ -745,7 +760,7 @@ public class ShortestPathPanel extends PluginPanel
 		int charged = 0;
 		for (TeleportMethod method : cachedCatalog)
 		{
-			if (!cachedUnavailable.containsKey(method))
+			if (isUsable(method))
 			{
 				available++;
 				if (method.isConsumable())

@@ -152,16 +152,16 @@ public class AlternativeRoutesService
 			return;
 		}
 		final List<TeleportMethod> catalog = new ArrayList<>(planningConfig.getMethodCatalog());
-		// The catalog is the full method universe in every mode; flag the entries the player can't use
-		// in THIS mode, with the reason, so the panel can mark them. A banked item counts as usable only
-		// in the "Inventory + bank" mode (its route walks to a bank); every other mode marks it.
+		// The catalog is the full method universe in every mode; this maps each entry the player can't
+		// use straight from the inventory to WHY (missing item/level/quest, in the bank, not unlocked),
+		// mode-independently — the panel decides usability per mode (a banked item is usable in the
+		// "Inventory + bank" mode, whose route walks to a bank) and filters by these reasons.
 		final Map<TeleportMethod, MethodAvailability> statuses = planningConfig.getMethodAvailability();
 		final Map<TeleportMethod, MethodAvailability> notUsable = new HashMap<>();
 		for (TeleportMethod method : catalog)
 		{
 			MethodAvailability status = statuses.getOrDefault(method, MethodAvailability.AVAILABLE);
-			if (status == MethodAvailability.AVAILABLE
-				|| (status == MethodAvailability.IN_BANK && mode == AlternativeRoutesMode.OWNED_WITH_BANK))
+			if (status == MethodAvailability.AVAILABLE)
 			{
 				continue;
 			}

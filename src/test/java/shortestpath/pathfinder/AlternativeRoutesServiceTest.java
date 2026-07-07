@@ -268,11 +268,11 @@ public class AlternativeRoutesServiceTest
 	}
 
 	@Test
-	public void inBankMethodFlaggedUnavailableOnlyOutsideBankMode() throws Exception
+	public void inBankMethodFlaggedInBankRegardlessOfMode() throws Exception
 	{
-		// Cowbell amulet only in the bank: Owned/Inventory must flag its method IN_BANK in the
-		// unavailable map, while Owned/Inv+bank treats it as usable (its routes walk to a bank), so it
-		// must NOT be flagged there. The catalog contains the method either way.
+		// Cowbell amulet only in the bank: the availability map records IN_BANK as the reason in
+		// EVERY mode (it's mode-independent — the panel decides usability, and the "Item in the bank"
+		// filter needs to see it in bank mode too). The catalog contains the method either way.
 		int cowbellDestination = WorldPointUtil.packWorldPoint(3259, 3277, 0);
 		PathfinderConfig base = new TestPathfinderConfig(client, config);
 		base.setBankSnapshot(new Item[]{new Item(33104, 1)});
@@ -293,8 +293,8 @@ public class AlternativeRoutesServiceTest
 			.orElseThrow(() -> new AssertionError("Cowbell amulet method missing from the catalog"));
 		assertTrue("Inventory mode must flag the banked item as IN_BANK",
 			inventoryUnavailable.get(cowbell) == MethodAvailability.IN_BANK);
-		assertTrue("Inv+bank mode must treat the banked item as usable (not flagged)",
-			!bankUnavailable.containsKey(cowbell));
+		assertTrue("Inv+bank mode must also record it as IN_BANK (usability is decided by the panel)",
+			bankUnavailable.get(cowbell) == MethodAvailability.IN_BANK);
 	}
 
 	/**
