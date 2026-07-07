@@ -428,17 +428,7 @@ public class ShortestPathPanel extends PluginPanel
 			|| catalogExpanded != renderedCatalogExpanded;
 		if (catalogDirty)
 		{
-			catalogHolder.removeAll();
-			if (!cachedCatalog.isEmpty())
-			{
-				catalogHolder.add(buildCatalogSection());
-			}
-			catalogHolder.revalidate();
-			catalogHolder.repaint();
-			renderedCatalog = cachedCatalog;
-			renderedExclusions = cachedExclusions;
-			renderedUnavailable = cachedUnavailable;
-			renderedCatalogExpanded = catalogExpanded;
+			refreshCatalog();
 		}
 
 		// Routes are shown as they stream in (even while still calculating). The previous list was
@@ -625,6 +615,22 @@ public class ShortestPathPanel extends PluginPanel
 		return row;
 	}
 
+	/** Rebuilds just the teleport-methods catalog slot (used on collapse/expand and dirty renders). */
+	private void refreshCatalog()
+	{
+		catalogHolder.removeAll();
+		if (!cachedCatalog.isEmpty())
+		{
+			catalogHolder.add(buildCatalogSection());
+		}
+		catalogHolder.revalidate();
+		catalogHolder.repaint();
+		renderedCatalog = cachedCatalog;
+		renderedExclusions = cachedExclusions;
+		renderedUnavailable = cachedUnavailable;
+		renderedCatalogExpanded = catalogExpanded;
+	}
+
 	private JPanel buildCatalogSection()
 	{
 		JPanel section = new JPanel();
@@ -639,18 +645,26 @@ public class ShortestPathPanel extends PluginPanel
 		titleRow.setBorder(new EmptyBorder(0, 0, 4, 0));
 		titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 		titleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-		int active = 0;
+		// "available" = methods usable right now (not missing an item/level/quest/unlock); the count
+		// the player actually cares about. Included-but-locked methods aren't counted.
+		int available = 0;
+		int included = 0;
 		for (TeleportMethod method : cachedCatalog)
 		{
+			if (!cachedUnavailable.containsKey(method))
+			{
+				available++;
+			}
 			if (!cachedExclusions.contains(method))
 			{
-				active++;
+				included++;
 			}
 		}
-		JLabel title = new JLabel("Teleport methods (" + active + "/" + cachedCatalog.size() + ")");
+		JLabel title = new JLabel("Teleport methods (" + available + "/" + cachedCatalog.size() + ")");
 		title.setFont(FontManager.getRunescapeBoldFont());
 		title.setForeground(ColorScheme.BRAND_ORANGE);
-		title.setToolTipText(active + " of " + cachedCatalog.size() + " methods included in searches");
+		title.setToolTipText(available + " usable now · " + included + " included in searches · "
+			+ cachedCatalog.size() + " total");
 		titleRow.add(title, BorderLayout.CENTER);
 		titleRow.add(control(new JLabel(catalogExpanded ? RouteIcons.CHEVRON_DOWN : RouteIcons.CHEVRON_RIGHT)),
 			BorderLayout.EAST);
@@ -661,8 +675,10 @@ public class ShortestPathPanel extends PluginPanel
 			@Override
 			public void mouseClicked(MouseEvent e)
 			{
+				// Toggle just the catalog — rebuilding the whole panel (and every route card) on a
+				// collapse was the source of the lag.
 				catalogExpanded = !catalogExpanded;
-				render();
+				refreshCatalog();
 			}
 		});
 		section.add(titleRow);
@@ -787,7 +803,7 @@ public class ShortestPathPanel extends PluginPanel
 		boolean allIncluded = excludedCount == 0;
 		boolean allExcluded = excludedCount == items.size();
 
-		JPanel row = new JPanel(new BorderLayout(5, 0));
+		JPanel row = new JPanel(new BorderLayout(3, 0));
 		row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		row.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createMatteBorder(0, 0, 1, 0, ColorScheme.DARK_GRAY_COLOR),
@@ -848,7 +864,7 @@ public class ShortestPathPanel extends PluginPanel
 	{
 		boolean excluded = cachedExclusions.contains(item);
 
-		JPanel row = new JPanel(new BorderLayout(5, 0));
+		JPanel row = new JPanel(new BorderLayout(3, 0));
 		row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		row.setBorder(new EmptyBorder(2, 18, 2, 4));
 		row.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -859,7 +875,7 @@ public class ShortestPathPanel extends PluginPanel
 				"Excluded — click to include", () -> plugin.includeMethod(item))
 			: new IconActionLabel(RouteIcons.CHECK, RouteIcons.CHECK_HOVER,
 				"Included — click to exclude", () -> plugin.excludeMethod(item));
-		JPanel west = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+		JPanel west = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
 		west.setOpaque(false);
 		west.add(control(toggle));
 		MethodAvailability status = cachedUnavailable.get(item);
@@ -1139,7 +1155,7 @@ public class ShortestPathPanel extends PluginPanel
 			button.setForeground(Color.WHITE);
 			button.setFocusPainted(false);
 			button.setHorizontalAlignment(SwingConstants.LEFT);
-			button.setIconTextGap(5);
+			button.setIconTextGap(4);
 			button.setToolTipText("Route to the nearest " + option.label.toLowerCase(java.util.Locale.ROOT)
 				+ " using the teleports you have available");
 			button.addActionListener(e ->
@@ -1213,7 +1229,7 @@ public class ShortestPathPanel extends PluginPanel
 		row.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
 		JLabel name = new JLabel(entry.name, RouteIcons.destinationIcon(entry.category), SwingConstants.LEADING);
-		name.setIconTextGap(6);
+		name.setIconTextGap(3);
 		name.setForeground(Color.WHITE);
 		name.setFont(FontManager.getRunescapeSmallFont());
 		row.add(name, BorderLayout.CENTER);
