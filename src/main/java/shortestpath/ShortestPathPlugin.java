@@ -259,6 +259,10 @@ public class ShortestPathPlugin extends Plugin
 	private PathfinderConfig pathfinderConfig;
 	@Getter
 	private boolean startPointSet = false;
+	// Whether the auto-finish (clear the target on arrival) is armed. Disarmed when a destination is
+	// set and only armed once the player is away from it, so setting a destination you're already at
+	// shows its walk route instead of clearing on the next tick.
+	private boolean autoFinishArmed = false;
 	private final KeyListener clearPathKeylistener = new KeyListener()
 	{
 		@Override
@@ -896,10 +900,23 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		int currentLocation = WorldPointUtil.fromLocalInstance(client, localPlayer);
-		if (pathTilesRemaining(currentLocation, config.reachedDistance()) < config.reachedDistance())
+		int reachedDistance = config.reachedDistance();
+		int remaining = pathTilesRemaining(currentLocation, reachedDistance);
+		if (remaining != Integer.MAX_VALUE)
 		{
-			setTarget(WorldPointUtil.UNDEFINED);
-			return;
+			// Arm the auto-finish only once the player is genuinely away from the destination. A
+			// destination set while already at it (e.g. "nearest bank" while standing at a bank)
+			// then shows its walk route instead of clearing on the next tick; it clears when the
+			// player later travels away and arrives.
+			if (!autoFinishArmed)
+			{
+				autoFinishArmed = remaining >= reachedDistance;
+			}
+			else if (remaining < reachedDistance)
+			{
+				setTarget(WorldPointUtil.UNDEFINED);
+				return;
+			}
 		}
 
 		if (!startPointSet && !isNearPath(currentLocation))
@@ -1721,6 +1738,9 @@ public class ShortestPathPlugin extends Plugin
 			{
 				destinations.addAll(pathfinder.getTargets());
 			}
+			// Re-arm the auto-finish for the new destination: it stays disarmed until the player is
+			// away from it, so a destination set while already at it isn't cleared immediately.
+			autoFinishArmed = false;
 			// Alternatives are computed manually via the panel's "Find routes" button.
 			restartPathfinding(start, destinations, append);
 		}
