@@ -194,11 +194,15 @@ public class PathTileOverlay extends Overlay
 				plugin.colourPathBlocked.getGreen(),
 				plugin.colourPathBlocked.getBlue(),
 				plugin.colourPathBlocked.getAlpha() / 2);
+			// The stretch the player has already covered is greyed out — the live part is what's ahead.
+			Color doneColor = new Color(0x80, 0x80, 0x80, pathColor.getAlpha() / 2);
 
 			List<PathStep> path = plugin.getDisplayPath();
 			// The path beyond the first door not yet seen open renders in the blocked colour: the
 			// route assumes doors are passable, this marks the part the player can't walk yet.
 			int blockedFrom = blockedFromIndex(path);
+			// Progress along the displayed route: edges up to here are done (greyed).
+			int progress = plugin.displayedRouteProgress();
 			int counter = 0;
 			// Repeating ripples flow along the line towards the destination: each edge's glow is
 			// its proximity to the nearest ripple centre in a train spaced WAVE_SPACING apart.
@@ -221,9 +225,12 @@ public class PathTileOverlay extends Overlay
 					phase += WAVE_SPACING;
 				}
 				double waveDistance = Math.min(phase, WAVE_SPACING - phase);
-				double glow = jump ? 0 : Math.max(0, 1 - waveDistance / WAVE_HALF_WIDTH);
+				// Edge i covers path[i-1]->path[i]; it's done once progress has reached path[i].
+				boolean done = i <= progress;
+				double glow = jump || done ? 0 : Math.max(0, 1 - waveDistance / WAVE_HALF_WIDTH);
+				Color edgeColor = done ? doneColor : (i >= blockedFrom ? blockedColor : color);
 				drawLine(graphics, currentStep.getPackedPosition(), nextStep.getPackedPosition(),
-					i >= blockedFrom ? blockedColor : color, 1 + counter++, head, glow, jump);
+					edgeColor, 1 + counter++, head, glow, jump);
 				drawTransportInfo(graphics, currentStep, nextStep, path, i - 1);
 			}
 
