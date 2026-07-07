@@ -283,15 +283,31 @@ public class AlternativeRoutesService
 		}
 		synchronized (timer)
 		{
-			log.debug("[alt-routes] generated {} route(s); timing: wall={}ms client={}ms rebuild={}ms searchCpu={}ms ({} searches)",
-				routes.size(),
+			// Retained for the GPS debug snapshot: [wallMs, clientMs, rebuildMs, searchCpuMs, searches].
+			lastTimingSummary = new long[]{
 				(System.nanoTime() - wallStart) / 1_000_000,
 				timer.clientNanos / 1_000_000,
 				timer.rebuildNanos / 1_000_000,
 				timer.searchNanos / 1_000_000,
-				timer.searches);
+				timer.searches};
+			log.debug("[alt-routes] generated {} route(s); timing: wall={}ms client={}ms rebuild={}ms searchCpu={}ms ({} searches)",
+				routes.size(),
+				lastTimingSummary[0], lastTimingSummary[1], lastTimingSummary[2],
+				lastTimingSummary[3], lastTimingSummary[4]);
 		}
 		emit(gen, listener, new ArrayList<>(routes), catalog, unavailable, true);
+	}
+
+	/**
+	 * The last completed generation's timing, for the GPS debug snapshot:
+	 * [wallMs, clientMs, rebuildMs, searchCpuMs, searches]. Null before the first generation.
+	 */
+	private volatile long[] lastTimingSummary;
+
+	long[] getLastTimingSummary()
+	{
+		long[] summary = lastTimingSummary;
+		return summary == null ? null : summary.clone();
 	}
 
 	/**

@@ -1927,6 +1927,23 @@ public class ShortestPathPlugin extends Plugin
 	 * edge data, mode/exclusions, player position, GPS progress state, and the relevant config.
 	 * Triggered by the panel's camera button; confirms via a game message.
 	 */
+	private static List<Object> stepsJson(List<RouteDirections.Step> steps)
+	{
+		List<Object> stepsJson = new ArrayList<>();
+		for (RouteDirections.Step step : steps)
+		{
+			Map<String, Object> stepJson = new LinkedHashMap<>();
+			stepJson.put("text", step.getText());
+			stepJson.put("startIndex", step.getStartIndex());
+			stepJson.put("endIndex", step.getEndIndex());
+			stepJson.put("ticks", step.getTicks());
+			stepJson.put("transport", step.isTransport());
+			stepJson.put("door", step.isDoor());
+			stepsJson.add(stepJson);
+		}
+		return stepsJson;
+	}
+
 	public void captureDebugSnapshot()
 	{
 		clientThread.invokeLater(() ->
@@ -1997,24 +2014,30 @@ public class ShortestPathPlugin extends Plugin
 					}
 					routeJson.put("packedPath", packedPath);
 					routeJson.put("bankVisitedFrom", bankFlips);
+					// Fresh directions build per route, timed — the dashboard renders the step
+					// list for every route and charts how long step derivation takes.
+					long buildStart = System.nanoTime();
+					List<RouteDirections.Step> routeSteps = RouteDirections.build(this, route);
+					routeJson.put("directionsBuildMicros", (System.nanoTime() - buildStart) / 1_000);
+					routeJson.put("directions", stepsJson(routeSteps));
 					routesJson.add(routeJson);
 				}
 				snapshot.put("routes", routesJson);
+				long[] genTiming = altRoutesService != null ? altRoutesService.getLastTimingSummary() : null;
+				if (genTiming != null)
+				{
+					Map<String, Object> timingJson = new LinkedHashMap<>();
+					timingJson.put("wallMs", genTiming[0]);
+					timingJson.put("clientMs", genTiming[1]);
+					timingJson.put("rebuildMs", genTiming[2]);
+					timingJson.put("searchCpuMs", genTiming[3]);
+					timingJson.put("searches", genTiming[4]);
+					snapshot.put("altGenTiming", timingJson);
+				}
 
 				if (displayed != null)
 				{
-					List<Object> stepsJson = new ArrayList<>();
-					for (RouteDirections.Step step : getRouteDirections(displayed))
-					{
-						Map<String, Object> stepJson = new LinkedHashMap<>();
-						stepJson.put("text", step.getText());
-						stepJson.put("startIndex", step.getStartIndex());
-						stepJson.put("endIndex", step.getEndIndex());
-						stepJson.put("ticks", step.getTicks());
-						stepJson.put("transport", step.isTransport());
-						stepsJson.add(stepJson);
-					}
-					snapshot.put("directions", stepsJson);
+					snapshot.put("directions", stepsJson(getRouteDirections(displayed)));
 					Map<String, Object> progress = new LinkedHashMap<>();
 					progress.put("reachedIndex", routeDirectionsOverlay.getReachedIndex());
 					progress.put("liveRemainingTicks", routeDirectionsOverlay.getLiveRemainingTicks());
