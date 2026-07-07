@@ -10,6 +10,8 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
 
@@ -82,6 +84,227 @@ final class RouteIcons
 			g.scale(1.3, 1.3);
 			g.translate(-8.0, -8.5);
 			drawPin(g, GPS_BLUE);
+		});
+	}
+
+	// ── Destination-search category icons ──────────────────────────────
+	// A coherent, meaningful set (one glyph per category) replacing the old hash-coloured dots.
+	private static final ImageIcon DEST_PLACE = new ImageIcon(place());
+	private static final ImageIcon DEST_BANK = new ImageIcon(coinStack());
+	private static final ImageIcon DEST_ALTAR = new ImageIcon(altar());
+	private static final ImageIcon DEST_WATER = new ImageIcon(droplet());
+	private static final ImageIcon DEST_FURNACE = new ImageIcon(flame(new Color(0xF2, 0x8A, 0x3B)));
+	private static final ImageIcon DEST_ANVIL = new ImageIcon(anvil());
+	private static final ImageIcon DEST_RANGE = new ImageIcon(pot());
+	private static final ImageIcon DEST_SPINNING = new ImageIcon(wheel());
+	private static final ImageIcon DEST_POTTERY = new ImageIcon(vase());
+	private static final ImageIcon DEST_FAIRY = new ImageIcon(ring());
+	private static final ImageIcon DEST_SPIRIT_TREE = new ImageIcon(tree());
+	private static final ImageIcon DEST_PIN = new ImageIcon(pin(GPS_BLUE));
+
+	/** The icon for a destination category, falling back to a location pin for anything unmapped. */
+	static ImageIcon destinationIcon(String category)
+	{
+		switch (category)
+		{
+			case "place": return DEST_PLACE;
+			case "bank": return DEST_BANK;
+			case "altar": return DEST_ALTAR;
+			case "water": return DEST_WATER;
+			case "furnace": return DEST_FURNACE;
+			case "anvil": return DEST_ANVIL;
+			case "range": return DEST_RANGE;
+			case "spinning_wheel": return DEST_SPINNING;
+			case "pottery": return DEST_POTTERY;
+			case "fairy_ring": return DEST_FAIRY;
+			case "spirit_tree": return DEST_SPIRIT_TREE;
+			default: return DEST_PIN;
+		}
+	}
+
+	private static BufferedImage place()
+	{
+		final Color body = new Color(0x8A, 0xB4, 0xF8);
+		return render(g ->
+		{
+			g.setColor(body);
+			g.fill(new Rectangle2D.Double(2, 6, 5, 8));    // shorter building
+			g.fill(new Rectangle2D.Double(8, 3, 6, 11));   // taller building
+			g.setComposite(AlphaComposite.Clear);
+			for (double wy : new double[]{8, 11})
+			{
+				g.fill(new Rectangle2D.Double(3.4, wy, 1.2, 1.4));
+			}
+			for (double wy : new double[]{5.5, 8, 10.5})
+			{
+				g.fill(new Rectangle2D.Double(9.4, wy, 1.2, 1.4));
+				g.fill(new Rectangle2D.Double(11.4, wy, 1.2, 1.4));
+			}
+			g.setComposite(AlphaComposite.SrcOver);
+		});
+	}
+
+	private static BufferedImage coinStack()
+	{
+		final Color gold = new Color(0xF2, 0xC1, 0x4E);
+		final Color edge = new Color(0xB8, 0x8E, 0x2A);
+		return render(g ->
+		{
+			for (double y : new double[]{9.5, 6.5, 3.5})
+			{
+				g.setColor(gold);
+				g.fill(new Ellipse2D.Double(3, y, 10, 3.6));
+				g.setColor(edge);
+				g.setStroke(new BasicStroke(1f));
+				g.draw(new Ellipse2D.Double(3, y, 10, 3.6));
+			}
+		});
+	}
+
+	private static BufferedImage altar()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0xC9, 0xB8, 0xE8));
+			g.fill(new Rectangle2D.Double(3.5, 11, 9, 3));   // base
+			g.fill(new Rectangle2D.Double(4.5, 8.5, 7, 2));  // top slab
+			g.fill(new Rectangle2D.Double(6.5, 10, 3, 1.2));  // column
+			g.setColor(new Color(0xFF, 0xB4, 0x4A));
+			g.fill(flameShape(8, 4.2, 0.75));                // candle glow
+		});
+	}
+
+	private static BufferedImage droplet()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0x4A, 0xA3, 0xE0));
+			Path2D drop = new Path2D.Double();
+			drop.moveTo(8, 2.5);
+			drop.curveTo(11.5, 7, 12, 9, 12, 10.5);
+			drop.curveTo(12, 13, 10.2, 14.5, 8, 14.5);
+			drop.curveTo(5.8, 14.5, 4, 13, 4, 10.5);
+			drop.curveTo(4, 9, 4.5, 7, 8, 2.5);
+			drop.closePath();
+			g.fill(drop);
+			g.setColor(new Color(0xBF, 0xE4, 0xFF));
+			g.fill(new Ellipse2D.Double(6, 9.5, 2, 3));      // highlight
+		});
+	}
+
+	private static BufferedImage flame(Color colour)
+	{
+		return render(g ->
+		{
+			g.setColor(colour);
+			g.fill(flameShape(8, 8, 1.0));
+		});
+	}
+
+	private static Path2D flameShape(double cx, double cy, double scale)
+	{
+		Path2D f = new Path2D.Double();
+		f.moveTo(cx, cy - 6 * scale);
+		f.curveTo(cx + 3 * scale, cy - 3 * scale, cx + 3 * scale, cy - scale, cx + 1.5 * scale, cy);
+		f.curveTo(cx + 3 * scale, cy + scale, cx + 3.5 * scale, cy + 3 * scale, cx + 2 * scale, cy + 5 * scale);
+		f.curveTo(cx + scale, cy + 6.5 * scale, cx - scale, cy + 6.5 * scale, cx - 2 * scale, cy + 5 * scale);
+		f.curveTo(cx - 3.5 * scale, cy + 3 * scale, cx - 2.5 * scale, cy + scale, cx - 1 * scale, cy);
+		f.curveTo(cx - 2.5 * scale, cy - scale, cx - 1.5 * scale, cy - 4 * scale, cx, cy - 6 * scale);
+		f.closePath();
+		return f;
+	}
+
+	private static BufferedImage anvil()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0x9A, 0xA5, 0xB1));
+			Path2D horn = new Path2D.Double();
+			horn.moveTo(3, 5);
+			horn.lineTo(1.3, 6.2);
+			horn.lineTo(3, 7.4);
+			horn.closePath();
+			g.fill(horn);
+			g.fill(new Rectangle2D.Double(3, 5, 10, 2.4));    // top face
+			g.fill(new Rectangle2D.Double(6.5, 7.4, 3, 2.6));  // waist
+			g.fill(new RoundRectangle2D.Double(4, 10, 8, 2.6, 2, 2)); // base
+		});
+	}
+
+	private static BufferedImage pot()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0xE0, 0x60, 0x3B));
+			g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.draw(new Arc2D.Double(3.2, 6.5, 3, 4, 40, 280, Arc2D.OPEN));   // left handle
+			g.draw(new Arc2D.Double(9.8, 6.5, 3, 4, -140, 280, Arc2D.OPEN)); // right handle
+			g.fill(new RoundRectangle2D.Double(4, 7, 8, 6.5, 3.5, 3.5));     // body
+			g.fill(new RoundRectangle2D.Double(3, 6, 10, 2, 1.5, 1.5));      // rim
+		});
+	}
+
+	private static BufferedImage wheel()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0xC7, 0xA6, 0x5A));
+			g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.draw(new Ellipse2D.Double(2.5, 2.5, 11, 11));
+			final double cx = 8, cy = 8, r = 5.3;
+			for (int a = 0; a < 180; a += 45)
+			{
+				double rad = Math.toRadians(a);
+				g.draw(new Line2D.Double(cx - Math.cos(rad) * r, cy - Math.sin(rad) * r,
+					cx + Math.cos(rad) * r, cy + Math.sin(rad) * r));
+			}
+			g.fill(new Ellipse2D.Double(6.7, 6.7, 2.6, 2.6));
+		});
+	}
+
+	private static BufferedImage vase()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0xB5, 0x79, 0x3B));
+			Path2D vase = new Path2D.Double();
+			vase.moveTo(6, 2.5);
+			vase.lineTo(10, 2.5);
+			vase.lineTo(9.2, 5);
+			vase.curveTo(12.5, 7, 12.5, 12, 8, 13.5);
+			vase.curveTo(3.5, 12, 3.5, 7, 6.8, 5);
+			vase.closePath();
+			g.fill(vase);
+			g.setColor(new Color(0x8A, 0x5A, 0x2A));
+			g.setStroke(new BasicStroke(1f));
+			g.draw(new Line2D.Double(5, 8.5, 11, 8.5));       // decorative band
+		});
+	}
+
+	private static BufferedImage ring()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0x5F, 0xB8, 0x65));
+			g.fill(new Ellipse2D.Double(2.5, 2.5, 11, 11));
+			g.setComposite(AlphaComposite.Clear);
+			g.fill(new Ellipse2D.Double(5.5, 5.5, 5, 5));
+			g.setComposite(AlphaComposite.SrcOver);
+			// A couple of "mushrooms" on the ring to read as a fairy ring rather than a plain torus.
+			g.setColor(new Color(0xE0, 0x60, 0x60));
+			g.fill(new Ellipse2D.Double(7, 1.6, 2, 1.6));
+			g.fill(new Ellipse2D.Double(12, 7, 1.6, 2));
+		});
+	}
+
+	private static BufferedImage tree()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0x8A, 0x5A, 0x2A));
+			g.fill(new Rectangle2D.Double(7, 8.5, 2, 5.5));  // trunk
+			g.setColor(new Color(0x4C, 0xAF, 0x50));
+			g.fill(new Ellipse2D.Double(2.5, 1.5, 11, 9));   // canopy
 		});
 	}
 

@@ -151,7 +151,12 @@ public class ShortestPathPanel extends PluginPanel
 		JPanel top = new JPanel(new BorderLayout());
 		top.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		top.add(buildHeader(), BorderLayout.NORTH);
-		top.add(catalogHolder, BorderLayout.CENTER);
+		// The teleport-methods catalog, then the "Go to" destination search beneath it, then notes.
+		JPanel belowHeader = new JPanel(new BorderLayout());
+		belowHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		belowHeader.add(catalogHolder, BorderLayout.NORTH);
+		belowHeader.add(buildDestinationSearch(), BorderLayout.CENTER);
+		top.add(belowHeader, BorderLayout.CENTER);
 		top.add(buildNotes(), BorderLayout.SOUTH);
 		add(top, BorderLayout.NORTH);
 
@@ -243,12 +248,7 @@ public class ShortestPathPanel extends PluginPanel
 			"Re-include all excluded methods", plugin::clearExclusions)));
 		titleRow.add(actions, BorderLayout.EAST);
 
-		JPanel headerTop = new JPanel();
-		headerTop.setLayout(new BoxLayout(headerTop, BoxLayout.Y_AXIS));
-		headerTop.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		headerTop.add(titleRow);
-		headerTop.add(buildDestinationSearch());
-		header.add(headerTop, BorderLayout.NORTH);
+		header.add(titleRow, BorderLayout.NORTH);
 
 		JPanel bottom = new JPanel(new BorderLayout());
 		bottom.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -1064,7 +1064,16 @@ public class ShortestPathPanel extends PluginPanel
 	{
 		JPanel wrap = new JPanel(new BorderLayout());
 		wrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		wrap.setBorder(new EmptyBorder(8, 0, 0, 0));
+		wrap.setBorder(new EmptyBorder(10, 0, 0, 0));
+
+		JLabel heading = new JLabel("Go to destination");
+		heading.setFont(FontManager.getRunescapeSmallFont());
+		heading.setForeground(Color.WHITE);
+		heading.setBorder(new EmptyBorder(0, 0, 4, 0));
+
+		JPanel field = new JPanel(new BorderLayout());
+		field.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		field.add(heading, BorderLayout.NORTH);
 
 		destinationSearch.setIcon(IconTextField.Icon.SEARCH);
 		destinationSearch.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -1097,7 +1106,8 @@ public class ShortestPathPanel extends PluginPanel
 		destinationResults.setBorder(new EmptyBorder(4, 0, 0, 0));
 		destinationResults.setVisible(false);
 
-		wrap.add(destinationSearch, BorderLayout.NORTH);
+		field.add(destinationSearch, BorderLayout.CENTER);
+		wrap.add(field, BorderLayout.NORTH);
 		wrap.add(destinationResults, BorderLayout.CENTER);
 		return wrap;
 	}
@@ -1181,7 +1191,7 @@ public class ShortestPathPanel extends PluginPanel
 		row.setBorder(new EmptyBorder(3, 4, 3, 4));
 		row.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-		JLabel name = new JLabel(entry.name, categoryDot(entry.category), SwingConstants.LEADING);
+		JLabel name = new JLabel(entry.name, RouteIcons.destinationIcon(entry.category), SwingConstants.LEADING);
 		name.setIconTextGap(6);
 		name.setForeground(Color.WHITE);
 		name.setFont(FontManager.getRunescapeSmallFont());
