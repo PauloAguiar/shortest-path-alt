@@ -220,10 +220,11 @@ public class AlternativeRoutesService
 
 			long searchStart = System.nanoTime();
 			int chainCap = capOf(walkFuture);
-			// Heuristic rebuilt per iteration: the exclusion set changes the usable transports, and
-			// the fewer good teleports remain, the STRONGER the heuristic gets — the expensive late
-			// chain searches are exactly the ones it accelerates.
-			SearchHeuristic heuristic = SearchHeuristic.build(planningConfig, ends);
+			// Heuristic rebuilt per iteration (the exclusion set changes the usable transports).
+			// The previous route's cost is a valid lower bound of this search's cost — chain costs
+			// never decrease — and gates A* to the corridor regime where it wins.
+			int chainCostFloor = routes.isEmpty() ? 0 : routes.get(routes.size() - 1).getTotalCost();
+			SearchHeuristic heuristic = SearchHeuristic.build(planningConfig, ends, chainCostFloor);
 			Pathfinder pathfinder = new Pathfinder(planningConfig, start, ends, null, chainCap, heuristic);
 			pathfinder.run();
 			long searchNanos = System.nanoTime() - searchStart;
@@ -602,9 +603,10 @@ public class AlternativeRoutesService
 			long rebuildStart = System.nanoTime();
 			config.rebuildAvailabilityWithExclusions(seedExclusions);
 			long searchStart = System.nanoTime();
-			// Seed searches exclude every other global teleport, so unless THIS seed lands near the
-			// target the heuristic floor stays high and the search is strongly directed.
-			SearchHeuristic heuristic = SearchHeuristic.build(config, ends);
+			// Seed searches exclude every other global teleport, so the floor comes from the seed
+			// itself and the search's own optimal route uses it — the corridor regime by
+			// construction (no cost hint needed), and the walk-cost cap bounds any residue.
+			SearchHeuristic heuristic = SearchHeuristic.build(config, ends, 0);
 			Pathfinder pathfinder = new Pathfinder(config, start, ends, null, costCap, heuristic);
 			pathfinder.run();
 			long searchEnd = System.nanoTime();
@@ -664,9 +666,17 @@ public class AlternativeRoutesService
 		long rebuildStart = System.nanoTime();
 		config.rebuildAvailabilityWithExclusions(walkExclusions);
 		long searchStart = System.nanoTime();
-		// With every method excluded almost nothing constrains the heuristic's floor, so the walk
-		// search — previously the biggest disc of the generation — is the one A* accelerates most.
-		SearchHeuristic heuristic = SearchHeuristic.build(config, ends);
+		// With every method excluded little constrains the heuristic's floor, so the walk search —
+		// the biggest disc of the generation — is the one A* accelerates most. Its cost is at
+		// least the straight-line distance, which gates out the flat-heuristic regime (a remaining
+		// agility shortcut landing near the target on a long trip).
+		int walkCostFloor = Integer.MAX_VALUE;
+		for (int end : ends)
+		{
+			walkCostFloor = Math.min(walkCostFloor, WorldPointUtil.distanceBetween2D(start, end));
+		}
+		SearchHeuristic heuristic = SearchHeuristic.build(config, ends,
+			walkCostFloor == Integer.MAX_VALUE ? 0 : walkCostFloor);
 		Pathfinder pathfinder = new Pathfinder(config, start, ends, null, Integer.MAX_VALUE, heuristic);
 		pathfinder.run();
 		long searchEnd = System.nanoTime();

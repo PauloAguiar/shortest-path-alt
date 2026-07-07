@@ -96,10 +96,18 @@ public final class SearchHeuristic
 	 * Builds the heuristic for a search over the given config's CURRENT transport availability
 	 * (call after any exclusion rebuild), or null when it wouldn't pay for itself — see the gate
 	 * constants. Correctness never depends on the gate: any returned heuristic is consistent.
+	 * <p>
+	 * {@code expectedCostFloor} is a known lower bound of the cost the search will find (0 =
+	 * unknown): the previous route's cost for an exclusion-chain search (chain costs never
+	 * decrease), or the straight-line start distance for a walk search. A* collapses the search
+	 * when the heuristic floor is comparable to the final cost (the cheapest-teleport corridor IS
+	 * the answer) and pays ~2x overhead when the cost far exceeds the floor (flat heuristic over a
+	 * full Dijkstra disc, measured on the benchmark) — so engagement requires
+	 * {@code floor >= 0.6 * expectedCostFloor}.
 	 */
-	public static SearchHeuristic build(PathfinderConfig config, Set<Integer> targets)
+	public static SearchHeuristic build(PathfinderConfig config, Set<Integer> targets, int expectedCostFloor)
 	{
-		return build(config, targets, MIN_USEFUL_FLOOR, MAX_TARGET_SPAN);
+		return build(config, targets, MIN_USEFUL_FLOOR, MAX_TARGET_SPAN, expectedCostFloor);
 	}
 
 	/**
@@ -107,6 +115,12 @@ public final class SearchHeuristic
 	 * the saturated-floor cases where ordering bugs would hide).
 	 */
 	static SearchHeuristic build(PathfinderConfig config, Set<Integer> targets, int minFloor, int maxSpan)
+	{
+		return build(config, targets, minFloor, maxSpan, 0);
+	}
+
+	static SearchHeuristic build(PathfinderConfig config, Set<Integer> targets, int minFloor, int maxSpan,
+		int expectedCostFloor)
 	{
 		if (targets == null || targets.isEmpty())
 		{
@@ -154,6 +168,13 @@ public final class SearchHeuristic
 			}
 		}
 		if (floor < minFloor)
+		{
+			return null;
+		}
+		// Corridor test: engage only when the floor is at least ~60% of the known cost lower
+		// bound. Below that the heuristic saturates long before the search finishes — nearly the
+		// whole Dijkstra disc still gets explored, plus A*'s heap and pop-dedup overhead.
+		if (expectedCostFloor > 0 && floor * 5L < expectedCostFloor * 3L)
 		{
 			return null;
 		}
