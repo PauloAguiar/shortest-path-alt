@@ -107,7 +107,15 @@ final class RouteIcons
 	private static final ImageIcon DEST_SPIRIT_TREE = new ImageIcon(tree());
 	private static final ImageIcon DEST_DUNGEON = new ImageIcon(dungeon());
 	private static final ImageIcon DEST_MINIGAME = new ImageIcon(minigame());
+	private static final ImageIcon DEST_LANDMARK = new ImageIcon(landmark());
 	private static final ImageIcon DEST_PIN = new ImageIcon(pin(GPS_BLUE));
+
+	// Route-card marker: the GPS pin the route number sits beside.
+	static final ImageIcon ROUTE_PIN = new ImageIcon(pin(GPS_BLUE));
+	// Panel message-banner glyphs: a warning triangle, an info circle, and a busy spinner.
+	static final ImageIcon BANNER_WARNING = new ImageIcon(warningTriangle(ORANGE));
+	static final ImageIcon BANNER_INFO = new ImageIcon(infoCircle(GPS_BLUE));
+	static final ImageIcon BANNER_BUSY = new ImageIcon(spinner(GPS_BLUE));
 
 	/** The icon for a destination category, falling back to a location pin for anything unmapped. */
 	static ImageIcon destinationIcon(String category)
@@ -127,6 +135,7 @@ final class RouteIcons
 			case "spirit_tree": return DEST_SPIRIT_TREE;
 			case "dungeon": return DEST_DUNGEON;
 			case "minigame": return DEST_MINIGAME;
+			case "landmark": return DEST_LANDMARK;
 			default: return DEST_PIN;
 		}
 	}
@@ -347,6 +356,65 @@ final class RouteIcons
 			g.setColor(new Color(0xF2, 0xC1, 0x4E));           // gold pommels at the hilts
 			g.fill(new Ellipse2D.Double(11, 11, 3, 3));
 			g.fill(new Ellipse2D.Double(2.8, 11, 3, 3));
+		});
+	}
+
+	private static BufferedImage landmark()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0x9A, 0xA5, 0xB1));           // pole
+			g.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.draw(new Line2D.Double(4.5, 2, 4.5, 14.5));
+			g.setColor(new Color(0xE0, 0x60, 0x3B));           // pennant
+			Path2D flag = new Path2D.Double();
+			flag.moveTo(4.5, 2.5);
+			flag.lineTo(13, 4.7);
+			flag.lineTo(4.5, 6.9);
+			flag.closePath();
+			g.fill(flag);
+		});
+	}
+
+	private static BufferedImage warningTriangle(Color colour)
+	{
+		return render(g ->
+		{
+			g.setColor(colour);
+			g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			Path2D tri = new Path2D.Double();
+			tri.moveTo(8, 1.6);
+			tri.lineTo(15, 14);
+			tri.lineTo(1, 14);
+			tri.closePath();
+			g.fill(tri);
+			g.setComposite(AlphaComposite.Clear);              // exclamation cut out
+			g.fill(new Rectangle2D.Double(7.2, 5.6, 1.6, 4.6));
+			g.fill(new Ellipse2D.Double(7.2, 11.2, 1.6, 1.6));
+			g.setComposite(AlphaComposite.SrcOver);
+		});
+	}
+
+	private static BufferedImage infoCircle(Color colour)
+	{
+		return render(g ->
+		{
+			g.setColor(colour);
+			g.fill(new Ellipse2D.Double(1.5, 1.5, 13, 13));
+			g.setComposite(AlphaComposite.Clear);              // "i" cut out
+			g.fill(new Ellipse2D.Double(7.1, 3.6, 1.9, 1.9));
+			g.fill(new Rectangle2D.Double(7.1, 6.7, 1.9, 5.4));
+			g.setComposite(AlphaComposite.SrcOver);
+		});
+	}
+
+	private static BufferedImage spinner(Color colour)
+	{
+		return render(g ->
+		{
+			g.setColor(colour);
+			g.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.draw(new Arc2D.Double(2.5, 2.5, 11, 11, 90, 280, Arc2D.OPEN));   // broken ring = loading
 		});
 	}
 

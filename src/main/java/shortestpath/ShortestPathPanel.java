@@ -44,6 +44,7 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.IconTextField;
+import shortestpath.transport.TransportType;
 
 /**
  * The "view": lists up to {@link AlternativeRoutesService#MAX_ROUTES} alternative routes to the
@@ -58,6 +59,10 @@ public class ShortestPathPanel extends PluginPanel
 {
 	private static final int CONTROL_SIZE = 18;
 	private static final int METHOD_TEXT_WIDTH = 132;
+	// Wrap width for message-banner text (panel width minus the banner icon and padding).
+	private static final int BANNER_TEXT_WIDTH = 158;
+	private static final Color BANNER_INFO_ACCENT = new Color(0x4C, 0x8B, 0xF5);   // GPS blue
+	private static final Color BANNER_WARN_ACCENT = new Color(0xFF, 0x98, 0x1F);   // amber
 	// Tallest the expanded teleport-methods box may grow before it scrolls internally.
 	private static final int CATALOG_MAX_HEIGHT = 240;
 
@@ -78,8 +83,9 @@ public class ShortestPathPanel extends PluginPanel
 	};
 
 	private final ShortestPathPlugin plugin;
-	private final JLabel statusLabel = new JLabel();
-	private final JLabel bankWarningLabel = new JLabel();
+	// Message-banner container below the header; repopulated each render with the status banner
+	// (routes found / calculating / none) plus any warnings (bank unknown, stale exclusions).
+	private final JPanel notes = new JPanel();
 	// Fixed (non-scrolling) slot below the header holding the teleport-methods catalog.
 	private final JPanel catalogHolder = new JPanel();
 	// Filter box for the catalog; a persistent component so typing keeps focus while only the rows
@@ -376,32 +382,43 @@ public class ShortestPathPanel extends PluginPanel
 	}
 
 	/**
-	 * The status line ("N routes found", "No destination set", ...) and the red bank
-	 * warning. Shown below the teleport-methods catalog, directly above the route cards.
+	 * The message-banner strip below the header: the status banner ("N routes found", "Calculating…",
+	 * "No destination set") plus warning banners (bank contents unknown, stale exclusions). Filled by
+	 * {@link #render()}; shown directly above the route cards.
 	 */
 	private JPanel buildNotes()
 	{
-		// Red bank warning directly above the status line; only visible in "Inv + bank" mode until the
-		// bank has been opened once this session (before that, banked items are invisible to the plugin).
-		bankWarningLabel.setText("<html><b>Bank contents unknown</b> — open your bank once so banked items can be found.</html>");
-		bankWarningLabel.setFont(FontManager.getRunescapeSmallFont());
-		bankWarningLabel.setForeground(ColorScheme.PROGRESS_ERROR_COLOR);
-		bankWarningLabel.setBorder(new EmptyBorder(4, 0, 0, 0));
-		bankWarningLabel.setVisible(false);
-
-		statusLabel.setFont(FontManager.getRunescapeSmallFont());
-		statusLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		statusLabel.setBorder(new EmptyBorder(4, 0, 0, 0));
-
-		JPanel notes = new JPanel();
 		notes.setLayout(new BoxLayout(notes, BoxLayout.Y_AXIS));
 		notes.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		notes.setBorder(new EmptyBorder(0, 0, 6, 0));
-		bankWarningLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		notes.add(bankWarningLabel);
-		notes.add(statusLabel);
+		notes.setBorder(new EmptyBorder(4, 0, 6, 0));
 		return notes;
+	}
+
+	/**
+	 * A message banner: a coloured left accent bar, an icon, and wrapped text — used for status and
+	 * warnings instead of loose labels.
+	 */
+	private JPanel buildBanner(Icon icon, String innerHtml, Color accent)
+	{
+		JPanel banner = new JPanel(new BorderLayout(7, 0));
+		banner.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		banner.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createMatteBorder(0, 3, 0, 0, accent),
+			new EmptyBorder(5, 7, 5, 6)));
+		banner.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+		JLabel iconLabel = new JLabel(icon);
+		iconLabel.setVerticalAlignment(SwingConstants.TOP);
+		iconLabel.setBorder(new EmptyBorder(1, 0, 0, 0));
+		banner.add(iconLabel, BorderLayout.WEST);
+
+		JLabel text = new JLabel("<html><body style='width:" + BANNER_TEXT_WIDTH + "px'>" + innerHtml + "</body></html>");
+		text.setFont(FontManager.getRunescapeSmallFont());
+		text.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		banner.add(text, BorderLayout.CENTER);
+
+		banner.setMaximumSize(new Dimension(Integer.MAX_VALUE, banner.getPreferredSize().height));
+		return banner;
 	}
 
 	/**
@@ -426,38 +443,59 @@ public class ShortestPathPanel extends PluginPanel
 		listPanel.removeAll();
 
 		String status;
+		Icon statusIcon;
+		Color statusAccent;
 		if (cachedCalculating)
 		{
 			status = cachedRoutes.isEmpty()
 				? "Calculating routes…"
 				: ("Calculating… (" + cachedRoutes.size() + " so far)");
+			statusIcon = RouteIcons.BANNER_BUSY;
+			statusAccent = BANNER_INFO_ACCENT;
 		}
 		else if (!cachedRoutes.isEmpty())
 		{
 			status = cachedRoutes.size() + (cachedRoutes.size() == 1 ? " route found" : " routes found");
+			statusIcon = RouteIcons.BANNER_INFO;
+			statusAccent = BANNER_INFO_ACCENT;
 		}
 		else if (cachedHasTarget)
 		{
 			// A search ran for the current target but produced nothing — distinct from "no target set".
-			status = "No routes found to the target."
+			status = "<b>No routes found to the target.</b>"
 				+ (plugin.getRoutesMode() == AlternativeRoutesMode.ALL_EVERYTHING ? "" : "<br>Try a broader mode (Inv + bank, or All).");
+			statusIcon = RouteIcons.BANNER_WARNING;
+			statusAccent = BANNER_WARN_ACCENT;
 		}
 		else
 		{
 			// GPS has no active target. (Quest Helper draws its own line for some steps and
 			// doesn't hand GPS a destination — set one on the map to find routes.)
 			status = "No destination set.";
+			statusIcon = RouteIcons.BANNER_INFO;
+			statusAccent = BANNER_INFO_ACCENT;
 		}
+
+		notes.removeAll();
+		// The bank container is only populated once the bank has been opened this session; without it
+		// Bank mode cannot see banked items (same constraint as Shortest Path itself).
+		if (plugin.getRoutesMode() == AlternativeRoutesMode.OWNED_WITH_BANK && !plugin.isBankContentsKnown())
+		{
+			notes.add(buildBanner(RouteIcons.BANNER_WARNING,
+				"<b>Bank contents unknown</b> — open your bank once so banked items can be found.",
+				ColorScheme.PROGRESS_ERROR_COLOR));
+			notes.add(verticalGap(4));
+		}
+		notes.add(buildBanner(statusIcon, status, statusAccent));
 		// Method toggles no longer recalculate; flag a route list generated with different exclusions.
 		if (!cachedCalculating && cachedHasTarget && plugin.isRouteListStale())
 		{
-			status += "<br><font color='#FF981F'>Exclusions changed — press \"Refresh routes\" to apply.</font>";
+			notes.add(verticalGap(4));
+			notes.add(buildBanner(RouteIcons.BANNER_WARNING,
+				"Exclusions changed — press \"Refresh routes\" to apply.", BANNER_WARN_ACCENT));
 		}
-		// The bank container is only populated once the bank has been opened this session; without it
-		// Bank mode cannot see banked items (same constraint as Shortest Path itself).
-		bankWarningLabel.setVisible(
-			plugin.getRoutesMode() == AlternativeRoutesMode.OWNED_WITH_BANK && !plugin.isBankContentsKnown());
-		statusLabel.setText("<html>" + status + "</html>");
+		notes.revalidate();
+		notes.repaint();
 
 		// The teleport-methods catalog lives in a fixed slot below the header (collapsed by default).
 		// Expanded it scrolls inside its own bounded box, so it never pushes the routes off screen.
@@ -519,7 +557,9 @@ public class ShortestPathPanel extends PluginPanel
 		topRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		topRow.setBorder(new EmptyBorder(3, 6, 3, 4));
 
-		JLabel name = new JLabel("Route " + (index + 1));
+		// The route's identity: the GPS pin with its number, in place of a "Route N" title.
+		JLabel name = new JLabel(Integer.toString(index + 1), RouteIcons.ROUTE_PIN, SwingConstants.LEADING);
+		name.setIconTextGap(3);
 		name.setFont(FontManager.getRunescapeBoldFont());
 		name.setForeground(selected ? ColorScheme.BRAND_ORANGE : ColorScheme.LIGHT_GRAY_COLOR);
 		if (!route.isReached())
@@ -530,17 +570,16 @@ public class ShortestPathPanel extends PluginPanel
 
 		JPanel right = new JPanel(new FlowLayout(FlowLayout.TRAILING, 5, 0));
 		right.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		// Weighted cost, plus — when configured weights changed it — the raw cost in parentheses.
+		// The route's estimated travel time (running), with the blended/raw cost kept in the tooltip.
 		boolean weighted = route.getRawCost() != route.getTotalCost();
-		JLabel cost = new JLabel("≈ " + route.getTotalCost()
-			+ (weighted ? " (" + route.getRawCost() + ")" : ""));
-		cost.setFont(FontManager.getRunescapeSmallFont());
-		cost.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		cost.setToolTipText(weighted
-			? "<html>Blended cost incl. your configured method weights (lower is shorter).<br>"
-				+ "In parentheses: the raw cost — walk distance + travel time only.</html>"
-			: "Blended cost: walk distance + travel time (lower is shorter)");
-		right.add(cost);
+		JLabel eta = new JLabel(formatDuration(routeEtaSeconds(route)));
+		eta.setFont(FontManager.getRunescapeSmallFont());
+		eta.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		eta.setToolTipText("<html>Estimated travel time, assuming you run.<br>"
+			+ "Blended cost: " + route.getTotalCost()
+			+ (weighted ? " (raw " + route.getRawCost() + ")" : "")
+			+ " — walk distance + travel time (lower is shorter).</html>");
+		right.add(eta);
 		// Status indicator (orange when shown); the whole card is the click target, see makeSelectable.
 		right.add(control(new JLabel(selected ? RouteIcons.SHOW_ACTIVE : RouteIcons.SHOW)));
 		topRow.add(right, BorderLayout.EAST);
@@ -575,9 +614,43 @@ public class ShortestPathPanel extends PluginPanel
 		return card;
 	}
 
+	/** The route's estimated travel time in seconds (assuming running), summed from its steps. */
+	private int routeEtaSeconds(RouteOption route)
+	{
+		int ticks = 0;
+		for (RouteDirections.Step step : plugin.getRouteDirections(route))
+		{
+			ticks += step.getTicks();
+		}
+		return (int) Math.ceil(ticks * RouteDirections.SECONDS_PER_TICK);
+	}
+
+	private static String formatDuration(int seconds)
+	{
+		if (seconds < 60)
+		{
+			return seconds + "s";
+		}
+		return (seconds / 60) + "m " + (seconds % 60) + "s";
+	}
+
 	// Neutral dot colour for walking legs; deliberately outside the category palette so walking
 	// doesn't masquerade as a teleport category.
 	private static final Color WALK_DOT_COLOUR = new Color(0x9E, 0x9E, 0x9E);
+	// Teleport-item dots are coloured by charge model — permanent (reusable) vs charged (consumes a
+	// charge or the item) — so the two read apart in a route card.
+	private static final Color PERMANENT_ITEM_DOT = new Color(0x4D, 0xB6, 0xAC); // teal
+	private static final Color CHARGED_ITEM_DOT = new Color(0xF2, 0xC1, 0x4E);   // amber
+
+	/** The category dot for a route-card method, splitting teleport items by charge model. */
+	private static Icon methodDot(TeleportMethod method)
+	{
+		if (method.getType() == TransportType.TELEPORTATION_ITEM)
+		{
+			return dot(method.isConsumable() ? CHARGED_ITEM_DOT : PERMANENT_ITEM_DOT);
+		}
+		return categoryDot(method.category());
+	}
 
 	/**
 	 * A walking-leg row, shaped exactly like a method row: a neutral grey dot in the category-dot
@@ -611,10 +684,12 @@ public class ShortestPathPanel extends PluginPanel
 		JPanel row = new JPanel(new BorderLayout(5, 0));
 		row.setOpaque(false);
 
-		JLabel dot = new JLabel(categoryDot(method.category()));
+		JLabel dot = new JLabel(methodDot(method));
 		dot.setVerticalAlignment(SwingConstants.TOP);
 		dot.setBorder(new EmptyBorder(2, 0, 0, 0));
-		dot.setToolTipText(method.category());
+		dot.setToolTipText(method.getType() == TransportType.TELEPORTATION_ITEM
+			? (method.isConsumable() ? "Item (charged — consumes a charge or the item)" : "Item (permanent — reusable)")
+			: method.category());
 		MethodAvailability status = cachedUnavailable.get(method);
 		boolean bankGated = bankMethods.contains(method);
 		if (status != null || bankGated)
@@ -803,7 +878,16 @@ public class ShortestPathPanel extends PluginPanel
 		});
 		section.add(titleRow);
 
-		// Usable breakdown — permanent (unlimited) vs charged (consumes a charge/the item).
+		if (!catalogExpanded)
+		{
+			catalogRowsPanel = null;
+			catalogRowsScroll = null;
+			section.setBorder(new EmptyBorder(0, 0, 4, 0));
+			return section;
+		}
+
+		// Usable breakdown — permanent (unlimited) vs charged (consumes a charge/the item). Only shown
+		// while expanded, where the split matters; the header count already carries the total collapsed.
 		if (available > 0)
 		{
 			JLabel breakdown = new JLabel(permanent + " permanent · " + charged + " charged");
@@ -814,14 +898,6 @@ public class ShortestPathPanel extends PluginPanel
 			breakdown.setAlignmentX(Component.LEFT_ALIGNMENT);
 			breakdown.setBorder(new EmptyBorder(0, 0, 4, 0));
 			section.add(breakdown);
-		}
-
-		if (!catalogExpanded)
-		{
-			catalogRowsPanel = null;
-			catalogRowsScroll = null;
-			section.setBorder(new EmptyBorder(0, 0, 4, 0));
-			return section;
 		}
 
 		// Filter box (persistent component, see the field comment) — only mounted while expanded —
@@ -863,6 +939,20 @@ public class ShortestPathPanel extends PluginPanel
 	}
 
 	/**
+	 * The catalog section a method is grouped under. Teleport items are split into two sections —
+	 * "Items (permanent)" (reusable jewellery/staves) and "Items (charged)" (tabs, charged jewellery
+	 * that consume a charge or the item) — since that distinction drives how freely they're used.
+	 */
+	private static String catalogGroupKey(TeleportMethod method)
+	{
+		if (method.getType() == TransportType.TELEPORTATION_ITEM)
+		{
+			return method.isConsumable() ? "Items (charged)" : "Items (permanent)";
+		}
+		return method.category();
+	}
+
+	/**
 	 * (Re)fills the expanded catalog's rows box from the current filter text. Called on every filter
 	 * keystroke — repopulates in place so the search field keeps focus. While a filter is active,
 	 * matching categories are shown force-expanded (a filter that only matched collapsed categories
@@ -898,7 +988,7 @@ public class ShortestPathPanel extends PluginPanel
 				|| method.category().toLowerCase().contains(filter)
 				|| method.label().toLowerCase().contains(filter))
 			{
-				grouped.computeIfAbsent(method.category(), k -> new ArrayList<>()).add(method);
+				grouped.computeIfAbsent(catalogGroupKey(method), k -> new ArrayList<>()).add(method);
 			}
 		}
 		for (List<TeleportMethod> items : grouped.values())

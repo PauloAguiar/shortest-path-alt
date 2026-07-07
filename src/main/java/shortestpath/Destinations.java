@@ -91,8 +91,8 @@ public final class Destinations
 		List<Entry> out = new ArrayList<>();
 		for (Entry entry : all(transports))
 		{
-			if ("place".equals(entry.category) || "dungeon".equals(entry.category)
-				|| "minigame".equals(entry.category))
+			if ("place".equals(entry.category) || "landmark".equals(entry.category)
+				|| "dungeon".equals(entry.category) || "minigame".equals(entry.category))
 			{
 				out.add(entry);
 			}

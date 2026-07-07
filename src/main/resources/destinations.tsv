@@ -326,7 +326,6 @@ dungeon	Minecarts	2928	10170	0
 dungeon	Motherlode Mine	3712	5648	1
 dungeon	Nora T. Hagg's cellar	2908	9872	0
 dungeon	Salt Mine	2845	10343	0
-dungeon	Sinclair Mansion	2741	3574	0
 dungeon	Sourhog Cave	3168	9696	0
 dungeon	Streambound Cavern	1505	9700	0
 dungeon	Sulphur Mine	1446	3885	0
@@ -386,821 +385,822 @@ furnace	Prifddinas Furnace	3287	6052	0
 furnace	Rellekka Furnace	2616	3666	0
 furnace	Wilderness Furnace	3143	3735	0
 furnace	Zanaris Furnace	2399	4472	0
-place	A	3787	10156	0
-place	Abalone Cliffs	3105	2532	0
-place	Aberrant Spectres	2457	9788	0
-place	Abyssal demons	1670	10091	0
-place	Access to Falador	3058	9776	0
-place	Administration	2900	6433	2
-place	Aehecatl	1103	3045	0
-place	Aestuarium Tempestus	1157	3218	0
-place	Afon Ganol	2258	3246	0
-place	Agility Arena	2815	3193	0
-place	Agility course	2720	5248	0
-place	Agility course spikes	2999	10350	0
-place	Al Kharid	3313	3171	0
-place	Alchemical Hydra	1368	10270	0
-place	Alchemical Society	1394	9327	0
-place	Aldarin	1391	2942	0
-place	Alloviz Estuary	3681	3430	0
-place	Altar	3060	5578	0
-place	Ancient Forge	1751	5290	1
-place	Ancient Prison	2875	5216	0
-place	Ancient Reef	3642	4019	0
-place	Ancient Shrine	1514	9583	0
-place	Ancient Vault	3512	2973	0
-place	Anger	3087	5293	0
-place	Anglerfish's Light	2759	2359	0
-place	Anglers' Retreat	2477	2711	0
-place	Animated axes	2962	9784	0
-place	Ankou	2479	9806	0
-place	Antechamber	1441	9633	1
-place	Ape Atoll	2755	2755	0
-place	Arandar	2339	3295	0
-place	Araxxor	3632	9815	0
+landmark	A	3787	10156	0
+landmark	Abalone Cliffs	3105	2532	0
+landmark	Aberrant Spectres	2457	9788	0
+landmark	Abyssal demons	1670	10091	0
+landmark	Access to Falador	3058	9776	0
+landmark	Administration	2900	6433	2
+landmark	Aehecatl	1103	3045	0
+landmark	Aestuarium Tempestus	1157	3218	0
+landmark	Afon Ganol	2258	3246	0
+landmark	Agility Arena	2815	3193	0
+landmark	Agility course	2720	5248	0
+landmark	Agility course spikes	2999	10350	0
+landmark	Alchemical Hydra	1368	10270	0
+landmark	Alchemical Society	1394	9327	0
+landmark	Alloviz Estuary	3681	3430	0
+landmark	Altar	3060	5578	0
+landmark	Ancient Forge	1751	5290	1
+landmark	Ancient Prison	2875	5216	0
+landmark	Ancient Reef	3642	4019	0
+landmark	Ancient Shrine	1514	9583	0
+landmark	Ancient Vault	3512	2973	0
+landmark	Anger	3087	5293	0
+landmark	Anglerfish's Light	2759	2359	0
+landmark	Anglers' Retreat	2477	2711	0
+landmark	Animated axes	2962	9784	0
+landmark	Ankou	2479	9806	0
+landmark	Antechamber	1441	9633	1
+landmark	Ape Atoll	2755	2755	0
+landmark	Arandar	2339	3295	0
+landmark	Araxxor	3632	9815	0
+landmark	Ardent Ocean	2916	2790	0
+landmark	Ardougne Zoo	2614	3273	0
+landmark	Armadyl's Eyrie	2837	5280	2
+landmark	Arrow Passage	2849	2754	0
+landmark	Auburn Valley	1417	3320	0
+landmark	Auburnvale	1405	3363	0
+landmark	Aureum Coast	1765	2901	0
+landmark	Avatar of Creation	2127	2893	0
+landmark	Avatar of Destruction	2287	2935	0
+landmark	Avium Savannah	1618	3020	0
+landmark	B	3815	10172	0
+landmark	Baby dragons	1894	9003	1
+landmark	Baby green dragons	2669	9578	2
+landmark	Backwater	2349	3002	0
+landmark	Bandit Camp	3175	2977	0
+landmark	Bandos's Stronghold	2832	5344	2
+landmark	Bank vault	3196	9822	0
+landmark	Banshees	1615	9994	0
+landmark	Barbarian Assault	2525	3581	0
+landmark	Barbarian Outpost	2542	3558	0
+landmark	Barracks	1641	9576	0
+landmark	Barracuda Belt	2169	2558	0
+landmark	Barrows	3566	3291	0
+landmark	Basilisk Knights	2455	10388	0
+landmark	Basilisks	2744	10004	0
+landmark	Bats	2569	9753	0
+landmark	Battlefield	2522	3232	0
+landmark	Battlefront	1368	3718	0
+landmark	Baxtorian Falls	2515	3462	0
+landmark	Bay of Elidinis	3282	2667	0
+landmark	Bay of Sarim	3070	3177	0
+landmark	Bazaar	1681	3108	0
+landmark	Bedabin Camp	3170	3038	0
+landmark	Beware of the dog	1310	1277	0
+landmark	Beware of the mushrooms	2422	4375	0
+landmark	Beware of the scorpions	3052	9809	0
+landmark	Black Guard H.Q.	2827	10213	0
+landmark	Black Knights' Base	2908	9689	0
+landmark	Black Knights' Fortress	3018	3522	0
+landmark	Black demons	2712	9485	0
+landmark	Black dragons	2839	9829	0
+landmark	Blank Tower	3594	6113	0
+landmark	Blast Furnace	2930	10194	0
+landmark	Bleakwater Bay	3429	3641	0
+landmark	Blighted Volcano	3365	3937	0
+landmark	Bloodvelds	2459	9832	0
+landmark	Blue Base	2128	2909	0
+landmark	Blue dragons	2127	9306	0
+landmark	Bone Burner	1811	9951	0
+landmark	Bone Yard	3246	3746	0
+landmark	Bone collector	2697	5319	0
+landmark	Boot	2985	9806	0
+landmark	Bounty Hunter	3141	3623	0
+landmark	Box of Health	2144	5283	0
+landmark	Breakbone Strait	2388	2866	0
+landmark	Brewery	3680	9960	0
+landmark	Brimhaven Passage	2752	3263	0
+landmark	Brimstail	2401	9827	0
+landmark	Brittle Isle	1948	4071	0
+landmark	Bronze & iron dragons	1648	10095	0
+landmark	Bronze dragons	2736	9497	0
+landmark	Bronze, iron & steel dragons	2656	9440	0
+landmark	Brutal black, blue & red dragons	1622	10084	0
+landmark	Brutal green dragons	1773	5332	0
+landmark	Buccaneers' Haven	2080	3681	0
+landmark	Buccaneers' Laboratory	2081	10073	0
+landmark	Burntmeat's Kitchen	2848	10054	1
+landmark	C	3830	10157	0
+landmark	Cairn Isle	2764	2979	0
+landmark	Calidum Reach	1190	2642	0
+landmark	Callisto's Den	3293	3848	0
+landmark	Cam Torum	1440	9568	1
+landmark	Cam Torum Entrance	1436	3124	0
+landmark	Camdozaal Vault	2971	5823	0
+landmark	Camelot Castle	2763	3505	0
+landmark	Cape Atoll	2700	2711	0
+landmark	Cape Conch	3286	2334	0
+landmark	Castle Drakan	3553	3360	0
+landmark	Castle Wars	2440	3092	0
+landmark	Catherby Bay	2823	3410	0
+landmark	Cauldron of Thunder	2895	9833	0
+landmark	Champions' Challenge	3168	9758	0
+landmark	Champions' Guild	3201	3354	0
+landmark	Chaos Temple	2934	3526	0
+landmark	Chaos druids	2934	9852	0
+landmark	Chaos dwarves	2920	9770	0
+landmark	Charcoal Burners	1718	3470	0
+landmark	Charred Island	2642	2405	0
+landmark	Chasm of Fire	1445	3679	0
+landmark	Chasm of Tears	3230	9517	2
+landmark	Chinchompa Island	1884	3435	0
+landmark	Chinchompas	2522	9299	0
+landmark	Chompy Marsh	2379	3055	0
+landmark	Chronozon	3086	9932	0
+landmark	Citharede Abbey	3413	3182	0
+landmark	City Entrance	1440	9518	1
+landmark	Clan Wars	3129	3623	0
+landmark	Clock Tower	2573	3242	0
+landmark	Coal Trucks	2600	3491	0
+landmark	Cockatrice	2792	10037	0
+landmark	Colossal Wyrm Remains	1640	2921	0
+landmark	Combat Ring	1546	3633	0
+landmark	Combat Training Camp	2519	3370	0
+landmark	Confusion	3122	5258	0
+landmark	Cooks' Guild	3137	3437	0
+landmark	Coral Nurseries	3298	8864	1
+landmark	Corporeal Beast	2986	4386	2
+landmark	Council chamber	2718	5367	1
+landmark	Court of Chaos	3598	6067	0
+landmark	Crabclaw Bay	1687	3427	0
+landmark	Crabclaw Isle	1760	3424	0
+landmark	Cradle of Life	2344	5216	0
+landmark	Crafting Guild	2921	3282	0
+landmark	Crandor	2839	3271	0
+landmark	Crash Island	2915	2723	0
+landmark	Crombwick Manor	3726	3360	0
+landmark	Crystal Sea	1982	3247	0
+landmark	Cursed Archipelago	3767	2581	0
+landmark	Custodia Mountains	1272	3414	0
+landmark	Custodia Pass	1268	3360	0
+landmark	Cyclopes	2920	9972	0
+landmark	Cyclopes & Axes	1650	10018	0
+landmark	Dagannoth	1895	4368	0
+landmark	Dagannoth Kings	2888	4384	0
+landmark	Dagger's Edge	1141	3942	0
+landmark	Daimon's Crater	3424	4088	0
+landmark	Dark Altar	1696	3880	0
+landmark	Dark Warrior's Palace	3552	6160	0
+landmark	Dark Warriors' Fortress	3030	3633	0
+landmark	Dark Wizards' Tower	2907	3336	0
+landmark	Dark beasts	3227	12397	0
+landmark	Darkmeyer	3626	3363	0
+landmark	Darkmoon Ravine	1311	2920	0
+landmark	Dead people	2149	5081	0
+landmark	Death	2336	5184	0
+landmark	Death Plateau	2865	3592	0
+landmark	Debtor Hideout	3406	5804	0
+landmark	Deepfin Point	1949	2793	0
+landmark	Demonic Ruins	3293	3884	0
+landmark	Desert Island	3456	5824	0
+landmark	Desert Mining Camp	3291	3022	0
+landmark	Deserted Keep	3149	3941	0
+landmark	Digsite	3365	3419	0
+landmark	Distillery	2152	5102	0
+landmark	Dognose Island	3048	2648	0
+landmark	Dogs	2666	9523	0
+landmark	Dondakan's rock	2836	10166	0
+landmark	Doors of Dinh	1630	3968	0
+landmark	Dragon Nest	1247	9503	0
+landmark	Dragon's Maw	3902	3559	0
+landmark	Dragons	1936	8992	1
+landmark	Dragontooth Island	3808	3560	0
+landmark	Drakes	1348	10241	1
+landmark	Dramen Tree	2861	9737	0
+landmark	Draynor Manor	3109	3355	0
+landmark	Druids' Circle	2925	3473	0
+landmark	Drumstick Isle	2145	3547	0
+landmark	Dusk's Maw	1239	2948	0
+landmark	Dust devils	1715	10025	0
+landmark	Dvergfjord	2745	3763	0
+landmark	Eagles' Peak	2337	3486	0
+landmark	Earth warriors	3119	9996	0
+landmark	Eastern Graveyard	2254	2929	0
+landmark	Eastern Ocean	3682	2854	0
+landmark	Eastern Ridge	3892	3148	0
+landmark	Echoing Rift	3723	3694	0
+landmark	Ectofuntus	3659	3520	0
+landmark	Elid Delta	3269	2718	0
+landmark	Elvarg	2856	9638	0
+landmark	Elves	3184	12405	0
+landmark	Emir's Arena	3358	3237	0
+landmark	Entrana	2850	3379	0
+landmark	Ents	1565	9891	0
+landmark	Etceteria	2609	3874	0
+landmark	Everwinter Sea	1792	4095	0
+landmark	Exam Centre	3361	3345	0
+landmark	Exit	3166	4547	0
+landmark	Falador Park	2995	3375	0
+landmark	Farming Guild	1249	3739	0
+landmark	Fear	3122	5298	0
+landmark	Feldip Gulf	2699	2955	0
+landmark	Feldip Hills	2540	2920	0
+landmark	Fenkenstrain's Castle	3551	3551	0
+landmark	Ferox Enclave	3151	3635	0
+landmark	Fiend's Passage	3308	4002	0
+landmark	Fight Arena	2594	3162	0
+landmark	Fight Pit	2398	5160	0
+landmark	Fire Obelisk	2812	9836	0
+landmark	Fire giants	2121	9330	0
+landmark	Fishing Guild	2599	3401	0
+landmark	Fishing Hamlet	1696	3936	0
+landmark	Fishing Platform	2776	3288	0
+landmark	Foodhall	1842	3748	0
+landmark	Forbidden Depths	3808	2499	0
+landmark	Forgotten Ocean	1251	3991	0
+landmark	Forthos Ruin	1675	3575	0
+landmark	Fortis Aqueduct	1562	3154	0
+landmark	Fortis Bay	1821	3020	0
+landmark	Fortis Colosseum	1825	3109	0
+landmark	Fortis Cothon	1760	3146	0
+landmark	Fossil Island	3740	3805	0
+landmark	Fountain of Heroes	2918	9889	0
+landmark	Fountain of Rune	3379	3893	0
+landmark	Fremennik Isles	2367	3879	0
+landmark	Fremennik Province	2679	3646	0
+landmark	Fremennik Strait	2349	3747	0
+landmark	Fremensund	2593	3724	0
+landmark	Frostgrave Depths	1556	4113	0
+landmark	Frozen Temple	3424	4121	0
+landmark	Frozen Waste Plateau	2972	3919	0
+landmark	Gargoyles	3452	9935	3
+landmark	Ghosts	1664	10025	0
+landmark	Giant Pit	1445	3615	0
+landmark	Giant frogs	3230	9546	0
+landmark	Giant rock crabs	2523	10165	0
+landmark	Giants' Plateau	3376	3164	0
+landmark	Gift of Peace	1907	5227	0
+landmark	Gloomthorn Trail	1378	3234	0
+landmark	Gnome Stronghold	2461	3444	0
+landmark	Gnomeball Field	2401	3487	0
+landmark	Goblin Maze	3264	9630	0
+landmark	Goblin Village	2963	3502	0
+landmark	Golden Apple Tree	2765	3608	0
+landmark	Golem Workshop	3010	5798	0
+landmark	Gorlah	2284	3426	0
+landmark	Goutweed store	2856	10084	0
+landmark	Grain of Plenty	2022	5221	0
+landmark	Grand Exchange	3165	3487	0
+landmark	Grand Museum	1713	3165	0
+landmark	Grand Tree	2469	3504	0
+landmark	Grandroot Bay	2455	3591	0
+landmark	Gravewater Bay	3755	3446	0
+landmark	Graveyard	3569	3408	0
+landmark	Graveyard of Heroes	1495	3561	0
+landmark	Graveyard of Shadows	3167	3673	0
+landmark	Great Sound	1527	3380	0
+landmark	Greater demons	2158	9336	0
+landmark	Greater nechryael	3336	10106	0
+landmark	Green dragons	3414	10073	0
+landmark	Grieving Bight	1106	3553	0
+landmark	Grimstone	2913	4075	0
+landmark	Gryphons	3232	8865	0
+landmark	Gu'Tanoth	2528	3046	0
+landmark	Gu'tanoth Bay	2623	3036	0
+landmark	Guardians	3278	9485	0
+landmark	Gulf of Kourend	1910	3757	0
+landmark	Gwenith	2199	3409	0
+landmark	H.A.M. Cult	3167	9635	0
+landmark	Hallowed Sea	3866	3330	0
+landmark	Hammerspike's hangout	2969	9819	0
+landmark	Harmony	3808	2863	0
+landmark	Haunted Coast	3642	3578	0
+landmark	Haunted Woods	3580	3488	0
+landmark	Hellhounds	2424	9793	0
+landmark	Hemenster	2634	3426	0
+landmark	Here be a big mole	1760	5188	0
+landmark	Here be dead stuff	3263	9904	0
+landmark	Here be goblins	2594	9823	0
+landmark	Here be minotaurs	1951	9508	0
+landmark	Here be odd stuff	3519	9960	0
+landmark	Here be penguins	2622	3988	0
+landmark	Here be spiders	3667	9824	0
+landmark	Heroes' Guild	2894	3501	0
+landmark	Hespori	1248	10089	0
+landmark	Highlord's Chamber	1414	9590	1
+landmark	Hill giants	3110	9838	0
+landmark	Hobgoblins	3019	9587	0
+landmark	Hopelessness	3087	5263	0
+landmark	Horizon's End	1278	2371	0
+landmark	Hosidian Sea	1917	3597	0
+landmark	House on the Hill	3780	3871	0
+landmark	Hunter Guild	1558	3048	0
+landmark	Hunter's End	3116	3675	0
+landmark	Huntsman's Wood	3382	4053	0
+landmark	Hut	3496	6072	0
+landmark	Hydras	1311	10241	0
+landmark	Ice Mountain	3009	3487	0
+landmark	Ice giants	2965	9565	0
+landmark	Ice path	2857	3809	0
+landmark	Ice warriors & giants	3051	9577	0
+landmark	Iceberg	2681	4048	0
+landmark	Icyene Graveyard	3697	3188	0
+landmark	Idestia Strait	2662	3855	0
+landmark	Infirmary	1509	3617	0
+landmark	Iorwerth Camp	2196	3257	0
+landmark	Iron & steel dragons	2721	9446	0
+landmark	Iron dragons	2154	9296	0
+landmark	Isafdar	2243	3186	0
+landmark	Island of Stone	2467	4011	0
+landmark	Isle of Bones	2530	2533	0
+landmark	Isle of Serpents	1850	2413	0
+landmark	Isle of Souls	2209	2878	0
+landmark	Jail	3126	3244	0
+landmark	Jaldraocht Pyramid	3233	2900	0
+landmark	Jaleustrophos Pyramid	3365	2845	0
+landmark	Jalsavrah Pyramid	3288	2798	0
+landmark	Jaltevas Pyramid	3365	2705	0
+landmark	Jellies	1688	9999	0
+landmark	Jiggig	2464	3047	0
+landmark	Jogres	2848	9504	0
+landmark	Kannski Tides	2395	3947	0
+landmark	Karamja	2924	3153	0
+landmark	Karamja Volcano	2843	3176	0
+landmark	Kastori	1372	3044	0
+landmark	Kebos Lowlands	1265	3649	0
+landmark	Kebos Shore	1163	3734	0
+landmark	Kebos Swamp	1255	3622	0
+landmark	Keep Le Faye	2770	3399	0
+landmark	Keldagrim Entrance	2728	3715	0
+landmark	Key Master	1310	1253	0
+landmark	Kharazi Jungle	2844	2923	0
+landmark	Kharazi Strait	2822	2851	0
+landmark	Kharidian Desert	3311	2930	0
+landmark	Kharidian Sea	3103	2968	0
+landmark	King Black Dragon	2272	4705	0
+landmark	Kingdom of Asgarnia	2988	3412	0
+landmark	Kingdom of Great Kourend	1600	3700	0
+landmark	Kingdom of Kandarin	2578	3370	0
+landmark	Kingdom of Misthalin	3217	3321	0
+landmark	Kingdom of Varlamore	1510	3195	0
+landmark	Kingstown	1668	3675	0
+landmark	Kourend Castle	1626	3676	0
+landmark	Kourend Woodland	1553	3456	0
+landmark	Kovac	3370	11487	0
+landmark	Kraken Cove	2272	3602	0
+landmark	Kualti Headquarters	1645	3150	0
+landmark	Kurask	2701	10001	0
+landmark	Lacerta Falls	1381	3470	0
+landmark	Laguna Aurorae	1190	2778	0
+landmark	Lake Hemenster	2610	3444	0
+landmark	Lake Molch	1374	3650	0
+landmark	Land's End	1510	3434	0
+landmark	Larran's Chest	3279	3659	0
+landmark	Last Gasp	1060	3379	0
+landmark	Last Light	2857	2330	0
+landmark	Last Man Standing	3142	3644	0
+landmark	Lava Dragon Isle	3199	3824	0
+landmark	Lava Maze	3079	3848	0
+landmark	Legends' Guild	2737	3374	0
+landmark	Lesser demons	2834	9561	0
+landmark	Library	1624	3826	0
+landmark	Lithkren	3567	4003	0
+landmark	Litus Lucis	1767	3241	0
+landmark	Lizardman Canyon	1503	3707	0
+landmark	Lizardman Settlement	1308	3548	0
+landmark	Lizardman Temple	1312	10079	1
+landmark	Lizards & Zamorak fighters	3018	5578	0
+landmark	Lledrith Island	2091	3181	0
+landmark	Locus Oasis	1686	2991	0
+landmark	Lovakengj Assembly	1483	3758	0
+landmark	Lovkengj's Shroud	1447	3994	0
+landmark	Lower level	3184	4544	0
+landmark	Lum Lagoon	3253	3144	0
+landmark	Lumber Yard	3308	3507	0
+landmark	Lumbridge Basin	3184	3106	0
+landmark	Lumbridge Swamp	3230	3155	0
+landmark	Lunar Bay	2183	3904	0
+landmark	Lunar Isle	2141	3877	0
+landmark	Lunar Sea	2124	4070	0
+landmark	Mage Arena	3107	3933	0
+landmark	Mage Arena bank	2533	4704	0
+landmark	Mage Training Arena	3363	3303	0
+landmark	Main Block	2913	6371	2
+landmark	Marim	2763	2784	0
+landmark	Market	3080	3250	0
+landmark	Mausoleum	3502	3572	0
+landmark	McGrubor's Wood	2647	3480	0
+landmark	Meiyerditch	3619	3263	0
+landmark	Melzar's Maze	2937	3248	0
+landmark	Menaphite Sea	3057	2721	0
+landmark	Merwick Lake	2779	3553	0
+landmark	Mess	1640	3626	0
+landmark	Middle level	3168	4544	1
+landmark	Mining Guild	3020	3344	0
+landmark	Minotaurs' Rest	1965	3104	0
+landmark	Miscellania Expansion	2518	10258	0
+landmark	Mistrock	1384	2866	0
+landmark	Misty Sea	1427	2747	0
+landmark	Mithril dragons	1762	5338	1
+landmark	Molch	1312	3670	0
+landmark	Monastery	2603	3218	0
+landmark	Mons Gratia	1442	3250	0
+landmark	Moonrise Brewery and Winery	1360	2922	0
+landmark	Moonshadow	2105	3814	0
+landmark	Mor Ul Rek	2496	5140	0
+landmark	Mort Myre Swamp	3446	3385	0
+landmark	Morytania	3552	3432	0
+landmark	Mos Le'Water	3902	2981	0
+landmark	Moser Settlement	3476	5791	0
+landmark	Moss giants	2663	9570	0
+landmark	Mount Karuulm	1311	3808	0
+landmark	Mount Quidamortem	1248	3552	0
+landmark	Mountain Camp	2784	3670	0
+landmark	Mountain dwarves	2853	9872	0
+landmark	Mudskipper Point	2990	3118	0
+landmark	Mudskipper Sound	2981	3090	0
+landmark	Muggers	2994	9571	0
+landmark	Murkshore Sea	3694	3122	0
+landmark	Musa Passage	2855	3133	0
+landmark	Musa Point	2914	3161	0
+landmark	Museum Camp	3730	3821	0
+landmark	Mushroom Forest	3690	3861	0
+landmark	Mynydd	2154	3425	0
+landmark	Mythic Sea	2530	2742	0
+landmark	Myths' Guild	2457	2848	0
+landmark	Nechryael	1700	10083	0
+landmark	Necromancer's Tower	2669	3243	0
+landmark	Necropolis	3335	2730	0
+landmark	Nemus Retreat	1373	3313	0
+landmark	Neypotzli Entrance	1440	9600	1
+landmark	Nightmare Zone	2608	3120	0
+landmark	Northern Ocean	2477	4085	0
+landmark	Northern Tundras	1630	3930	0
+landmark	Nothing interesting happens here	2159	5170	0
+landmark	Nursery	2742	5337	1
+landmark	Observatory	2440	3151	0
+landmark	Obstacle course	3537	9889	0
+landmark	Ochre Sea	1510	2528	0
+landmark	Offering Altar	2937	5773	0
+landmark	Ogres	2586	9608	0
+landmark	Ogresses	2011	8989	1
+landmark	Old Manor	3497	6118	0
+landmark	Oldak's teleportation laboratory	2704	5368	0
+landmark	Oo'glog Channel	2644	2828	0
+landmark	Ortus Farm	1570	3127	0
+landmark	Otherworldly beings	2386	4427	0
+landmark	Otto's Grotto	2502	3489	0
+landmark	Outer Fortis	1707	3064	0
+landmark	Outpost	2435	3355	0
+landmark	Palace	3213	3483	0
+landmark	Park	1737	3105	0
+landmark	Party Room	3046	3380	0
+landmark	Paterdomus Temple	3414	3489	0
+landmark	Pearl Bank	3262	2237	0
+landmark	Pest Control	2656	2587	0
+landmark	Pestilence	2144	5248	0
+landmark	Pilgrims' Passage	1928	3397	0
+landmark	Pillars of Sacrifice	3598	6164	0
+landmark	Pirates	2990	9576	0
+landmark	Pirates' Cove	2206	3815	0
+landmark	Pirates' Hideout	3043	3948	0
+landmark	Piscatoris Fishing Colony	2345	3693	0
+landmark	Piscatoris Sea	2231	3679	0
+landmark	Pit scorpions	2719	9744	0
+landmark	Poison Waste	2241	3098	0
+landmark	Poison spiders	2576	9568	0
+landmark	Poisonous scorpions	2935	9754	0
+landmark	Port Khazard	2659	3189	0
+landmark	Port Roberts	1892	3303	0
+landmark	Port Tyras	2155	3122	0
+landmark	Porth Gwenith	2163	3483	0
+landmark	Porth Neigwl	2124	3205	0
+landmark	Puro-puro	2428	4446	0
+landmark	Pyre Cove	3349	3618	0
+landmark	Pyrefiends	2761	10012	0
+landmark	Quarry	3172	2904	0
+landmark	Queen's Chamber	3488	9504	0
+landmark	Quetzacalli Gorge	1506	3241	0
+landmark	Rainbow Reef	2278	2340	0
+landmark	Rainbow's End	2335	2273	0
+landmark	Ralos' Rise	1445	3164	0
+landmark	Ramarno	2956	5806	0
+landmark	Ranging Guild	2676	3436	0
+landmark	Rat Pits	2976	9632	0
+landmark	Rats	3239	9872	0
+landmark	Red Base	2287	2919	0
+landmark	Red Reef	2874	2497	0
+landmark	Red Rock	2797	2518	0
+landmark	Red Spiders	2834	9586	0
+landmark	Red dragons	2710	9521	0
+landmark	Refugee Camp	2991	6351	2
+landmark	Residential District	2657	6427	0
+landmark	Resource Area	3187	3936	0
+landmark	Rimmington Strait	2887	3249	0
+landmark	Ritual Site	1130	3420	0
+landmark	River Amja	2914	3032	0
+landmark	River Crannmor	2379	3458	0
+landmark	River Dougne	2540	3398	0
+landmark	River Elid	3371	3068	0
+landmark	River Hos	1615	3594	0
+landmark	River Kelda	2842	10141	0
+landmark	River Lum	3167	3350	0
+landmark	River Molch	1260	3672	0
+landmark	River Ortus	1624	3200	0
+landmark	River Salve	3403	3437	0
+landmark	River Shilo	2814	2972	0
+landmark	River Varla	1375	3117	0
+landmark	River of Souls	1842	3892	0
+landmark	Rock Island Prison	2898	2837	0
+landmark	Rock lobsters	1950	4362	0
+landmark	Rock slugs	2796	10019	0
+landmark	Rocky Outcrop	3463	5767	0
+landmark	Rogues' Castle	3286	3931	0
+landmark	Rower's Arm	2563	3617	0
+landmark	Ruins	2966	3697	0
+landmark	Ruins of Morra	1449	3514	0
+landmark	Ruins of Ullek	3413	2832	0
+landmark	Ruins of Unkah	3171	2841	0
+landmark	Ruins of Uzer	3479	3098	0
+landmark	Salarin the Twisted	2614	9524	0
+landmark	Saltpetre	1702	3520	0
+landmark	Salvager Overlook	1635	3296	0
+landmark	Sanctuary's End	3518	3145	0
+landmark	Sand crabs	1714	9997	0
+landmark	Sapphire Sea	1784	2578	0
+landmark	Sarachnis	1844	9902	0
+landmark	Saradomin's Encampment	2908	5270	0
+landmark	Scabaras' Shallows	3485	2818	0
+landmark	Science District	2592	6369	0
+landmark	Scorpion Pit	3236	3945	0
+landmark	Scurrius The Rat King	3300	9869	0
+landmark	Sea Spirit Dock	3123	2839	0
+landmark	Sea of Shells	3054	2344	0
+landmark	Sea of Souls	2250	2707	0
+landmark	Sea snakes	2600	10275	0
+landmark	Seers' Eye	2710	3527	0
+landmark	Settlement Ruins	1558	3892	0
+landmark	Shades	3488	9696	0
+landmark	Shadow spiders	3021	10328	0
+landmark	Shadow warriors	2700	9774	0
+landmark	Shamans	1435	3710	0
+landmark	Shantay Pass	3304	3126	0
+landmark	Shayzia Ruin	1583	3602	0
+landmark	Shayzien Encampment	1510	3664	0
+landmark	Shayziens' Wall	1395	3539	0
+landmark	Shellbane  Gryphon	3179	8876	0
+landmark	Shimmering Atoll	1568	2786	0
+landmark	Shipwreck Cove	1572	3311	0
+landmark	Shipyard	2078	2720	0
+landmark	Shiverwake Expanse	2750	4103	0
+landmark	Shrieking Waters	3894	2691	0
+landmark	Shrine	2452	4478	0
+landmark	Shrouded Ocean	2104	2491	0
+landmark	Shura	3808	9747	1
+landmark	Silk Chasm	3321	3793	0
+landmark	Silvarea	3362	3485	0
+landmark	Sinclair Mansion	2736	3578	0
+landmark	Sire	3110	4793	0
+landmark	Skeletal Tomb	3181	3682	0
+landmark	Skeletal wyverns	3057	9547	0
+landmark	Skeletons	2857	9572	0
+landmark	Skeletons & zombies	3121	9899	0
+landmark	Skullball	3560	9866	0
+landmark	Slayer Tower	3429	3555	0
+landmark	Slepe	3718	3330	0
+landmark	Slepe Sound	3718	3259	0
+landmark	Smoke devils	2408	9438	0
+landmark	Soldiers	3330	9486	0
+landmark	Sorcerer's Tower	2713	3410	0
+landmark	Soul Bay	2091	2806	0
+landmark	Soul Obelisk	2207	2915	0
+landmark	Soul Wars Arena	2207	2932	0
+landmark	Soul Wars Lobby	2210	2851	0
+landmark	South Falador Farm	3038	3294	0
+landmark	Southern Expanse	1984	2397	0
+landmark	Spectres	1613	10010	0
+landmark	Spiders	2606	9638	0
+landmark	Stalker Den	1286	9775	0
+landmark	Station	2696	5277	1
+landmark	Steel dragons	1602	10059	0
+landmark	Stone Circle	3567	6054	0
+landmark	Stonecutter Outpost	1740	2969	0
+landmark	Stoneheart Sea	2553	4014	0
+landmark	Strait of Discord	3754	2908	0
+landmark	Strait of Khazard	2704	3131	0
+landmark	Sub-level 1	2496	10112	0
+landmark	Sub-level 2	1888	4352	3
+landmark	Sub-level 3	1888	4352	2
+landmark	Sub-level 4	1888	4352	1
+landmark	Sub-level 5	1888	4352	0
+landmark	Sub-level 6	2888	4360	0
+landmark	Sulphur Cove	1354	3876	0
+landmark	Sulphur lizards	1335	10185	1
+landmark	Sunbleak Island	2212	2327	0
+landmark	Sunken Cathedral	2656	6372	0
+landmark	Sunrise Palace	1681	3166	0
+landmark	Sunset Bay	1538	2933	0
+landmark	Sunset Coast	1547	2971	0
+landmark	Sunset Ocean	1387	2629	0
+landmark	Tainted Tides	3644	2674	0
+landmark	Tal Teklan	1220	3113	0
+landmark	Tal Teok	1248	3169	0
+landmark	Talon's Grasp	1173	3489	0
+landmark	Tanglefeet	2383	4380	0
+landmark	Tar Swamp	3680	3781	0
+landmark	Tasakaal	1312	10207	0
+landmark	Tear of the Soul	2333	2770	0
+landmark	Tears of Guthix	3260	9522	2
+landmark	Tegdak	2746	5342	0
+landmark	Tempestus	1284	3256	0
+landmark	Temple	1175	3430	0
+landmark	Temple Spiders	1842	9960	0
+landmark	Tempoross Cove	3015	2847	0
+landmark	Terror dogs	3150	4650	0
+landmark	The Accursed Sea	3669	2307	0
+landmark	The Blood Moon	1393	9635	0
+landmark	The Blue Moon	1441	9683	0
+landmark	The Cinderwaters	3443	3923	0
+landmark	The Crown Jewel	1758	2665	0
+landmark	The Darkfrost	1512	3288	0
+landmark	The Dibber	1836	3627	0
+landmark	The Eastern Doldrums	3852	3985	0
+landmark	The Eclipse Moon	1489	9635	0
+landmark	The Endless Sea	1276	4070	0
+landmark	The Everdeep	1884	2729	0
+landmark	The Forgotten Cemetery	2977	3753	0
+landmark	The Forsaken Tower	1385	3830	0
+landmark	The Gauntlet	3033	6115	1
+landmark	The Great Conch	3187	2455	0
+landmark	The Hollows	3500	3384	0
+landmark	The Inferno	2272	5337	0
+landmark	The Iron Sea	3462	2614	0
+landmark	The Little Pearl	3356	2205	0
+landmark	The Lonely Sea	2518	2316	0
+landmark	The Mountain	3431	5845	0
+landmark	The Nightmare	3808	9762	1
+landmark	The Node	3109	3025	0
+landmark	The Onyx Crest	2977	2271	0
+landmark	The Pandemonium	3042	2992	0
+landmark	The Precipice	3925	3796	0
+landmark	The Proudspire	1570	3241	0
+landmark	The Sacred Grove	3200	2485	0
+landmark	The Searing Sea	3161	4067	0
+landmark	The Simian Sea	2757	2636	0
+landmark	The Skullhorde	2445	2505	0
+landmark	The Storm Tempor	3082	2878	0
+landmark	The Stranglewood	1155	3391	0
+landmark	The Summer Shore	3166	2414	0
+landmark	The Teomat	1450	3190	0
+landmark	The Warrens	1770	10143	0
+landmark	The White Cliffs of Lova	1503	3960	0
+landmark	The Wintertodt	1630	4011	0
+landmark	Thermonuclear Smoke Devil	2362	9456	0
+landmark	Throne room	2447	4429	0
+landmark	Thugs	3130	9935	0
+landmark	Tirannwn	2240	3264	0
+landmark	Tirannwn Bight	2119	3362	0
+landmark	Tithe Farm	1806	3507	0
+landmark	Tlati Rainforest	1302	3098	0
+landmark	Toll Gate	3275	3227	0
+landmark	Tortugan Sea	3337	2461	0
+landmark	Tower of Ascension	1641	3225	0
+landmark	Tower of Bounty	3473	4036	0
+landmark	Tower of Life	2650	3213	0
+landmark	Tower of Magic	1573	3822	0
+landmark	Town Center	3552	6107	0
+landmark	Trading Post	3500	6169	0
+landmark	Tree Gnome Stronghold	2433	3454	0
+landmark	Trinity Outpost	3500	5873	0
+landmark	Troll Country	2846	3736	0
+landmark	Troll Stronghold	2844	3684	0
+landmark	Troll generals	2829	10082	2
+landmark	Trollheim	2892	3678	0
+landmark	Trolls	2790	10132	0
+landmark	Trollweiss Mountain	2782	3863	0
+landmark	Trouble Brewing	3786	2998	0
+landmark	Turoth	2716	10011	0
+landmark	Turtle Belt	3025	2595	0
+landmark	Tutorial Island	3105	3099	0
+landmark	Twilight Temple	1697	3257	0
+landmark	Tyras Camp	2180	3147	0
+landmark	Undead druids	1850	9939	0
+landmark	Underground Pass	2443	3315	0
+landmark	Underwater	3772	10288	1
+landmark	Ungael	2272	4066	0
+landmark	Unmarked Grave	1570	3940	0
+landmark	Unquiet Ocean	2865	2436	0
+landmark	Untamed Ocean	3575	3911	0
+landmark	Upper level	1743	5375	1
+landmark	Ur-meg	2692	5304	0
+landmark	Ur-tag	2733	5366	1
+landmark	Ur-vass	2723	5331	0
+landmark	Ur-zek & Ur-taal	2716	5344	0
+landmark	Uzer Channel	3586	3010	0
+landmark	Uzer Oasis	3489	3043	0
+landmark	V's Belt	2477	3815	0
+landmark	VTAM Corporation	3245	9773	0
+landmark	Vagabonds Rest	2080	3626	0
+landmark	Vatrachos Island	1886	2984	0
+landmark	Ver Sinhaza	3662	3220	0
+landmark	Vesmjos	2606	3557	0
+landmark	Vet'ion's Rest	3223	3786	0
+landmark	Villa Lucens	1448	2933	0
+landmark	Vinery	1808	3560	0
+landmark	Voice of Yama	1440	10084	0
+landmark	Void Knights' Outpost	2636	2666	0
+landmark	Volcano	3780	3781	0
+landmark	Wallasalki	2506	10145	0
+landmark	War	1888	5184	0
+landmark	War Tent	1488	3636	0
+landmark	Warriors' Guild	2854	3564	0
+landmark	Waterbirth Island	2522	3756	0
+landmark	Waterfiends	1738	5356	0
+landmark	Web Chasm	3184	3743	0
+landmark	Weiss Melt	2952	4031	0
+landmark	Weissmere	2777	3941	0
+landmark	Western Gate	1994	2977	0
+landmark	Western Graveyard	2163	2902	0
+landmark	Western Ocean	1996	3331	0
+landmark	White Knights' Castle	2961	3345	0
+landmark	White Wolf Mountain	2849	3492	0
+landmark	Wild Varrock	3552	6120	0
+landmark	Wilderness	3100	3680	0
+landmark	Wine of Zamorak	3022	10354	0
+landmark	Winter's Edge	1969	3959	0
+landmark	Wintertodt	1630	3945	0
+landmark	Wintertodt Camp	1640	3944	0
+landmark	Wintumber Island	2067	2608	0
+landmark	Wire machine	2715	5270	0
+landmark	Witchaven	2710	3291	0
+landmark	Wizards' Guild	2589	3077	0
+landmark	Wizards' Tower	3112	3153	0
+landmark	Wolf Den	1481	9506	1
+landmark	Woodcutting Guild	1613	3490	0
+landmark	Wyrm's Waters	1632	2844	0
+landmark	Wyrms	1263	10158	0
+landmark	Wyvern's Wake	3546	3776	0
+landmark	Wyverns	3616	10208	0
+landmark	Wyverns Task Only	3616	10272	0
+landmark	Xeric's Look out	1580	3530	0
+landmark	Xeric's Shrine	1311	3618	0
+landmark	Yama	1504	10084	0
+landmark	Yanille Chain	2664	3102	0
+landmark	Ynysdail	2218	3476	0
+landmark	Zalcano	3035	6051	0
+landmark	Zamorak's Fortress	2909	5363	2
+landmark	Zanaris	2452	4473	0
+landmark	Zanik's bedroom	2744	5351	2
+landmark	Zombies	2842	9766	0
+landmark	Zombies & rocks	2675	9682	0
+landmark	Zul-Andra	2201	3068	0
+landmark	Zul-Egil	2158	3032	0
+landmark	Zulrah's shrine	2270	3074	0
+place	Al Kharid	3293	3174	0
+place	Aldarin	1420	2965	0
 place	Arceuus	1699	3742	0
-place	Ardent Ocean	2916	2790	0
 place	Ardougne	2662	3305	0
-place	Ardougne Zoo	2614	3273	0
-place	Armadyl's Eyrie	2837	5280	2
-place	Arrow Passage	2849	2754	0
-place	Auburn Valley	1417	3320	0
-place	Auburnvale	1405	3363	0
-place	Aureum Coast	1765	2901	0
-place	Avatar of Creation	2127	2893	0
-place	Avatar of Destruction	2287	2935	0
-place	Avium Savannah	1618	3020	0
-place	B	3815	10172	0
-place	Baby dragons	1894	9003	1
-place	Baby green dragons	2669	9578	2
-place	Backwater	2349	3002	0
-place	Bandit Camp	3175	2977	0
-place	Bandos's Stronghold	2832	5344	2
-place	Bank vault	3196	9822	0
-place	Banshees	1615	9994	0
-place	Barbarian Assault	2525	3581	0
-place	Barbarian Outpost	2542	3558	0
-place	Barbarian Village	3063	3416	0
-place	Barracks	1641	9576	0
-place	Barracuda Belt	2169	2558	0
-place	Barrows	3566	3291	0
-place	Basilisk Knights	2455	10388	0
-place	Basilisks	2744	10004	0
-place	Bats	2569	9753	0
-place	Battlefield	2522	3232	0
-place	Battlefront	1368	3718	0
-place	Baxtorian Falls	2515	3462	0
-place	Bay of Elidinis	3282	2667	0
-place	Bay of Sarim	3070	3177	0
-place	Bazaar	1681	3108	0
-place	Bedabin Camp	3170	3038	0
-place	Beware of the dog	1310	1277	0
-place	Beware of the mushrooms	2422	4375	0
-place	Beware of the scorpions	3052	9809	0
-place	Black Guard H.Q.	2827	10213	0
-place	Black Knights' Base	2908	9689	0
-place	Black Knights' Fortress	3018	3522	0
-place	Black demons	2712	9485	0
-place	Black dragons	2839	9829	0
-place	Blank Tower	3594	6113	0
-place	Blast Furnace	2930	10194	0
-place	Bleakwater Bay	3429	3641	0
-place	Blighted Volcano	3365	3937	0
-place	Bloodvelds	2459	9832	0
-place	Blue Base	2128	2909	0
-place	Blue dragons	2127	9306	0
-place	Bone Burner	1811	9951	0
-place	Bone Yard	3246	3746	0
-place	Bone collector	2697	5319	0
-place	Boot	2985	9806	0
-place	Bounty Hunter	3141	3623	0
-place	Box of Health	2144	5283	0
-place	Breakbone Strait	2388	2866	0
-place	Brewery	3680	9960	0
-place	Brimhaven	2779	3174	0
-place	Brimhaven Passage	2752	3263	0
-place	Brimstail	2401	9827	0
-place	Brittle Isle	1948	4071	0
-place	Bronze & iron dragons	1648	10095	0
-place	Bronze dragons	2736	9497	0
-place	Bronze, iron & steel dragons	2656	9440	0
-place	Brutal black, blue & red dragons	1622	10084	0
-place	Brutal green dragons	1773	5332	0
-place	Buccaneers' Haven	2080	3681	0
-place	Buccaneers' Laboratory	2081	10073	0
+place	Barbarian Village	3082	3420	0
+place	Brimhaven	2803	3178	0
 place	Burgh de Rott	3495	3211	0
-place	Burntmeat's Kitchen	2848	10054	1
 place	Burthorpe	2898	3545	0
-place	C	3830	10157	0
-place	Cairn Isle	2764	2979	0
-place	Calidum Reach	1190	2642	0
-place	Callisto's Den	3293	3848	0
-place	Cam Torum	1440	9568	1
-place	Cam Torum Entrance	1436	3124	0
-place	Camdozaal Vault	2971	5823	0
 place	Camelot	2757	3477	0
-place	Camelot Castle	2763	3505	0
-place	Canifis	3491	3487	0
-place	Cape Atoll	2700	2711	0
-place	Cape Conch	3286	2334	0
-place	Castle Drakan	3553	3360	0
-place	Castle Wars	2440	3092	0
+place	Canifis	3512	3488	0
 place	Catherby	2810	3441	0
-place	Catherby Bay	2823	3410	0
-place	Cauldron of Thunder	2895	9833	0
-place	Champions' Challenge	3168	9758	0
-place	Champions' Guild	3201	3354	0
-place	Chaos Temple	2934	3526	0
-place	Chaos druids	2934	9852	0
-place	Chaos dwarves	2920	9770	0
-place	Charcoal Burners	1718	3470	0
-place	Charred Island	2642	2405	0
-place	Chasm of Fire	1445	3679	0
-place	Chasm of Tears	3230	9517	2
-place	Chinchompa Island	1884	3435	0
-place	Chinchompas	2522	9299	0
-place	Chompy Marsh	2379	3055	0
-place	Chronozon	3086	9932	0
-place	Citharede Abbey	3413	3182	0
-place	City Entrance	1440	9518	1
-place	Civitas illa Fortis	1713	3127	0
-place	Clan Wars	3129	3623	0
-place	Clock Tower	2573	3242	0
-place	Coal Trucks	2600	3491	0
-place	Cockatrice	2792	10037	0
-place	Colossal Wyrm Remains	1640	2921	0
-place	Combat Ring	1546	3633	0
-place	Combat Training Camp	2519	3370	0
-place	Confusion	3122	5258	0
-place	Cooks' Guild	3137	3437	0
-place	Coral Nurseries	3298	8864	1
-place	Corporeal Beast	2986	4386	2
+place	Civitas illa Fortis	1682	3140	0
 place	Corsair Cove	2567	2858	0
-place	Council chamber	2718	5367	1
-place	Court of Chaos	3598	6067	0
-place	Crabclaw Bay	1687	3427	0
-place	Crabclaw Isle	1760	3424	0
-place	Cradle of Life	2344	5216	0
-place	Crafting Guild	2921	3282	0
-place	Crandor	2839	3271	0
-place	Crash Island	2915	2723	0
-place	Crombwick Manor	3726	3360	0
-place	Crystal Sea	1982	3247	0
-place	Cursed Archipelago	3767	2581	0
-place	Custodia Mountains	1272	3414	0
-place	Custodia Pass	1268	3360	0
-place	Cyclopes	2920	9972	0
-place	Cyclopes & Axes	1650	10018	0
-place	Dagannoth	1895	4368	0
-place	Dagannoth Kings	2888	4384	0
-place	Dagger's Edge	1141	3942	0
-place	Daimon's Crater	3424	4088	0
-place	Dark Altar	1696	3880	0
-place	Dark Warrior's Palace	3552	6160	0
-place	Dark Warriors' Fortress	3030	3633	0
-place	Dark Wizards' Tower	2907	3336	0
-place	Dark beasts	3227	12397	0
-place	Darkmeyer	3626	3363	0
-place	Darkmoon Ravine	1311	2920	0
-place	Dead people	2149	5081	0
-place	Death	2336	5184	0
-place	Death Plateau	2865	3592	0
-place	Debtor Hideout	3406	5804	0
-place	Deepfin Point	1949	2793	0
-place	Demonic Ruins	3293	3884	0
-place	Desert Island	3456	5824	0
-place	Desert Mining Camp	3291	3022	0
-place	Deserted Keep	3149	3941	0
-place	Digsite	3365	3419	0
-place	Distillery	2152	5102	0
-place	Dognose Island	3048	2648	0
-place	Dogs	2666	9523	0
-place	Dondakan's rock	2836	10166	0
-place	Doors of Dinh	1630	3968	0
 place	Dorgesh-Kaan	2720	5350	0
-place	Dragon Nest	1247	9503	0
-place	Dragon's Maw	3902	3559	0
-place	Dragons	1936	8992	1
-place	Dragontooth Island	3808	3560	0
-place	Drakes	1348	10241	1
-place	Dramen Tree	2861	9737	0
-place	Draynor Manor	3108	3345	0
 place	Draynor Village	3093	3245	0
-place	Druids' Circle	2925	3473	0
-place	Drumstick Isle	2145	3547	0
-place	Dusk's Maw	1239	2948	0
-place	Dust devils	1715	10025	0
-place	Dvergfjord	2745	3763	0
-place	Eagles' Peak	2337	3486	0
-place	Earth warriors	3119	9996	0
-place	East Ardougne	2597	3298	0
-place	Eastern Graveyard	2254	2929	0
-place	Eastern Ocean	3682	2854	0
-place	Eastern Ridge	3892	3148	0
-place	Echoing Rift	3723	3694	0
-place	Ectofuntus	3659	3520	0
-place	Edgeville	3098	3488	0
-place	Elid Delta	3269	2718	0
-place	Elvarg	2856	9638	0
-place	Elves	3184	12405	0
-place	Emir's Arena	3358	3237	0
-place	Entrana	2850	3379	0
-place	Ents	1565	9891	0
-place	Etceteria	2609	3874	0
-place	Everwinter Sea	1792	4095	0
-place	Exam Centre	3361	3345	0
-place	Exit	3166	4547	0
-place	Falador	2989	3355	0
+place	East Ardougne	2615	3335	0
+place	Edgeville	3094	3491	0
+place	Falador	2965	3380	0
 place	Falador East	3013	3355	0
-place	Falador Park	2995	3375	0
-place	Farming Guild	1249	3739	0
-place	Fear	3122	5298	0
-place	Feldip Gulf	2699	2955	0
-place	Feldip Hills	2540	2920	0
-place	Fenkenstrain's Castle	3551	3551	0
-place	Ferox Enclave	3151	3635	0
-place	Fiend's Passage	3308	4002	0
-place	Fight Arena	2594	3162	0
-place	Fight Pit	2398	5160	0
-place	Fire Obelisk	2812	9836	0
-place	Fire giants	2121	9330	0
-place	Fishing Guild	2599	3401	0
-place	Fishing Hamlet	1696	3936	0
-place	Fishing Platform	2776	3288	0
-place	Foodhall	1842	3748	0
-place	Forbidden Depths	3808	2499	0
-place	Forgotten Ocean	1251	3991	0
-place	Forthos Ruin	1675	3575	0
-place	Fortis Aqueduct	1562	3154	0
-place	Fortis Bay	1821	3020	0
-place	Fortis Colosseum	1825	3109	0
-place	Fortis Cothon	1760	3146	0
-place	Fossil Island	3721	3781	0
-place	Fountain of Heroes	2918	9889	0
-place	Fountain of Rune	3379	3893	0
-place	Fremennik Isles	2367	3879	0
-place	Fremennik Province	2679	3646	0
-place	Fremennik Strait	2349	3747	0
-place	Fremensund	2593	3724	0
-place	Frostgrave Depths	1556	4113	0
-place	Frozen Temple	3424	4121	0
-place	Frozen Waste Plateau	2972	3919	0
-place	Gargoyles	3452	9935	3
-place	Ghosts	1664	10025	0
-place	Giant Pit	1445	3615	0
-place	Giant frogs	3230	9546	0
-place	Giant rock crabs	2523	10165	0
-place	Giants' Plateau	3376	3164	0
-place	Gift of Peace	1907	5227	0
-place	Gloomthorn Trail	1378	3234	0
-place	Gnome Stronghold	2461	3444	0
-place	Gnomeball Field	2401	3487	0
-place	Goblin Maze	3264	9630	0
-place	Goblin Village	2963	3502	0
-place	Golden Apple Tree	2765	3608	0
-place	Golem Workshop	3010	5798	0
-place	Gorlah	2284	3426	0
-place	Goutweed store	2856	10084	0
-place	Grain of Plenty	2022	5221	0
-place	Grand Exchange	3168	3477	0
-place	Grand Museum	1713	3165	0
-place	Grand Tree	2469	3504	0
-place	Grandroot Bay	2455	3591	0
-place	Gravewater Bay	3755	3446	0
-place	Graveyard	3569	3408	0
-place	Graveyard of Heroes	1495	3561	0
-place	Graveyard of Shadows	3167	3673	0
-place	Great Sound	1527	3380	0
-place	Greater demons	2158	9336	0
-place	Greater nechryael	3336	10106	0
-place	Green dragons	3414	10073	0
-place	Grieving Bight	1106	3553	0
-place	Grimstone	2913	4075	0
-place	Gryphons	3232	8865	0
-place	Gu'Tanoth	2528	3046	0
-place	Gu'tanoth Bay	2623	3036	0
-place	Guardians	3278	9485	0
-place	Gulf of Kourend	1910	3757	0
-place	Gwenith	2199	3409	0
-place	H.A.M. Cult	3167	9635	0
-place	Hallowed Sea	3866	3330	0
-place	Hammerspike's hangout	2969	9819	0
-place	Harmony	3808	2863	0
-place	Haunted Coast	3642	3578	0
-place	Haunted Woods	3580	3488	0
-place	Hellhounds	2424	9793	0
-place	Hemenster	2634	3426	0
-place	Here be a big mole	1760	5188	0
-place	Here be dead stuff	3263	9904	0
-place	Here be goblins	2594	9823	0
-place	Here be minotaurs	1951	9508	0
-place	Here be odd stuff	3519	9960	0
-place	Here be penguins	2622	3988	0
-place	Here be spiders	3667	9824	0
-place	Heroes' Guild	2894	3501	0
-place	Hespori	1248	10089	0
-place	Highlord's Chamber	1414	9590	1
-place	Hill giants	3110	9838	0
-place	Hobgoblins	3019	9587	0
-place	Hopelessness	3087	5263	0
-place	Horizon's End	1278	2371	0
-place	Hosidian Sea	1917	3597	0
 place	Hosidius	1746	3517	0
-place	House on the Hill	3780	3871	0
-place	Hunter Guild	1558	3048	0
-place	Hunter's End	3116	3675	0
-place	Huntsman's Wood	3382	4053	0
-place	Hut	3496	6072	0
-place	Hydras	1311	10241	0
-place	Ice Mountain	3009	3487	0
-place	Ice giants	2965	9565	0
-place	Ice path	2857	3809	0
-place	Ice warriors & giants	3051	9577	0
-place	Iceberg	2681	4048	0
-place	Icyene Graveyard	3697	3188	0
-place	Idestia Strait	2662	3855	0
-place	Infirmary	1509	3617	0
-place	Iorwerth Camp	2196	3257	0
-place	Iron & steel dragons	2721	9446	0
-place	Iron dragons	2154	9296	0
-place	Isafdar	2243	3186	0
-place	Island of Stone	2467	4011	0
-place	Isle of Bones	2530	2533	0
-place	Isle of Serpents	1850	2413	0
-place	Isle of Souls	2209	2878	0
-place	Jail	3126	3244	0
-place	Jaldraocht Pyramid	3233	2900	0
-place	Jaleustrophos Pyramid	3365	2845	0
-place	Jalsavrah Pyramid	3288	2798	0
-place	Jaltevas Pyramid	3365	2705	0
 place	Jatizso	2420	3800	0
-place	Jellies	1688	9999	0
-place	Jiggig	2464	3047	0
-place	Jogres	2848	9504	0
-place	Kannski Tides	2395	3947	0
-place	Karamja	2860	3059	0
-place	Karamja Volcano	2843	3176	0
-place	Kastori	1372	3044	0
-place	Kebos Lowlands	1265	3649	0
-place	Kebos Shore	1163	3734	0
-place	Kebos Swamp	1255	3622	0
-place	Keep Le Faye	2770	3399	0
 place	Keldagrim	2845	10210	0
-place	Keldagrim Entrance	2728	3715	0
-place	Key Master	1310	1253	0
-place	Kharazi Jungle	2844	2923	0
-place	Kharazi Strait	2822	2851	0
-place	Kharidian Desert	3311	2930	0
-place	Kharidian Sea	3103	2968	0
-place	King Black Dragon	2272	4705	0
-place	Kingdom of Asgarnia	2988	3412	0
-place	Kingdom of Great Kourend	1600	3700	0
-place	Kingdom of Kandarin	2578	3370	0
-place	Kingdom of Misthalin	3217	3321	0
-place	Kingdom of Varlamore	1510	3195	0
-place	Kingstown	1668	3675	0
 place	Kourend	1642	3673	0
-place	Kourend Castle	1626	3676	0
-place	Kourend Woodland	1553	3456	0
-place	Kovac	3370	11487	0
-place	Kraken Cove	2272	3602	0
-place	Kualti Headquarters	1645	3150	0
-place	Kurask	2701	10001	0
-place	Lacerta Falls	1381	3470	0
-place	Laguna Aurorae	1190	2778	0
-place	Lake Hemenster	2610	3444	0
-place	Lake Molch	1374	3650	0
-place	Land's End	1510	3434	0
 place	Lands End	1504	3417	0
-place	Larran's Chest	3279	3659	0
-place	Last Gasp	1060	3379	0
-place	Last Light	2857	2330	0
-place	Last Man Standing	3142	3644	0
-place	Lava Dragon Isle	3199	3824	0
-place	Lava Maze	3079	3848	0
-place	Legends' Guild	2737	3374	0
-place	Lesser demons	2834	9561	0
-place	Library	1624	3826	0
-place	Lithkren	3567	4003	0
-place	Litus Lucis	1767	3241	0
-place	Lizardman Canyon	1503	3707	0
-place	Lizardman Settlement	1308	3548	0
-place	Lizardman Temple	1312	10079	1
-place	Lizards & Zamorak fighters	3018	5578	0
-place	Lledrith Island	2091	3181	0
 place	Lletya	2350	3170	0
-place	Locus Oasis	1686	2991	0
 place	Lovakengj	1520	3740	0
-place	Lovakengj Assembly	1483	3758	0
-place	Lovkengj's Shroud	1447	3994	0
-place	Lower level	3184	4544	0
-place	Lum Lagoon	3253	3144	0
-place	Lumber Yard	3308	3507	0
 place	Lumbridge	3222	3218	0
-place	Lumbridge Basin	3184	3106	0
-place	Lumbridge Swamp	3230	3155	0
-place	Lunar Bay	2183	3904	0
-place	Lunar Isle	2141	3877	0
-place	Lunar Sea	2124	4070	0
-place	Mage Arena	3107	3933	0
-place	Mage Arena bank	2533	4704	0
-place	Mage Training Arena	3363	3303	0
-place	Main Block	2913	6371	2
-place	Marim	2763	2784	0
-place	Market	3080	3250	0
-place	Mausoleum	3502	3572	0
-place	McGrubor's Wood	2647	3480	0
-place	Meiyerditch	3619	3263	0
-place	Melzar's Maze	2937	3248	0
-place	Menaphite Sea	3057	2721	0
-place	Menaphos	3211	2762	0
-place	Merwick Lake	2779	3553	0
-place	Mess	1640	3626	0
-place	Middle level	3168	4544	1
-place	Mining Guild	3020	3344	0
-place	Minotaurs' Rest	1965	3104	0
+place	Menaphos	3225	2775	0
 place	Miscellania	2515	3862	0
-place	Miscellania Expansion	2518	10258	0
-place	Mistrock	1384	2866	0
-place	Misty Sea	1427	2747	0
-place	Mithril dragons	1762	5338	1
-place	Molch	1312	3670	0
-place	Monastery	2603	3218	0
-place	Mons Gratia	1442	3250	0
-place	Moonrise Brewery and Winery	1360	2922	0
-place	Moonshadow	2105	3814	0
-place	Mor Ul Rek	2496	5140	0
-place	Mort Myre Swamp	3446	3385	0
-place	Mort'ton	3491	3281	0
-place	Morytania	3552	3432	0
+place	Mort'ton	3487	3283	0
 place	Mos Le'Harmless	3695	2977	0
-place	Mos Le'Water	3902	2981	0
-place	Moser Settlement	3476	5791	0
-place	Moss giants	2663	9570	0
-place	Mount Karuulm	1311	3808	0
-place	Mount Quidamortem	1248	3552	0
-place	Mountain Camp	2784	3670	0
-place	Mountain dwarves	2853	9872	0
-place	Mudskipper Point	2990	3118	0
-place	Mudskipper Sound	2981	3090	0
-place	Muggers	2994	9571	0
-place	Murkshore Sea	3694	3122	0
-place	Musa Passage	2855	3133	0
-place	Musa Point	2914	3161	0
-place	Museum Camp	3730	3821	0
-place	Mushroom Forest	3690	3861	0
-place	Mynydd	2154	3425	0
-place	Mythic Sea	2530	2742	0
-place	Myths' Guild	2457	2848	0
 place	Nardah	3427	2894	0
-place	Nechryael	1700	10083	0
-place	Necromancer's Tower	2669	3243	0
-place	Necropolis	3335	2730	0
 place	Neitiznot	2337	3805	0
-place	Nemus Retreat	1373	3313	0
-place	Neypotzli Entrance	1440	9600	1
-place	Nightmare Zone	2608	3120	0
-place	Northern Ocean	2477	4085	0
-place	Northern Tundras	1630	3930	0
-place	Nothing interesting happens here	2159	5170	0
-place	Nursery	2742	5337	1
-place	Observatory	2440	3151	0
-place	Obstacle course	3537	9889	0
-place	Ochre Sea	1510	2528	0
-place	Offering Altar	2937	5773	0
-place	Ogres	2586	9608	0
-place	Ogresses	2011	8989	1
-place	Old Manor	3497	6118	0
-place	Oldak's teleportation laboratory	2704	5368	0
-place	Oo'glog Channel	2644	2828	0
-place	Ortus Farm	1570	3127	0
-place	Otherworldly beings	2386	4427	0
-place	Otto's Grotto	2502	3489	0
-place	Outer Fortis	1707	3064	0
-place	Outpost	2435	3355	0
-place	Palace	3213	3483	0
-place	Park	1737	3105	0
-place	Party Room	3046	3380	0
-place	Paterdomus Temple	3414	3489	0
-place	Pearl Bank	3262	2237	0
-place	Pest Control	2656	2587	0
-place	Pestilence	2144	5248	0
-place	Pilgrims' Passage	1928	3397	0
-place	Pillars of Sacrifice	3598	6164	0
-place	Pirates	2990	9576	0
-place	Pirates' Cove	2206	3815	0
-place	Pirates' Hideout	3043	3948	0
-place	Piscatoris	2331	3604	0
-place	Piscatoris Fishing Colony	2345	3693	0
-place	Piscatoris Sea	2231	3679	0
-place	Pit scorpions	2719	9744	0
-place	Poison Waste	2241	3098	0
-place	Poison spiders	2576	9568	0
-place	Poisonous scorpions	2935	9754	0
+place	Piscatoris	2340	3688	0
 place	Pollnivneach	3351	2967	0
-place	Port Khazard	2659	3189	0
 place	Port Phasmatys	3685	3475	0
-place	Port Piscarilius	1824	3704	0
-place	Port Roberts	1892	3303	0
-place	Port Sarim	3047	3221	0
-place	Port Tyras	2155	3122	0
-place	Porth Gwenith	2163	3483	0
-place	Porth Neigwl	2124	3205	0
-place	Prifddinas	2240	3328	0
-place	Puro-puro	2428	4446	0
-place	Pyre Cove	3349	3618	0
-place	Pyrefiends	2761	10012	0
-place	Quarry	3172	2904	0
-place	Queen's Chamber	3488	9504	0
-place	Quetzacalli Gorge	1506	3241	0
-place	Rainbow Reef	2278	2340	0
-place	Rainbow's End	2335	2273	0
-place	Ralos' Rise	1445	3164	0
-place	Ramarno	2956	5806	0
-place	Ranging Guild	2676	3436	0
-place	Rat Pits	2976	9632	0
-place	Rats	3239	9872	0
-place	Red Base	2287	2919	0
-place	Red Reef	2874	2497	0
-place	Red Rock	2797	2518	0
-place	Red Spiders	2834	9586	0
-place	Red dragons	2710	9521	0
-place	Refugee Camp	2991	6351	2
+place	Port Piscarilius	1804	3714	0
+place	Port Sarim	3045	3235	0
+place	Prifddinas	3243	6053	0
 place	Rellekka	2668	3630	0
-place	Residential District	2657	6427	0
-place	Resource Area	3187	3936	0
 place	Rimmington	2957	3213	0
-place	Rimmington Strait	2887	3249	0
-place	Ritual Site	1130	3420	0
-place	River Amja	2914	3032	0
-place	River Crannmor	2379	3458	0
-place	River Dougne	2540	3398	0
-place	River Elid	3371	3068	0
-place	River Hos	1615	3594	0
-place	River Kelda	2842	10141	0
-place	River Lum	3167	3350	0
-place	River Molch	1260	3672	0
-place	River Ortus	1624	3200	0
-place	River Salve	3403	3437	0
-place	River Shilo	2814	2972	0
-place	River Varla	1375	3117	0
-place	River of Souls	1842	3892	0
-place	Rock Island Prison	2898	2837	0
-place	Rock lobsters	1950	4362	0
-place	Rock slugs	2796	10019	0
-place	Rocky Outcrop	3463	5767	0
-place	Rogues' Castle	3286	3931	0
-place	Rower's Arm	2563	3617	0
-place	Ruins	2966	3697	0
-place	Ruins of Morra	1449	3514	0
-place	Ruins of Ullek	3413	2832	0
-place	Ruins of Unkah	3171	2841	0
-place	Ruins of Uzer	3479	3098	0
-place	Salarin the Twisted	2614	9524	0
-place	Saltpetre	1702	3520	0
-place	Salvager Overlook	1635	3296	0
-place	Sanctuary's End	3518	3145	0
-place	Sand crabs	1714	9997	0
-place	Sapphire Sea	1784	2578	0
-place	Sarachnis	1844	9902	0
-place	Saradomin's Encampment	2908	5270	0
-place	Scabaras' Shallows	3485	2818	0
-place	Science District	2592	6369	0
-place	Scorpion Pit	3236	3945	0
-place	Scurrius The Rat King	3300	9869	0
-place	Sea Spirit Dock	3123	2839	0
-place	Sea of Shells	3054	2344	0
-place	Sea of Souls	2250	2707	0
-place	Sea snakes	2600	10275	0
-place	Seers' Eye	2710	3527	0
 place	Seers' Village	2726	3485	0
-place	Settlement Ruins	1558	3892	0
-place	Shades	3488	9696	0
-place	Shadow spiders	3021	10328	0
-place	Shadow warriors	2700	9774	0
-place	Shamans	1435	3710	0
-place	Shantay Pass	3304	3126	0
-place	Shayzia Ruin	1583	3602	0
-place	Shayzien	1536	3552	0
-place	Shayzien Encampment	1510	3664	0
-place	Shayziens' Wall	1395	3539	0
-place	Shellbane  Gryphon	3179	8876	0
+place	Shayzien	1520	3592	0
 place	Shilo Village	2852	2955	0
-place	Shimmering Atoll	1568	2786	0
-place	Shipwreck Cove	1572	3311	0
-place	Shipyard	2078	2720	0
-place	Shiverwake Expanse	2750	4103	0
-place	Shrieking Waters	3894	2691	0
-place	Shrine	2452	4478	0
-place	Shrouded Ocean	2104	2491	0
-place	Shura	3808	9747	1
-place	Silk Chasm	3321	3793	0
-place	Silvarea	3362	3485	0
-place	Sire	3110	4793	0
-place	Skeletal Tomb	3181	3682	0
-place	Skeletal wyverns	3057	9547	0
-place	Skeletons	2857	9572	0
-place	Skeletons & zombies	3121	9899	0
-place	Skullball	3560	9866	0
-place	Slayer Tower	3429	3555	0
-place	Slepe	3718	3330	0
-place	Slepe Sound	3718	3259	0
-place	Smoke devils	2408	9438	0
-place	Soldiers	3330	9486	0
-place	Sophanem	3298	2783	0
-place	Sorcerer's Tower	2713	3410	0
-place	Soul Bay	2091	2806	0
-place	Soul Obelisk	2207	2915	0
-place	Soul Wars Arena	2207	2932	0
-place	Soul Wars Lobby	2210	2851	0
-place	South Falador Farm	3038	3294	0
-place	Southern Expanse	1984	2397	0
-place	Spectres	1613	10010	0
-place	Spiders	2606	9638	0
-place	Stalker Den	1286	9775	0
-place	Station	2696	5277	1
-place	Steel dragons	1602	10059	0
-place	Stone Circle	3567	6054	0
-place	Stonecutter Outpost	1740	2969	0
-place	Stoneheart Sea	2553	4014	0
-place	Strait of Discord	3754	2908	0
-place	Strait of Khazard	2704	3131	0
-place	Sub-level 1	2496	10112	0
-place	Sub-level 2	1888	4352	3
-place	Sub-level 3	1888	4352	2
-place	Sub-level 4	1888	4352	1
-place	Sub-level 5	1888	4352	0
-place	Sub-level 6	2888	4360	0
-place	Sulphur Cove	1354	3876	0
-place	Sulphur lizards	1335	10185	1
-place	Sunbleak Island	2212	2327	0
-place	Sunken Cathedral	2656	6372	0
-place	Sunrise Palace	1681	3166	0
-place	Sunset Bay	1538	2933	0
-place	Sunset Coast	1547	2971	0
-place	Sunset Ocean	1387	2629	0
+place	Sophanem	3287	2785	0
 place	Tai Bwo Wannai	2789	3064	0
-place	Tainted Tides	3644	2674	0
-place	Tal Teklan	1220	3113	0
-place	Tal Teok	1248	3169	0
-place	Talon's Grasp	1173	3489	0
-place	Tanglefeet	2383	4380	0
-place	Tar Swamp	3680	3781	0
-place	Tasakaal	1312	10207	0
 place	Taverley	2895	3443	0
-place	Tear of the Soul	2333	2770	0
-place	Tears of Guthix	3260	9522	2
-place	Tegdak	2746	5342	0
-place	Tempestus	1284	3256	0
-place	Temple	1175	3430	0
-place	Temple Spiders	1842	9960	0
-place	Tempoross Cove	3015	2847	0
-place	Terror dogs	3150	4650	0
-place	The Accursed Sea	3669	2307	0
-place	The Blood Moon	1393	9635	0
-place	The Blue Moon	1441	9683	0
-place	The Cinderwaters	3443	3923	0
-place	The Crown Jewel	1758	2665	0
-place	The Darkfrost	1512	3288	0
-place	The Dibber	1836	3627	0
-place	The Eastern Doldrums	3852	3985	0
-place	The Eclipse Moon	1489	9635	0
-place	The Endless Sea	1276	4070	0
-place	The Everdeep	1884	2729	0
-place	The Forgotten Cemetery	2977	3753	0
-place	The Forsaken Tower	1385	3830	0
-place	The Gauntlet	3033	6115	1
-place	The Great Conch	3187	2455	0
-place	The Hollows	3500	3384	0
-place	The Inferno	2272	5337	0
-place	The Iron Sea	3462	2614	0
-place	The Little Pearl	3356	2205	0
-place	The Lonely Sea	2518	2316	0
-place	The Mountain	3431	5845	0
-place	The Nightmare	3808	9762	1
-place	The Node	3109	3025	0
-place	The Onyx Crest	2977	2271	0
-place	The Pandemonium	3042	2992	0
-place	The Precipice	3925	3796	0
-place	The Proudspire	1570	3241	0
-place	The Sacred Grove	3200	2485	0
-place	The Searing Sea	3161	4067	0
-place	The Simian Sea	2757	2636	0
-place	The Skullhorde	2445	2505	0
-place	The Storm Tempor	3082	2878	0
-place	The Stranglewood	1155	3391	0
-place	The Summer Shore	3166	2414	0
-place	The Teomat	1450	3190	0
-place	The Warrens	1770	10143	0
-place	The White Cliffs of Lova	1503	3960	0
-place	The Wintertodt	1630	4011	0
-place	Thermonuclear Smoke Devil	2362	9456	0
-place	Throne room	2447	4429	0
-place	Thugs	3130	9935	0
-place	Tirannwn	2240	3264	0
-place	Tirannwn Bight	2119	3362	0
-place	Tithe Farm	1806	3507	0
-place	Tlati Rainforest	1302	3098	0
-place	Toll Gate	3275	3227	0
-place	Tortugan Sea	3337	2461	0
-place	Tower of Ascension	1641	3225	0
-place	Tower of Bounty	3473	4036	0
-place	Tower of Life	2650	3213	0
-place	Tower of Magic	1573	3822	0
-place	Town Center	3552	6107	0
-place	Trading Post	3500	6169	0
-place	Tree Gnome Stronghold	2433	3454	0
 place	Tree Gnome Village	2542	3170	0
-place	Trinity Outpost	3500	5873	0
-place	Troll Country	2846	3736	0
-place	Troll Stronghold	2844	3684	0
-place	Troll generals	2829	10082	2
-place	Trollheim	2892	3678	0
-place	Trolls	2790	10132	0
-place	Trollweiss Mountain	2782	3863	0
-place	Trouble Brewing	3786	2998	0
-place	Turoth	2716	10011	0
-place	Turtle Belt	3025	2595	0
-place	Tutorial Island	3105	3099	0
-place	Twilight Temple	1697	3257	0
-place	Tyras Camp	2180	3147	0
-place	Undead druids	1850	9939	0
-place	Underground Pass	2443	3315	0
-place	Underwater	3772	10288	1
-place	Ungael	2272	4066	0
-place	Unmarked Grave	1570	3940	0
-place	Unquiet Ocean	2865	2436	0
-place	Untamed Ocean	3575	3911	0
-place	Upper level	1743	5375	1
-place	Ur-meg	2692	5304	0
-place	Ur-tag	2733	5366	1
-place	Ur-vass	2723	5331	0
-place	Ur-zek & Ur-taal	2716	5344	0
-place	Uzer Channel	3586	3010	0
-place	Uzer Oasis	3489	3043	0
-place	V's Belt	2477	3815	0
-place	VTAM Corporation	3245	9773	0
-place	Vagabonds Rest	2080	3626	0
 place	Varrock	3213	3428	0
 place	Varrock West	3164	3436	0
-place	Vatrachos Island	1886	2984	0
-place	Ver Sinhaza	3662	3220	0
-place	Vesmjos	2606	3557	0
-place	Vet'ion's Rest	3223	3786	0
-place	Villa Lucens	1448	2933	0
-place	Vinery	1808	3560	0
-place	Voice of Yama	1440	10084	0
-place	Void Knights' Outpost	2636	2666	0
-place	Volcano	3780	3781	0
-place	Wallasalki	2506	10145	0
-place	War	1888	5184	0
-place	War Tent	1488	3636	0
-place	Warriors' Guild	2854	3564	0
-place	Waterbirth Island	2522	3756	0
-place	Waterfiends	1738	5356	0
-place	Web Chasm	3184	3743	0
 place	Weiss	2848	3934	0
-place	Weiss Melt	2952	4031	0
-place	Weissmere	2777	3941	0
 place	West Ardougne	2530	3307	0
-place	Western Gate	1994	2977	0
-place	Western Graveyard	2163	2902	0
-place	Western Ocean	1996	3331	0
-place	White Knights' Castle	2961	3345	0
-place	White Wolf Mountain	2849	3492	0
-place	Wild Varrock	3552	6120	0
-place	Wilderness	3100	3680	0
-place	Wine of Zamorak	3022	10354	0
-place	Winter's Edge	1969	3959	0
-place	Wintertodt	1630	3945	0
-place	Wintertodt Camp	1640	3944	0
-place	Wintumber Island	2067	2608	0
-place	Wire machine	2715	5270	0
-place	Witchaven	2710	3291	0
-place	Wizards' Guild	2589	3077	0
-place	Wizards' Tower	3112	3153	0
-place	Wolf Den	1481	9506	1
-place	Woodcutting Guild	1613	3490	0
-place	Wyrm's Waters	1632	2844	0
-place	Wyrms	1263	10158	0
-place	Wyvern's Wake	3546	3776	0
-place	Wyverns	3616	10208	0
-place	Wyverns Task Only	3616	10272	0
-place	Xeric's Look out	1580	3530	0
-place	Xeric's Shrine	1311	3618	0
-place	Yama	1504	10084	0
-place	Yanille	2549	3091	0
-place	Yanille Chain	2664	3102	0
-place	Ynysdail	2218	3476	0
-place	Zalcano	3035	6051	0
-place	Zamorak's Fortress	2909	5363	2
-place	Zanaris	2452	4473	0
-place	Zanik's bedroom	2744	5351	2
-place	Zombies	2842	9766	0
-place	Zombies & rocks	2675	9682	0
-place	Zul-Andra	2201	3068	0
-place	Zul-Egil	2158	3032	0
-place	Zulrah's shrine	2270	3074	0
+place	Yanille	2605	3096	0
 pottery	Barbarian Village Potter's wheel	3087	3410	0
 pottery	Civitas illa Fortis Potter's wheel	1769	3096	0
 pottery	East Ardougne Potter's wheel	2595	3324	0
