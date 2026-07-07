@@ -94,7 +94,7 @@ public class GpsBenchmarkTest
 		AtomicReference<String> lastMessage = new AtomicReference<>("");
 		GpsBenchmark benchmark = new GpsBenchmark(service,
 			List.of(GpsBenchmark.Scenario.trip("Lumbridge -> Varrock", START, TARGET)),
-			outputDir, new Gson(), lastMessage::set, done::countDown);
+			outputDir, false, new Gson(), lastMessage::set, done::countDown);
 		benchmark.start();
 
 		assertTrue("Benchmark should complete", done.await(300, TimeUnit.SECONDS));

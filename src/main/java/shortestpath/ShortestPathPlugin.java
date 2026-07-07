@@ -2109,7 +2109,7 @@ public class ShortestPathPlugin extends Plugin
 		{
 			return;
 		}
-		GpsBenchmark.standard(altRoutesService, getTransports(), gson,
+		GpsBenchmark.standard(altRoutesService, getTransports(), isSeasonalTransportsEnabled(), gson,
 			message -> clientThread.invokeLater(() ->
 			{
 				log.info(message);
@@ -2309,6 +2309,25 @@ public class ShortestPathPlugin extends Plugin
 		this.routesMode = mode;
 		saveRoutesMode();
 		triggerAlternatives(lastAltStart, new HashSet<>(lastAltTargets));
+	}
+
+	/** Whether seasonal (Leagues) transports are opted in — see {@link #toggleSeasonalTransports()}. */
+	public boolean isSeasonalTransportsEnabled()
+	{
+		return override("useSeasonalTransports", config.useSeasonalTransports());
+	}
+
+	/**
+	 * Opt-in toggle for seasonal (Leagues) transports. They only exist on seasonal game worlds, so
+	 * they're excluded by default from every mode, the classic path and the catalog; the panel's
+	 * seasonal button flips this. Persisted (config key {@code useSeasonalTransports}); the classic
+	 * path restarts via onConfigChanged and the catalog/routes regenerate here.
+	 */
+	public void toggleSeasonalTransports()
+	{
+		configManager.setConfiguration(CONFIG_GROUP, "useSeasonalTransports",
+			!config.useSeasonalTransports());
+		recomputeAlternatives();
 	}
 
 	/**

@@ -77,13 +77,17 @@ public final class GpsBenchmark
 	private final Gson gson;
 	private final Consumer<String> notify;
 	private final Runnable onDone;
+	// Recorded in the report header: seasonal (Leagues) transports change the method universe, so
+	// two reports are only comparable when this flag matches.
+	private final boolean seasonalTransports;
 
 	public GpsBenchmark(AlternativeRoutesService service, List<Scenario> scenarios, File outputDir,
-		Gson gson, Consumer<String> notify, Runnable onDone)
+		boolean seasonalTransports, Gson gson, Consumer<String> notify, Runnable onDone)
 	{
 		this.service = service;
 		this.scenarios = scenarios;
 		this.outputDir = outputDir;
+		this.seasonalTransports = seasonalTransports;
 		this.gson = gson;
 		this.notify = notify;
 		this.onDone = onDone;
@@ -95,7 +99,8 @@ public final class GpsBenchmark
 	 * whose target sets range from dense (water sources) to the canonical bank case.
 	 */
 	public static GpsBenchmark standard(AlternativeRoutesService service,
-		PrimitiveIntHashMap<Transport[]> transports, Gson gson, Consumer<String> notify, Runnable onDone)
+		PrimitiveIntHashMap<Transport[]> transports, boolean seasonalTransports, Gson gson,
+		Consumer<String> notify, Runnable onDone)
 	{
 		int lumbridge = WorldPointUtil.packWorldPoint(3222, 3218, 0);
 		int grandExchange = WorldPointUtil.packWorldPoint(3165, 3487, 0);
@@ -115,7 +120,8 @@ public final class GpsBenchmark
 			Scenario.nearest("Nearest anvil from Varrock", varrock,
 				Destinations.tilesForCategory("anvil", transports)));
 		return new GpsBenchmark(service, scenarios,
-			new File(net.runelite.client.RuneLite.RUNELITE_DIR, "gps-debug"), gson, notify, onDone);
+			new File(net.runelite.client.RuneLite.RUNELITE_DIR, "gps-debug"), seasonalTransports,
+			gson, notify, onDone);
 	}
 
 	public void start()
@@ -170,6 +176,7 @@ public final class GpsBenchmark
 			report.put("benchmark", "gps-fixed-suite");
 			report.put("capturedAt", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 			report.put("mode", String.valueOf(AlternativeRoutesMode.ALL_EVERYTHING));
+			report.put("seasonalTransports", seasonalTransports);
 			report.put("routeLimit", LIMIT);
 			report.put("warmupRuns", WARMUP_RUNS);
 			report.put("measuredRuns", MEASURED_RUNS);

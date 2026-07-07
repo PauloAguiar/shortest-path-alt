@@ -182,4 +182,29 @@ public class MethodAvailabilityCatalogTest
 		assertEquals(MethodAvailability.IN_BANK, MethodAvailability.IN_BANK.best(MethodAvailability.MISSING_ITEM));
 		assertEquals(MethodAvailability.LOCKED, MethodAvailability.LOCKED.best(null));
 	}
+
+	@Test
+	public void seasonalTransportsExcludedFromCatalogByDefault()
+	{
+		// Leagues-only transports don't exist on normal worlds: with the opt-in off (the default —
+		// the mocked config returns false) they must be absent from the catalog in EVERY mode,
+		// including Everything (the structural gate is not bypassed by planning mode).
+		PathfinderConfig planning = new TestPathfinderConfig(client, config).copyForPlanning();
+		planning.refresh();
+
+		assertFalse("Catalog should not be empty", planning.getMethodCatalog().isEmpty());
+		assertFalse("Seasonal (Leagues) methods must be excluded by default, even in Everything mode",
+			planning.getMethodCatalog().stream().anyMatch(m -> m.getType() == TransportType.SEASONAL_TRANSPORTS));
+	}
+
+	@Test
+	public void seasonalTransportsIncludedWhenOptedIn()
+	{
+		when(config.useSeasonalTransports()).thenReturn(true);
+		PathfinderConfig planning = new TestPathfinderConfig(client, config).copyForPlanning();
+		planning.refresh();
+
+		assertTrue("Opting in must surface seasonal (Leagues) methods in the catalog",
+			planning.getMethodCatalog().stream().anyMatch(m -> m.getType() == TransportType.SEASONAL_TRANSPORTS));
+	}
 }
