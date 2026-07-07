@@ -150,10 +150,18 @@ public class ClosedDoors
 		}
 		for (Door door : doors)
 		{
-			// Straight walls sit on one edge; anything else (diagonal walls, corner pieces)
-			// blocks its whole tile, so every edge of the tile matches. Open-placed doors
-			// match loosely too — their recorded orientation is the swung-open position.
-			if (door.type != TYPE_WALL_STRAIGHT || door.placedOpen || door.orientation == facing)
+			// Doors placed OPEN in the map data are open by default. Their rare closed state can't
+			// be read reliably from the scene — the swung-open leaf anchors to a neighbouring tile,
+			// so a presence check at the doorway misses it and wrongly reports "closed", which
+			// false-blocked open doorways. They're skipped: an open door needs no hint, and never
+			// blocking one is far better than blocking one that's actually open.
+			if (door.placedOpen)
+			{
+				continue;
+			}
+			// Straight walls sit on one edge; anything else (diagonal walls, corner pieces) blocks
+			// its whole tile, so every edge of the tile matches.
+			if (door.type != TYPE_WALL_STRAIGHT || door.orientation == facing)
 			{
 				return door;
 			}

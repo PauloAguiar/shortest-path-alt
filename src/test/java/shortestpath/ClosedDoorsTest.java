@@ -61,17 +61,13 @@ public class ClosedDoorsTest
 	}
 
 	// Canifis house door: the map places it OPEN (id 24368, action "Close") at (3480,3494),
-	// so it matches loosely on any edge of its tile and carries the placedOpen flag for the
-	// inverted presence test.
+	// so it is IGNORED by the door matching: doors placed open by default can't have their state
+	// read reliably from the scene, and false-blocking an open doorway is worse than not hinting.
 	@Test
-	public void openPlacedDoorMatchesLooselyAndCarriesTheFlag()
+	public void openPlacedDoorIsNotMatched()
 	{
-		ClosedDoors.Door door = ClosedDoors.doorBetween(pack(3480, 3494, 0), pack(3480, 3495, 0));
-		Assert.assertNotNull(door);
-		Assert.assertEquals(24368, door.id);
-		Assert.assertTrue(door.placedOpen);
-		// Loose: the other axis matches too.
-		Assert.assertNotNull(ClosedDoors.doorBetween(pack(3479, 3494, 0), pack(3480, 3494, 0)));
+		Assert.assertNull(ClosedDoors.doorBetween(pack(3480, 3494, 0), pack(3480, 3495, 0)));
+		Assert.assertNull(ClosedDoors.doorBetween(pack(3479, 3494, 0), pack(3480, 3494, 0)));
 	}
 
 	@Test
