@@ -1960,6 +1960,7 @@ public class ShortestPathPlugin extends Plugin
 			stepJson.put("ticks", step.getTicks());
 			stepJson.put("transport", step.isTransport());
 			stepJson.put("door", step.isDoor());
+			stepJson.put("obstacle", step.isObstacle());
 			stepsJson.add(stepJson);
 		}
 		return stepsJson;

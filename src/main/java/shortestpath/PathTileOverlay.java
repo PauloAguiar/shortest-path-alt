@@ -245,53 +245,41 @@ public class PathTileOverlay extends Overlay
 	}
 
 	// Doors along the displayed path (registry matches per edge), cached per path reference so
-	// the scan runs once per (re)calculated path rather than every frame.
-	private List<PathStep> doorScanPath;
-	private int[] doorEdgeIndexes;
-	private ClosedDoors.Door[] doorEdgeDoors;
-
 	/**
-	 * The first path index the player cannot reach yet: everything at or beyond the first door
-	 * ahead of route progress that has not been SEEN open (closed in the scene, or too far away
-	 * to know — regular doors shut themselves, so unseen means assume closed). Doors verified
-	 * open pass the boundary on to the next door, and doors already crossed don't count.
+	 * The first path index the player cannot click-walk to yet: everything at or beyond the first
+	 * obstacle ahead of route progress that the player must interact with to cross — an agility
+	 * shortcut, stairs/ladder, or a door that hasn't been seen open. Clicking past such an
+	 * obstacle would misroute, so the path beyond it is drawn blocked until the obstacle is used
+	 * (progress passes it) or, for a door, seen open. Only meaningful for a displayed route; the
+	 * classic path (no step data) is never blocked.
 	 */
 	private int blockedFromIndex(List<PathStep> path)
 	{
-		if (path != doorScanPath)
+		RouteOption route = plugin.getDisplayedRoute();
+		if (route == null || route.getPath() != path)
 		{
-			doorScanPath = path;
-			List<Integer> indexes = new ArrayList<>();
-			List<ClosedDoors.Door> doors = new ArrayList<>();
-			for (int i = 1; i < path.size(); i++)
-			{
-				ClosedDoors.Door door = ClosedDoors.doorBetween(
-					path.get(i - 1).getPackedPosition(), path.get(i).getPackedPosition());
-				if (door != null)
-				{
-					indexes.add(i);
-					doors.add(door);
-				}
-			}
-			doorEdgeIndexes = new int[indexes.size()];
-			for (int i = 0; i < indexes.size(); i++)
-			{
-				doorEdgeIndexes[i] = indexes.get(i);
-			}
-			doorEdgeDoors = doors.toArray(new ClosedDoors.Door[0]);
+			return Integer.MAX_VALUE;
 		}
 		int progress = plugin.displayedRouteProgress();
-		for (int k = 0; k < doorEdgeIndexes.length; k++)
+		for (RouteDirections.Step step : plugin.getRouteDirections(route))
 		{
-			if (doorEdgeIndexes[k] <= progress)
+			if (!step.gatesWalk() || step.getEndIndex() <= progress)
 			{
 				continue;
 			}
-			ClosedDoors.Door door = doorEdgeDoors[k];
-			if (ClosedDoors.state(client, door) != ClosedDoors.State.OPEN)
+			if (step.isDoor())
 			{
-				return doorEdgeIndexes[k];
+				// A door only blocks while it hasn't been seen open.
+				ClosedDoors.Door door = ClosedDoors.doorBetween(
+					path.get(step.getStartIndex()).getPackedPosition(),
+					path.get(step.getEndIndex()).getPackedPosition());
+				if (door == null || ClosedDoors.state(client, door) == ClosedDoors.State.OPEN)
+				{
+					continue;
+				}
 			}
+			// The first un-crossed obstacle (shortcut) or still-closed door blocks the rest.
+			return step.getEndIndex();
 		}
 		return Integer.MAX_VALUE;
 	}

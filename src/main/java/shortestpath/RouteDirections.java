@@ -41,18 +41,28 @@ final class RouteDirections
 		// True for "Open <door>" steps: their edge gates progress until actually crossed —
 		// straight-line proximity sees through the closed door.
 		private final boolean door;
+		// True for object-transport obstacles the player must click to cross (agility shortcuts,
+		// stairs/ladders, ...). Like a closed door, the player can't click-walk PAST it, so the
+		// path beyond it is drawn blocked until they use it. Doors carry {@link #door} instead.
+		private final boolean obstacle;
 
 		private Step(String text, int startIndex, int endIndex, int ticks)
 		{
-			this(text, startIndex, endIndex, ticks, false, false);
+			this(text, startIndex, endIndex, ticks, false, false, false);
 		}
 
 		private Step(String text, int startIndex, int endIndex, int ticks, boolean transport)
 		{
-			this(text, startIndex, endIndex, ticks, transport, false);
+			this(text, startIndex, endIndex, ticks, transport, false, false);
 		}
 
 		private Step(String text, int startIndex, int endIndex, int ticks, boolean transport, boolean door)
+		{
+			this(text, startIndex, endIndex, ticks, transport, door, false);
+		}
+
+		private Step(String text, int startIndex, int endIndex, int ticks,
+			boolean transport, boolean door, boolean obstacle)
 		{
 			this.text = text;
 			this.startIndex = startIndex;
@@ -60,6 +70,13 @@ final class RouteDirections
 			this.ticks = ticks;
 			this.transport = transport;
 			this.door = door;
+			this.obstacle = obstacle;
+		}
+
+		/** Whether the player must interact with something to cross this edge (door or shortcut). */
+		boolean gatesWalk()
+		{
+			return door || obstacle;
 		}
 	}
 
@@ -133,8 +150,12 @@ final class RouteDirections
 				flushWalk(steps, walk, legStart, i - 1);
 				walk = 0;
 				String text = objectText(object);
+				boolean isDoor = text.startsWith("Open ");
+				// Doors carry the door flag (closed-state gated); every other object transport
+				// (climbs, agility shortcuts, tunnels) is an obstacle the player must click to
+				// cross, so the path beyond it is blocked until used.
 				steps.add(new Step(text, i - 1, i, Math.max(1, object.getDuration()),
-					false, text.startsWith("Open ")));
+					false, isDoor, !isDoor));
 				legStart = i;
 			}
 			else if (door != null)
