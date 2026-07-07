@@ -218,10 +218,13 @@ public class AlternativeRoutesService
 			timer.rebuildNanos += System.nanoTime() - rebuildStart;
 
 			long searchStart = System.nanoTime();
-			Pathfinder pathfinder = new Pathfinder(planningConfig, start, ends, null, capOf(walkFuture));
+			int chainCap = capOf(walkFuture);
+			Pathfinder pathfinder = new Pathfinder(planningConfig, start, ends, null, chainCap);
 			pathfinder.run();
-			timer.searchNanos += System.nanoTime() - searchStart;
+			long searchNanos = System.nanoTime() - searchStart;
+			timer.searchNanos += searchNanos;
 			timer.searches++;
+			record(timer, "chain#" + i, searchNanos, pathfinder, chainCap);
 			PathfinderResult result = pathfinder.getResult();
 			List<PathStep> path = (result != null) ? result.getPathSteps() : List.of();
 			if (result == null || path.isEmpty())
@@ -314,6 +317,9 @@ public class AlternativeRoutesService
 				timer.rebuildNanos / 1_000_000,
 				timer.searchNanos / 1_000_000,
 				timer.searches};
+			List<SearchRecord> records = new ArrayList<>(timer.records);
+			records.sort(Comparator.comparingLong((SearchRecord r) -> r.cpuMs).reversed());
+			lastSearchRecords = Collections.unmodifiableList(records);
 			log.debug("[alt-routes] generated {} route(s); timing: wall={}ms client={}ms rebuild={}ms searchCpu={}ms ({} searches)",
 				routes.size(),
 				lastTimingSummary[0], lastTimingSummary[1], lastTimingSummary[2],
@@ -346,7 +352,72 @@ public class AlternativeRoutesService
 		private long rebuildNanos;
 		private long searchNanos;
 		private int searches;
+		private final List<SearchRecord> records = new ArrayList<>();
 	}
+
+	/**
+	 * One search's profile within a generation — which search ran, what it found, and how much it
+	 * explored — for the benchmark report and for pinpointing slow searches (the aggregate GenTimer
+	 * numbers can't tell a few expensive searches from many cheap ones).
+	 */
+	static final class SearchRecord
+	{
+		final String label;
+		final long cpuMs;
+		/** Total cost of the found path, -1 when the search produced none. */
+		final int resultCost;
+		final boolean reached;
+		final String termination;
+		final int nodesChecked;
+		final int transportsChecked;
+		final boolean capped;
+
+		SearchRecord(String label, long cpuMs, int resultCost, boolean reached, String termination,
+			int nodesChecked, int transportsChecked, boolean capped)
+		{
+			this.label = label;
+			this.cpuMs = cpuMs;
+			this.resultCost = resultCost;
+			this.reached = reached;
+			this.termination = termination;
+			this.nodesChecked = nodesChecked;
+			this.transportsChecked = transportsChecked;
+			this.capped = capped;
+		}
+	}
+
+	/** Appends one search's profile to the generation's records (seed workers call concurrently). */
+	private static void record(GenTimer timer, String label, long searchNanos, Pathfinder pathfinder, int cap)
+	{
+		PathfinderResult result = pathfinder.getResult();
+		Pathfinder.PathfinderStats stats = pathfinder.getStats();
+		List<PathStep> path = result != null ? result.getPathSteps() : null;
+		SearchRecord searchRecord = new SearchRecord(
+			label,
+			searchNanos / 1_000_000,
+			(path != null && !path.isEmpty()) ? result.getTotalCost() : -1,
+			result != null && result.isReached(),
+			(result != null && result.getTerminationReason() != null) ? result.getTerminationReason().name() : "NONE",
+			stats != null ? stats.getNodesChecked() : -1,
+			stats != null ? stats.getTransportsChecked() : -1,
+			cap != Integer.MAX_VALUE);
+		synchronized (timer)
+		{
+			timer.records.add(searchRecord);
+		}
+	}
+
+	/**
+	 * The last completed generation's per-search profiles, slowest first. Empty before the first
+	 * generation. For the benchmark report.
+	 */
+	List<SearchRecord> getLastSearchRecords()
+	{
+		List<SearchRecord> records = lastSearchRecords;
+		return records == null ? List.of() : records;
+	}
+
+	private volatile List<SearchRecord> lastSearchRecords;
 
 	/**
 	 * Seeds additional routes when the exclusion loop ended early: for each candidate global teleport
@@ -532,6 +603,10 @@ public class AlternativeRoutesService
 				timer.searchNanos += searchEnd - searchStart;
 				timer.searches++;
 			}
+			String seedLabel = seed.getDisplayInfo() != null && !seed.getDisplayInfo().isEmpty()
+				? seed.getDisplayInfo()
+				: WorldPointUtil.unpackWorldX(seed.getDestination()) + "," + WorldPointUtil.unpackWorldY(seed.getDestination());
+			record(timer, "seed:" + seedLabel, searchEnd - searchStart, pathfinder, costCap);
 
 			PathfinderResult result = pathfinder.getResult();
 			List<PathStep> path = (result != null) ? result.getPathSteps() : List.of();
@@ -587,6 +662,7 @@ public class AlternativeRoutesService
 			timer.searchNanos += searchEnd - searchStart;
 			timer.searches++;
 		}
+		record(timer, "walk", searchEnd - searchStart, pathfinder, Integer.MAX_VALUE);
 
 		PathfinderResult result = pathfinder.getResult();
 		List<PathStep> path = (result != null) ? result.getPathSteps() : List.of();

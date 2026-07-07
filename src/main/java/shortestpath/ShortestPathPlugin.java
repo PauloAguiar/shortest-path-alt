@@ -269,6 +269,10 @@ public class ShortestPathPlugin extends Plugin
 	// Wall-clock time the current target was set, used to report the journey duration on arrival
 	// (~0 when the destination was set while already there, e.g. "nearest bank" at a bank).
 	private long targetSetMillis = 0;
+	// One-shot world-map pin override for the next setTargets call: the destination a perimeter
+	// expansion is centred on (the searched bank booth), where the pin belongs. UNDEFINED = default
+	// behaviour (pin on a single target, none for multi-target sets).
+	private int markerTarget = WorldPointUtil.UNDEFINED;
 	private final KeyListener clearPathKeylistener = new KeyListener()
 	{
 		@Override
@@ -1685,7 +1689,14 @@ public class ShortestPathPlugin extends Plugin
 		clientThread.invokeLater(() ->
 		{
 			targetSource = source;
-			setTarget(packedPosition);
+			// Searched destinations are often object tiles (a bank booth, an altar) that aren't
+			// walkable: target the tile plus its perimeter so the search can settle a target and
+			// terminate — instead of flooding the whole map and falling back to closest-tile.
+			// The world-map pin stays on the destination itself.
+			Set<Integer> targets = new HashSet<>();
+			Destinations.addWithPerimeter(targets, packedPosition);
+			markerTarget = packedPosition;
+			setTargets(targets, false);
 		});
 	}
 
@@ -1755,9 +1766,14 @@ public class ShortestPathPlugin extends Plugin
 				return;
 			}
 			worldMapPointManager.removeIf(x -> x == marker);
-			if (targets.size() == 1)
+			// A destination expanded to its walkable perimeter (a searched bank booth and its
+			// surround) still gets its pin: on the expansion's centre, not the single-target tile.
+			int markerTile = markerTarget != WorldPointUtil.UNDEFINED ? markerTarget
+				: (targets.size() == 1 ? targets.iterator().next() : WorldPointUtil.UNDEFINED);
+			markerTarget = WorldPointUtil.UNDEFINED;
+			if (markerTile != WorldPointUtil.UNDEFINED)
 			{
-				marker = new WorldMapPoint(WorldPointUtil.unpackWorldPoint(targets.iterator().next()), MARKER_IMAGE);
+				marker = new WorldMapPoint(WorldPointUtil.unpackWorldPoint(markerTile), MARKER_IMAGE);
 				marker.setName("Target");
 				marker.setTarget(marker.getWorldPoint());
 				marker.setJumpOnClick(true);

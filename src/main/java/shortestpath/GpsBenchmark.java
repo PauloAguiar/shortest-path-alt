@@ -247,6 +247,23 @@ public final class GpsBenchmark
 		run.put("searches", timing != null ? timing[4] : -1);
 		run.put("catalogSize", catalogSize.get());
 		run.put("routeCount", finalRoutes.get().size());
+		// Per-search profiles (slowest first): which searches the time actually went to — the
+		// aggregate can't tell one expensive search from many cheap ones.
+		List<Object> searchDetails = new ArrayList<>();
+		for (AlternativeRoutesService.SearchRecord searchRecord : service.getLastSearchRecords())
+		{
+			Map<String, Object> detail = new LinkedHashMap<>();
+			detail.put("label", searchRecord.label);
+			detail.put("cpuMs", searchRecord.cpuMs);
+			detail.put("cost", searchRecord.resultCost);
+			detail.put("reached", searchRecord.reached);
+			detail.put("termination", searchRecord.termination);
+			detail.put("nodes", searchRecord.nodesChecked);
+			detail.put("transports", searchRecord.transportsChecked);
+			detail.put("capped", searchRecord.capped);
+			searchDetails.add(detail);
+		}
+		run.put("searchDetails", searchDetails);
 		List<Object> routesJson = new ArrayList<>();
 		for (RouteOption route : finalRoutes.get())
 		{
