@@ -112,6 +112,9 @@ public class ShortestPathPanel extends PluginPanel
 	// and pick a result to set it as the GPS destination.
 	private final IconTextField destinationSearch = new IconTextField();
 	private final JPanel destinationResults = new JPanel();
+	// The search results float over the panel in a non-focusable popup anchored under the search
+	// field (autocomplete-style) — inline results pushed the whole panel down while typing.
+	private final JPopupMenu destinationPopup = new JPopupMenu();
 	// The name-search index (places + dungeons + minigames), built once the transport data is
 	// available: it's session-static, so caching avoids rescanning transports on every keystroke.
 	private List<Destinations.Entry> destinationIndex;
@@ -178,6 +181,7 @@ public class ShortestPathPanel extends PluginPanel
 	@Override
 	public void onDeactivate()
 	{
+		destinationPopup.setVisible(false);
 		plugin.setAltPanelVisible(false);
 	}
 
@@ -1483,11 +1487,15 @@ public class ShortestPathPanel extends PluginPanel
 		wrap.add(destinationSearch);
 
 		destinationResults.setLayout(new BoxLayout(destinationResults, BoxLayout.Y_AXIS));
-		destinationResults.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		destinationResults.setBorder(new EmptyBorder(4, 0, 0, 0));
-		destinationResults.setAlignmentX(LEFT_ALIGNMENT);
-		destinationResults.setVisible(false);
-		wrap.add(destinationResults);
+		destinationResults.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		// Hosted in a floating popup under the search field, NOT in the panel flow — inline
+		// results pushed everything below down on every keystroke. Non-focusable so typing stays
+		// in the search field while the popup is showing.
+		destinationPopup.setFocusable(false);
+		destinationPopup.setBorder(BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR));
+		destinationPopup.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		destinationPopup.setLayout(new BorderLayout());
+		destinationPopup.add(destinationResults, BorderLayout.CENTER);
 
 		// "Nearest X": a single button opening a menu of amenity types; picking one routes to the
 		// closest of that type using available teleports.
@@ -1573,9 +1581,7 @@ public class ShortestPathPanel extends PluginPanel
 		String query = destinationSearch.getText().trim().toLowerCase(java.util.Locale.ROOT);
 		if (query.isEmpty())
 		{
-			destinationResults.setVisible(false);
-			destinationResults.revalidate();
-			destinationResults.repaint();
+			destinationPopup.setVisible(false);
 			return;
 		}
 
@@ -1611,12 +1617,25 @@ public class ShortestPathPanel extends PluginPanel
 			JLabel none = new JLabel("No matching destination");
 			none.setForeground(Color.GRAY);
 			none.setFont(FontManager.getRunescapeSmallFont());
-			none.setBorder(new EmptyBorder(2, 4, 2, 0));
+			none.setBorder(new EmptyBorder(2, 4, 2, 4));
 			destinationResults.add(none);
 		}
-		destinationResults.setVisible(true);
-		destinationResults.revalidate();
-		destinationResults.repaint();
+
+		// Float the results over the panel, matching the search field's width. Re-showing on every
+		// keystroke would flicker and can steal the caret, so a visible popup is resized in place.
+		int width = Math.max(destinationSearch.getWidth(), 180);
+		destinationPopup.setPreferredSize(new Dimension(width,
+			destinationResults.getPreferredSize().height + 2));
+		if (destinationPopup.isVisible())
+		{
+			destinationPopup.revalidate();
+			destinationPopup.repaint();
+			destinationPopup.pack();
+		}
+		else
+		{
+			destinationPopup.show(destinationSearch, 0, destinationSearch.getHeight());
+		}
 	}
 
 	private JPanel destinationRow(Destinations.Entry entry, int player)
