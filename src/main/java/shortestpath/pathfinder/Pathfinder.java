@@ -22,11 +22,18 @@ public class Pathfinder implements Runnable
 	private final Runnable completionCallback;
 	// Nodes are stored structure-of-arrays style: each node is an int id into the graph, instead of
 	// an object per explored tile. This keeps a whole search to a handful of arrays (issue #491).
-	private final NodeGraph graph = new NodeGraph(1 << 14);
+	private final NodeGraph graph;
 	// Capacities should be enough to store all nodes without requiring the queue to grow
 	// They were found by checking the max queue size
 	private final IntDeque boundary = new IntDeque(4096);
-	private final IntMinHeap pending = new IntMinHeap(graph, 256);
+	private final IntMinHeap pending;
+	// A* mode (heuristic attached): every node goes through the f-ordered pending heap — the FIFO
+	// boundary's uniform-cost-layer assumption doesn't hold once the ordering key includes a
+	// position-dependent heuristic — and visited-marking moves from enqueue to dequeue (under f
+	// ordering the first ENQUEUE of a tile isn't necessarily via its cheapest parent; the first
+	// DEQUEUE is, because the heuristic is consistent). Costs are provably identical to the
+	// uninformed search; only exploration order and explored-set size change.
+	private final boolean astar;
 	private final VisitedTiles visited;
 	@Getter
 	private volatile boolean done = false;
@@ -79,6 +86,12 @@ public class Pathfinder implements Runnable
 
 	public Pathfinder(PathfinderConfig config, int start, Set<Integer> targets, Runnable completionCallback, int costCap)
 	{
+		this(config, start, targets, completionCallback, costCap, null);
+	}
+
+	public Pathfinder(PathfinderConfig config, int start, Set<Integer> targets, Runnable completionCallback,
+		int costCap, SearchHeuristic heuristic)
+	{
 		stats = new PathfinderStats();
 		this.config = config;
 		this.map = config.getMap();
@@ -86,6 +99,9 @@ public class Pathfinder implements Runnable
 		this.targets = targets;
 		this.completionCallback = completionCallback;
 		this.costCap = costCap;
+		this.astar = heuristic != null;
+		this.graph = new NodeGraph(1 << 14, heuristic);
+		this.pending = new IntMinHeap(graph, astar ? 4096 : 256);
 		visited = new VisitedTiles(map);
 		targetInWilderness = WildernessChecker.isInWilderness(targets);
 		targetInBlockedRegion = anyInBlockedRegion(config.getLeagueModeState(), targets);
@@ -96,6 +112,12 @@ public class Pathfinder implements Runnable
 		{
 			targetArray[i++] = target;
 		}
+	}
+
+	/** Whether this search runs with an A* heuristic (identical costs, smaller exploration). */
+	public boolean isAstar()
+	{
+		return astar;
 	}
 
 	private static boolean anyInBlockedRegion(LeagueModeState league, Set<Integer> packed)
@@ -219,6 +241,15 @@ public class Pathfinder implements Runnable
 			}
 
 			final boolean neighborIsTransport = graph.isTransport(neighbor);
+			// A* mode: nothing is marked at enqueue (the pop dedups instead — see the run loop) and
+			// every node is ordered by f through the pending heap. Stats are counted at settle
+			// (pop) rather than here: enqueues include duplicates, so counting them would make the
+			// explored-size numbers incomparable with the uninformed search.
+			if (astar)
+			{
+				pending.add(neighbor);
+				continue;
+			}
 			// For delayed-visit nodes (shared destinations), don't mark as visited on enqueue.
 			// They will be checked and marked when dequeued from pending.
 			if (!(neighborIsTransport && graph.isDelayedVisit(neighbor)))
@@ -320,17 +351,29 @@ public class Pathfinder implements Runnable
 			{
 				node = pending.poll();
 
-				// For delayed-visit nodes, check if the destination was already
-				// reached by a cheaper path while this node was queued.
-				if (graph.isDelayedVisit(node))
+				// For delayed-visit nodes, check if the destination was already reached by a
+				// cheaper path while this node was queued. In A* mode EVERY node dedups here:
+				// nothing is marked at enqueue, and consistency makes the first dequeue optimal.
+				if (astar || graph.isDelayedVisit(node))
 				{
-					int packed = graph.packedPosition(node);
-					boolean bank = graph.bankVisited(node);
-					if (visited.get(packed, bank))
+					if (visited.get(node, graph))
 					{
 						continue;
 					}
-					visited.set(packed, bank);
+					visited.set(node, graph);
+				}
+				// A* counts distinct settled states (enqueues include duplicates); the uninformed
+				// search counts at enqueue, where marking makes every count unique.
+				if (astar)
+				{
+					if (graph.isTransport(node))
+					{
+						++stats.transportsChecked;
+					}
+					else
+					{
+						++stats.nodesChecked;
+					}
 				}
 			}
 			else

@@ -268,6 +268,7 @@ public final class GpsBenchmark
 			detail.put("nodes", searchRecord.nodesChecked);
 			detail.put("transports", searchRecord.transportsChecked);
 			detail.put("capped", searchRecord.capped);
+			detail.put("astar", searchRecord.astar);
 			searchDetails.add(detail);
 		}
 		run.put("searchDetails", searchDetails);

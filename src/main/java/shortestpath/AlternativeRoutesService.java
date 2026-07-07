@@ -31,6 +31,7 @@ import shortestpath.pathfinder.PathStep;
 import shortestpath.pathfinder.Pathfinder;
 import shortestpath.pathfinder.PathfinderConfig;
 import shortestpath.pathfinder.PathfinderResult;
+import shortestpath.pathfinder.SearchHeuristic;
 import shortestpath.pathfinder.TransportAvailability;
 import shortestpath.transport.Transport;
 
@@ -219,7 +220,11 @@ public class AlternativeRoutesService
 
 			long searchStart = System.nanoTime();
 			int chainCap = capOf(walkFuture);
-			Pathfinder pathfinder = new Pathfinder(planningConfig, start, ends, null, chainCap);
+			// Heuristic rebuilt per iteration: the exclusion set changes the usable transports, and
+			// the fewer good teleports remain, the STRONGER the heuristic gets — the expensive late
+			// chain searches are exactly the ones it accelerates.
+			SearchHeuristic heuristic = SearchHeuristic.build(planningConfig, ends);
+			Pathfinder pathfinder = new Pathfinder(planningConfig, start, ends, null, chainCap, heuristic);
 			pathfinder.run();
 			long searchNanos = System.nanoTime() - searchStart;
 			timer.searchNanos += searchNanos;
@@ -371,9 +376,10 @@ public class AlternativeRoutesService
 		final int nodesChecked;
 		final int transportsChecked;
 		final boolean capped;
+		final boolean astar;
 
 		SearchRecord(String label, long cpuMs, int resultCost, boolean reached, String termination,
-			int nodesChecked, int transportsChecked, boolean capped)
+			int nodesChecked, int transportsChecked, boolean capped, boolean astar)
 		{
 			this.label = label;
 			this.cpuMs = cpuMs;
@@ -383,6 +389,7 @@ public class AlternativeRoutesService
 			this.nodesChecked = nodesChecked;
 			this.transportsChecked = transportsChecked;
 			this.capped = capped;
+			this.astar = astar;
 		}
 	}
 
@@ -400,7 +407,8 @@ public class AlternativeRoutesService
 			(result != null && result.getTerminationReason() != null) ? result.getTerminationReason().name() : "NONE",
 			stats != null ? stats.getNodesChecked() : -1,
 			stats != null ? stats.getTransportsChecked() : -1,
-			cap != Integer.MAX_VALUE);
+			cap != Integer.MAX_VALUE,
+			pathfinder.isAstar());
 		synchronized (timer)
 		{
 			timer.records.add(searchRecord);
@@ -594,7 +602,10 @@ public class AlternativeRoutesService
 			long rebuildStart = System.nanoTime();
 			config.rebuildAvailabilityWithExclusions(seedExclusions);
 			long searchStart = System.nanoTime();
-			Pathfinder pathfinder = new Pathfinder(config, start, ends, null, costCap);
+			// Seed searches exclude every other global teleport, so unless THIS seed lands near the
+			// target the heuristic floor stays high and the search is strongly directed.
+			SearchHeuristic heuristic = SearchHeuristic.build(config, ends);
+			Pathfinder pathfinder = new Pathfinder(config, start, ends, null, costCap, heuristic);
 			pathfinder.run();
 			long searchEnd = System.nanoTime();
 			synchronized (timer)
@@ -653,7 +664,10 @@ public class AlternativeRoutesService
 		long rebuildStart = System.nanoTime();
 		config.rebuildAvailabilityWithExclusions(walkExclusions);
 		long searchStart = System.nanoTime();
-		Pathfinder pathfinder = new Pathfinder(config, start, ends);
+		// With every method excluded almost nothing constrains the heuristic's floor, so the walk
+		// search — previously the biggest disc of the generation — is the one A* accelerates most.
+		SearchHeuristic heuristic = SearchHeuristic.build(config, ends);
+		Pathfinder pathfinder = new Pathfinder(config, start, ends, null, Integer.MAX_VALUE, heuristic);
 		pathfinder.run();
 		long searchEnd = System.nanoTime();
 		synchronized (timer)

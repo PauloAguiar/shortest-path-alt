@@ -3,7 +3,7 @@ package shortestpath.pathfinder;
 import java.util.Arrays;
 
 /**
- * A binary min-heap of primitive {@code int} node ids ordered by {@link NodeGraph#compareCost}.
+ * A binary min-heap of primitive {@code int} node ids ordered by {@link NodeGraph#orderCost} (compareCost, plus the heuristic in A* mode).
  * <p>
  * Replaces the {@code PriorityQueue<TransportNode>} pending queue in {@link Pathfinder} so transport
  * candidates are stored as int ids rather than boxed node objects. The ordering key is fixed when a
@@ -79,11 +79,11 @@ class IntMinHeap
 	private void siftUp(int index)
 	{
 		final int id = heap[index];
-		final int key = graph.compareCost(id);
+		final int key = graph.orderCost(id);
 		while (index > 0)
 		{
 			final int parent = (index - 1) >> 1;
-			if (key >= graph.compareCost(heap[parent]))
+			if (key >= graph.orderCost(heap[parent]))
 			{
 				break;
 			}
@@ -96,16 +96,16 @@ class IntMinHeap
 	private void siftDown(int index)
 	{
 		final int id = heap[index];
-		final int key = graph.compareCost(id);
+		final int key = graph.orderCost(id);
 		final int half = size >> 1;
 		while (index < half)
 		{
 			int child = (index << 1) + 1;
-			int childKey = graph.compareCost(heap[child]);
+			int childKey = graph.orderCost(heap[child]);
 			final int right = child + 1;
 			if (right < size)
 			{
-				final int rightKey = graph.compareCost(heap[right]);
+				final int rightKey = graph.orderCost(heap[right]);
 				if (rightKey < childKey)
 				{
 					child = right;

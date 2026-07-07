@@ -55,19 +55,32 @@ public class NodeGraph
 	private int[] previous;
 	private int[] cost;
 	private int[] differentialCost;
+	// The priority-queue ordering key, precomputed at append time: compareCost plus — when a
+	// heuristic is attached (A* mode) — the node's heuristic value. With no heuristic it equals
+	// compareCost exactly, so Dijkstra-mode ordering is bit-for-bit unchanged.
+	private int[] orderCost;
 	private byte[] flags;
 	private byte[] abstractKind;
 	private int size;
+	// Optional A* heuristic; null = uninformed (Dijkstra) ordering.
+	private final SearchHeuristic heuristic;
 
 	public NodeGraph(int initialCapacity)
+	{
+		this(initialCapacity, null);
+	}
+
+	public NodeGraph(int initialCapacity, SearchHeuristic heuristic)
 	{
 		final int capacity = Math.max(1, initialCapacity);
 		packedPosition = new int[capacity];
 		previous = new int[capacity];
 		cost = new int[capacity];
 		differentialCost = new int[capacity];
+		orderCost = new int[capacity];
 		flags = new byte[capacity];
 		abstractKind = new byte[capacity];
+		this.heuristic = heuristic;
 	}
 
 	public int size()
@@ -89,6 +102,7 @@ public class NodeGraph
 		previous = Arrays.copyOf(previous, newCapacity);
 		cost = Arrays.copyOf(cost, newCapacity);
 		differentialCost = Arrays.copyOf(differentialCost, newCapacity);
+		orderCost = Arrays.copyOf(orderCost, newCapacity);
 		flags = Arrays.copyOf(flags, newCapacity);
 		abstractKind = Arrays.copyOf(abstractKind, newCapacity);
 	}
@@ -101,6 +115,7 @@ public class NodeGraph
 		previous[id] = prev;
 		cost[id] = nodeCost;
 		differentialCost[id] = diffCost;
+		orderCost[id] = nodeCost + diffCost + (heuristic == null ? 0 : heuristic.of(packed));
 		abstractKind[id] = kind;
 		flags[id] = flagBits;
 		size = id + 1;
@@ -203,6 +218,15 @@ public class NodeGraph
 	public int compareCost(int id)
 	{
 		return cost[id] + differentialCost[id];
+	}
+
+	/**
+	 * The precomputed priority-queue key: {@link #compareCost} plus the A* heuristic value when
+	 * one is attached (equal to compareCost otherwise).
+	 */
+	public int orderCost(int id)
+	{
+		return orderCost[id];
 	}
 
 	public boolean bankVisited(int id)
@@ -321,6 +345,7 @@ public class NodeGraph
 		previous = null;
 		cost = null;
 		differentialCost = null;
+		orderCost = null;
 		flags = null;
 		abstractKind = null;
 		size = 0;
