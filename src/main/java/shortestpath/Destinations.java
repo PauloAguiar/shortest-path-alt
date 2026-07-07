@@ -67,7 +67,7 @@ public final class Destinations
 		new NearestOption("fairy_ring", "Fairy ring"),
 		new NearestOption("spirit_tree", "Spirit tree"));
 
-	/** The named places (cities/towns) — the only entries offered by the text search. */
+	/** The named places (cities/towns/landmarks) from the bundled resource. */
 	public static List<Entry> places()
 	{
 		List<Entry> places = new ArrayList<>();
@@ -79,6 +79,25 @@ public final class Destinations
 			}
 		}
 		return places;
+	}
+
+	/**
+	 * The entries offered by the name search: named places and dungeons (from the bundled resource)
+	 * plus minigames (from the live transport data). Amenities like banks and altars are reached via
+	 * "nearest X" instead, so they're left out here to keep results focused.
+	 */
+	public static List<Entry> searchable(PrimitiveIntHashMap<Transport[]> transports)
+	{
+		List<Entry> out = new ArrayList<>();
+		for (Entry entry : all(transports))
+		{
+			if ("place".equals(entry.category) || "dungeon".equals(entry.category)
+				|| "minigame".equals(entry.category))
+			{
+				out.add(entry);
+			}
+		}
+		return out;
 	}
 
 	/**
@@ -125,9 +144,10 @@ public final class Destinations
 	}
 
 	/**
-	 * The static entries plus one entry per fairy ring and spirit tree, derived from the live
-	 * transport data (deduplicated by origin). These objects have no cache name, so the plugin
-	 * names them by their transport display info ("Fairy ring AIQ", "Spirit tree: Gnome Stronghold").
+	 * The static entries plus destinations derived from the live transport data: one per fairy ring
+	 * and spirit tree (deduplicated by origin — these objects have no cache name, so they're named by
+	 * their transport display info like "Fairy ring AIQ"), and one per minigame (deduplicated by name,
+	 * placed at the minigame's teleport destination and named from its display info, e.g. "Castle Wars").
 	 */
 	public static List<Entry> all(PrimitiveIntHashMap<Transport[]> transports)
 	{
@@ -137,6 +157,7 @@ public final class Destinations
 			return entries;
 		}
 		PrimitiveIntList seen = new PrimitiveIntList();
+		Set<String> seenMinigames = new HashSet<>();
 		for (int key : transports.keys())
 		{
 			Transport[] set = transports.get(key);
@@ -147,24 +168,50 @@ public final class Destinations
 			for (Transport transport : set)
 			{
 				TransportType type = transport.getType();
-				if (type != TransportType.FAIRY_RING && type != TransportType.SPIRIT_TREE)
+				if (type == TransportType.FAIRY_RING || type == TransportType.SPIRIT_TREE)
 				{
-					continue;
+					int origin = transport.getOrigin();
+					if (origin == Transport.UNDEFINED_ORIGIN || seen.contains(origin))
+					{
+						continue;
+					}
+					seen.add(origin);
+					String label = type == TransportType.FAIRY_RING ? "Fairy ring" : "Spirit tree";
+					String info = transport.getDisplayInfo();
+					String name = info != null && !info.isEmpty() ? label + " " + info : label;
+					entries.add(new Entry(type == TransportType.FAIRY_RING ? "fairy_ring" : "spirit_tree",
+						name, origin));
 				}
-				int origin = transport.getOrigin();
-				if (origin == Transport.UNDEFINED_ORIGIN || seen.contains(origin))
+				else if (type == TransportType.TELEPORTATION_MINIGAME)
 				{
-					continue;
+					int destination = transport.getDestination();
+					String name = minigameName(transport.getDisplayInfo());
+					if (destination == WorldPointUtil.UNDEFINED
+						|| !seenMinigames.add(name.toLowerCase(java.util.Locale.ROOT)))
+					{
+						continue;
+					}
+					entries.add(new Entry("minigame", name, destination));
 				}
-				seen.add(origin);
-				String label = type == TransportType.FAIRY_RING ? "Fairy ring" : "Spirit tree";
-				String info = transport.getDisplayInfo();
-				String name = info != null && !info.isEmpty() ? label + " " + info : label;
-				entries.add(new Entry(type == TransportType.FAIRY_RING ? "fairy_ring" : "spirit_tree",
-					name, origin));
 			}
 		}
 		return entries;
+	}
+
+	/**
+	 * A clean minigame label from a minigame-teleport's display info: drops the "Minigame Teleport"
+	 * boilerplate and the numbered-variant prefix, e.g. "Castle Wars Minigame Teleport" -&gt;
+	 * "Castle Wars", and "Rat Pits Minigame Teleport: 1. Ardougne" -&gt; "Rat Pits: Ardougne".
+	 */
+	private static String minigameName(String info)
+	{
+		if (info == null || info.isEmpty())
+		{
+			return "Minigame";
+		}
+		String name = info.replace("Minigame Teleport", " ").replaceAll("\\s+", " ").trim();
+		name = name.replace(" :", ":").replaceAll(":\\s*\\d+\\.\\s*", ": ");
+		return name.trim();
 	}
 
 	private static List<Entry> load()

@@ -100,6 +100,9 @@ public class ShortestPathPanel extends PluginPanel
 	// and pick a result to set it as the GPS destination.
 	private final IconTextField destinationSearch = new IconTextField();
 	private final JPanel destinationResults = new JPanel();
+	// The name-search index (places + dungeons + minigames), built once the transport data is
+	// available: it's session-static, so caching avoids rescanning transports on every keystroke.
+	private List<Destinations.Entry> destinationIndex;
 	private JButton ownedButton;
 	private JButton allButton;
 	private JButton variantOneButton;
@@ -1238,7 +1241,7 @@ public class ShortestPathPanel extends PluginPanel
 		destinationSearch.setIcon(IconTextField.Icon.SEARCH);
 		destinationSearch.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		destinationSearch.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
-		destinationSearch.setToolTipText("Search for a city or town by name");
+		destinationSearch.setToolTipText("Search places, dungeons and minigames by name");
 		destinationSearch.setMaximumSize(new Dimension(Integer.MAX_VALUE, destinationSearch.getPreferredSize().height));
 		destinationSearch.setAlignmentX(LEFT_ALIGNMENT);
 		destinationSearch.getDocument().addDocumentListener(new DocumentListener()
@@ -1246,19 +1249,19 @@ public class ShortestPathPanel extends PluginPanel
 			@Override
 			public void insertUpdate(DocumentEvent e)
 			{
-				renderCityResults();
+				renderDestinationResults();
 			}
 
 			@Override
 			public void removeUpdate(DocumentEvent e)
 			{
-				renderCityResults();
+				renderDestinationResults();
 			}
 
 			@Override
 			public void changedUpdate(DocumentEvent e)
 			{
-				renderCityResults();
+				renderDestinationResults();
 			}
 		});
 		wrap.add(destinationSearch);
@@ -1330,7 +1333,23 @@ public class ShortestPathPanel extends PluginPanel
 		menu.show(anchor, 0, anchor.getHeight());
 	}
 
-	private void renderCityResults()
+	/** The cached name-search index; (re)built only once the transport data is available. */
+	private List<Destinations.Entry> destinationIndex()
+	{
+		List<Destinations.Entry> cached = destinationIndex;
+		if (cached != null)
+		{
+			return cached;
+		}
+		List<Destinations.Entry> built = Destinations.searchable(plugin.getTransports());
+		if (plugin.getTransports() != null)
+		{
+			destinationIndex = built;
+		}
+		return built;
+	}
+
+	private void renderDestinationResults()
 	{
 		destinationResults.removeAll();
 		String query = destinationSearch.getText().trim().toLowerCase(java.util.Locale.ROOT);
@@ -1344,7 +1363,7 @@ public class ShortestPathPanel extends PluginPanel
 
 		final int player = plugin.getPlayerLocation();
 		List<Destinations.Entry> matches = new ArrayList<>();
-		for (Destinations.Entry entry : Destinations.places())
+		for (Destinations.Entry entry : destinationIndex())
 		{
 			if (entry.name.toLowerCase(java.util.Locale.ROOT).contains(query))
 			{
@@ -1371,7 +1390,7 @@ public class ShortestPathPanel extends PluginPanel
 		}
 		if (shown == 0)
 		{
-			JLabel none = new JLabel("No matching place");
+			JLabel none = new JLabel("No matching destination");
 			none.setForeground(Color.GRAY);
 			none.setFont(FontManager.getRunescapeSmallFont());
 			none.setBorder(new EmptyBorder(2, 4, 2, 0));

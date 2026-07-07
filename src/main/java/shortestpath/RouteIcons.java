@@ -105,6 +105,8 @@ final class RouteIcons
 	private static final ImageIcon DEST_POTTERY = new ImageIcon(vase());
 	private static final ImageIcon DEST_FAIRY = new ImageIcon(ring());
 	private static final ImageIcon DEST_SPIRIT_TREE = new ImageIcon(tree());
+	private static final ImageIcon DEST_DUNGEON = new ImageIcon(dungeon());
+	private static final ImageIcon DEST_MINIGAME = new ImageIcon(minigame());
 	private static final ImageIcon DEST_PIN = new ImageIcon(pin(GPS_BLUE));
 
 	/** The icon for a destination category, falling back to a location pin for anything unmapped. */
@@ -123,6 +125,8 @@ final class RouteIcons
 			case "pottery": return DEST_POTTERY;
 			case "fairy_ring": return DEST_FAIRY;
 			case "spirit_tree": return DEST_SPIRIT_TREE;
+			case "dungeon": return DEST_DUNGEON;
+			case "minigame": return DEST_MINIGAME;
 			default: return DEST_PIN;
 		}
 	}
@@ -310,6 +314,39 @@ final class RouteIcons
 			g.fill(new Rectangle2D.Double(7, 8.5, 2, 5.5));  // trunk
 			g.setColor(new Color(0x4C, 0xAF, 0x50));
 			g.fill(new Ellipse2D.Double(2.5, 1.5, 11, 9));   // canopy
+		});
+	}
+
+	private static BufferedImage dungeon()
+	{
+		return render(g ->
+		{
+			g.setColor(new Color(0x8A, 0x8F, 0x98));           // rocky mound
+			Path2D mound = new Path2D.Double();
+			mound.moveTo(1.5, 14);
+			mound.curveTo(2.5, 4.5, 13.5, 4.5, 14.5, 14);
+			mound.closePath();
+			g.fill(mound);
+			g.setColor(new Color(0x1E, 0x20, 0x26));           // dark cave mouth
+			Path2D mouth = new Path2D.Double();
+			mouth.moveTo(5, 14);
+			mouth.curveTo(5, 8, 11, 8, 11, 14);
+			mouth.closePath();
+			g.fill(mouth);
+		});
+	}
+
+	private static BufferedImage minigame()
+	{
+		return render(g ->
+		{
+			g.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.setColor(new Color(0xC7, 0xD0, 0xDA));           // two crossed blades, tips up
+			g.draw(new Line2D.Double(2.5, 2.5, 12, 12));
+			g.draw(new Line2D.Double(13.5, 2.5, 4, 12));
+			g.setColor(new Color(0xF2, 0xC1, 0x4E));           // gold pommels at the hilts
+			g.fill(new Ellipse2D.Double(11, 11, 3, 3));
+			g.fill(new Ellipse2D.Double(2.8, 11, 3, 3));
 		});
 	}
 
