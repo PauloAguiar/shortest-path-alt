@@ -60,6 +60,9 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private double[] remainingTicksAt;
 	// The live remaining estimate chosen by the scoring pass.
 	private double liveRemainingTicks;
+	// Distance from the player to the tile the scoring pass selected: 0 = standing on the
+	// path. Arrival is only trusted at 0 — anything else may be proximity through a wall.
+	private int lastSelectionDistance = Integer.MAX_VALUE;
 
 	// Straight-line proximity is not reachability: a later leg can pass close by across a cliff the
 	// route detours around, and straight-line cost always underprices a transport that exists
@@ -135,8 +138,10 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			return null;
 		}
 		updateProgress(route, steps);
-		// Within ~2 seconds of travel from the destination counts as "about to arrive".
-		if (liveRemainingTicks <= 3.5)
+		// "About to arrive" needs more than a small ETA — straight-line proximity can undercut
+		// walls (the goal one tile away across a fence). It must be EARNED: standing exactly on
+		// a path tile in the final stretch, with no unopened door left between here and the end.
+		if (liveRemainingTicks <= 3.5 && lastSelectionDistance == 0 && lastLegClear(route, steps))
 		{
 			nearEndAtMillis = now;
 		}
@@ -561,7 +566,9 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			// Mid-transport: interpolate through the ride geometrically. Distance to the landing
 			// tile over the full hop length gives the fraction completed; the ETA becomes the
 			// remainder of the ride plus everything after it. Progress itself (step completion)
-			// still only advances on landing.
+			// still only advances on landing — and mid-flight never counts as standing on the
+			// path, so a ride passing over the destination can't stamp an arrival.
+			lastSelectionDistance = Integer.MAX_VALUE;
 			RouteDirections.Step ride = currentStep(plugin.getRouteDirections(route));
 			if (ride != null && ride.isTransport())
 			{
@@ -639,6 +646,32 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		}
 		reachedIndex = best;
 		liveRemainingTicks = bestDistance / 2.0 + remainingTicksAt[best];
+		lastSelectionDistance = bestDistance;
+	}
+
+	/**
+	 * Whether the remaining leg is clear of doors that haven't been seen open — the "green"
+	 * condition for arrival: a small ETA behind a still-closed (or unverified) door is not
+	 * an arrival.
+	 */
+	private boolean lastLegClear(RouteOption route, List<RouteDirections.Step> steps)
+	{
+		List<shortestpath.pathfinder.PathStep> path = route.getPath();
+		for (RouteDirections.Step step : steps)
+		{
+			if (!step.isDoor() || step.getEndIndex() <= reachedIndex || step.getEndIndex() >= path.size())
+			{
+				continue;
+			}
+			ClosedDoors.Door door = ClosedDoors.doorBetween(
+				path.get(step.getStartIndex()).getPackedPosition(),
+				path.get(step.getEndIndex()).getPackedPosition());
+			if (door != null && ClosedDoors.state(client, door) != ClosedDoors.State.OPEN)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
