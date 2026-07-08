@@ -1843,13 +1843,15 @@ public class ShortestPathPlugin extends Plugin
 		clientThread.invokeLater(() ->
 		{
 			targetSource = source;
-			// Searched destinations are often object tiles (a bank booth, an altar) that aren't
-			// walkable: target the tile plus its perimeter so the search can settle a target and
-			// terminate — instead of flooding the whole map and falling back to closest-tile.
+			// Searched destinations can sit on unwalkable tiles (a place label on a fountain):
+			// expand to the nearest walkable ring, like map pins — walkable tiles stay exact.
 			// The world-map pin stays on the destination itself.
-			Set<Integer> targets = new HashSet<>();
-			Destinations.addWithPerimeter(targets, packedPosition);
-			markerTarget = packedPosition;
+			Set<Integer> targets = new HashSet<>(Destinations.walkableTargets(
+				pathfinderConfig != null ? pathfinderConfig.getMap() : null, packedPosition));
+			if (targets.size() > 1)
+			{
+				markerTarget = packedPosition;
+			}
 			setTargets(targets, false);
 		});
 	}

@@ -102,9 +102,14 @@ public final class Destinations
 	}
 
 	/**
-	 * Every tile of an amenity category plus each tile's walkable perimeter — the target set for its
-	 * "nearest X" search. Fairy rings and spirit trees come from the live transport data (their world
-	 * objects carry no cache name).
+	 * Every target tile of an amenity category — the target set for its "nearest X" search. The
+	 * bundled rows ARE the access tiles: the dump emits, per amenity, the perimeter tiles whose
+	 * shared edge with the object carries no wall (the collision map can't make that distinction
+	 * at runtime — walls and object-filled neighbours clear the same edge bits — so a blind 3x3
+	 * perimeter let "nearest water source" routes end one tile across a wall, OUTSIDE the
+	 * building the trough stands in). Tiles occupied by other objects are harmless: never
+	 * settled. Fairy rings and spirit trees come from the live transport data; their origins are
+	 * the standing tiles themselves.
 	 */
 	public static Set<Integer> tilesForCategory(String category, PrimitiveIntHashMap<Transport[]> transports)
 	{
@@ -116,30 +121,10 @@ public final class Destinations
 		{
 			if (effective.equals(entry.category))
 			{
-				addWithPerimeter(tiles, entry.packedPosition);
+				tiles.add(entry.packedPosition);
 			}
 		}
 		return tiles;
-	}
-
-	/**
-	 * Adds a destination tile and its 8 neighbours to the target set. Amenity destinations are the
-	 * OBJECT's own tile (a bank booth, an anvil, an altar), which is usually not walkable — a search
-	 * targeting only that tile can never settle it, so it explores the entire reachable map and falls
-	 * back to a closest-tile path (measured: ~1.3M nodes per search, and the walk-cost cap never
-	 * engages because nothing ever counts as reached). With the perimeter in the target set the
-	 * search terminates the moment it settles a tile the player could interact from, and the
-	 * reached/cost-cap machinery works. Unwalkable perimeter tiles are harmless: never settled.
-	 */
-	public static void addWithPerimeter(Set<Integer> tiles, int packed)
-	{
-		for (int dx = -1; dx <= 1; dx++)
-		{
-			for (int dy = -1; dy <= 1; dy++)
-			{
-				tiles.add(WorldPointUtil.dxdy(packed, dx, dy));
-			}
-		}
 	}
 
 	/**
