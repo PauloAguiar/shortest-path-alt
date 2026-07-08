@@ -1588,11 +1588,12 @@ public class ShortestPathPanel extends PluginPanel
 
 	private JButton buildNearestButton()
 	{
-		// A proper call-to-action: pin icon, centred full-weight label, padded and outlined, with
-		// a hover lift — the plain left-aligned small-font button read as another loose label.
+		// Reads as a button (icon, centred, outlined, hover lift) but stays subordinate to the
+		// search box above it: small font and tight padding, so it doesn't outweigh the primary
+		// control.
 		JButton button = new JButton("Find nearest…", RouteIcons.destinationIcon("pin"));
-		button.setIconTextGap(6);
-		button.setFont(FontManager.getRunescapeFont());
+		button.setIconTextGap(5);
+		button.setFont(FontManager.getRunescapeSmallFont());
 		button.setForeground(Color.WHITE);
 		button.setBackground(ColorScheme.DARKER_GRAY_HOVER_COLOR);
 		button.setFocusPainted(false);
@@ -1600,7 +1601,7 @@ public class ShortestPathPanel extends PluginPanel
 		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		button.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
-			new EmptyBorder(6, 10, 6, 10)));
+			new EmptyBorder(3, 8, 3, 8)));
 		button.setAlignmentX(LEFT_ALIGNMENT);
 		button.setMaximumSize(new Dimension(Integer.MAX_VALUE, button.getPreferredSize().height));
 		button.setToolTipText("Route to the nearest bank / altar / water source / … using available teleports");
