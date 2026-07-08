@@ -639,16 +639,17 @@ public class ShortestPathPanel extends PluginPanel
 		// quiet rank chip, then the ETA — the decision-making number.
 		JPanel left = new JPanel(new FlowLayout(FlowLayout.LEADING, 0, 0));
 		left.setOpaque(false);
-		left.add(new JLabel(selected ? RouteIcons.SHOW_ACTIVE : RouteIcons.SHOW));
-		JLabel rank = new JLabel("#" + (index + 1));
+		// Pin + rank read as one unit ("📍1", no gap); the clock + ETA sit a space apart.
+		JLabel rank = new JLabel(Integer.toString(index + 1),
+			selected ? RouteIcons.SHOW_ACTIVE : RouteIcons.SHOW, SwingConstants.LEADING);
+		rank.setIconTextGap(1);
 		rank.setFont(FontManager.getRunescapeSmallFont());
 		rank.setForeground(Color.GRAY);
-		rank.setBorder(new EmptyBorder(0, 4, 0, 0));
 		left.add(rank);
 		boolean weighted = route.getRawCost() != route.getTotalCost();
 		JLabel eta = new JLabel(formatDuration(routeEtaSeconds(route)), RouteIcons.CLOCK, SwingConstants.LEADING);
-		eta.setIconTextGap(4);
-		eta.setBorder(new EmptyBorder(0, 6, 0, 0));
+		eta.setIconTextGap(3);
+		eta.setBorder(new EmptyBorder(0, 12, 0, 0));
 		eta.setFont(FontManager.getRunescapeBoldFont());
 		eta.setForeground(selected ? ColorScheme.BRAND_ORANGE : Color.WHITE);
 		eta.setToolTipText("<html>Estimated travel time, assuming you run.<br>"
@@ -835,27 +836,11 @@ public class ShortestPathPanel extends PluginPanel
 		JPanel row = new JPanel(new BorderLayout(5, 0));
 		row.setOpaque(false);
 
-		// Network methods get their real glyph (like the overlay's fairy-ring step); everything
-		// else keeps the category dot.
-		JLabel dot;
-		if (method.getType() == TransportType.FAIRY_RING)
-		{
-			dot = new JLabel(RouteIcons.destinationIcon("fairy_ring"));
-			dot.setToolTipText("Fairy ring");
-		}
-		else if (method.getType() == TransportType.SPIRIT_TREE)
-		{
-			dot = new JLabel(RouteIcons.destinationIcon("spirit_tree"));
-			dot.setToolTipText("Spirit tree");
-		}
-		else
-		{
-			dot = new JLabel(methodDot(method));
-			dot.setBorder(new EmptyBorder(2, 0, 0, 0));
-			dot.setToolTipText(method.getType() == TransportType.TELEPORTATION_ITEM
-				? (method.isConsumable() ? "Item (charged — consumes a charge or the item)" : "Item (permanent — reusable)")
-				: method.category());
-		}
+		JLabel dot = new JLabel(methodDot(method));
+		dot.setBorder(new EmptyBorder(2, 0, 0, 0));
+		dot.setToolTipText(method.getType() == TransportType.TELEPORTATION_ITEM
+			? (method.isConsumable() ? "Item (charged — consumes a charge or the item)" : "Item (permanent — reusable)")
+			: method.category());
 		dot.setAlignmentY(Component.TOP_ALIGNMENT);
 		MethodAvailability status = cachedUnavailable.get(method);
 		boolean bankGated = bankMethods.contains(method);
@@ -867,6 +852,18 @@ public class ShortestPathPanel extends PluginPanel
 		west.setLayout(new BoxLayout(west, BoxLayout.X_AXIS));
 		west.setOpaque(false);
 		west.add(dot);
+		// Network methods carry their real glyph inline after the dot (like the bank marker and
+		// the overlay's fairy-ring step), so "C K S" reads as a fairy-ring code at a glance.
+		String networkGlyph = method.getType() == TransportType.FAIRY_RING ? "fairy_ring"
+			: method.getType() == TransportType.SPIRIT_TREE ? "spirit_tree" : null;
+		if (networkGlyph != null)
+		{
+			JLabel glyph = new JLabel(RouteIcons.destinationIcon(networkGlyph));
+			glyph.setAlignmentY(Component.TOP_ALIGNMENT);
+			glyph.setBorder(new EmptyBorder(0, 3, 0, 0));
+			glyph.setToolTipText(method.category());
+			west.add(glyph);
+		}
 		if (bankGated)
 		{
 			JLabel bankMarker = new JLabel(RouteIcons.IN_BANK);
