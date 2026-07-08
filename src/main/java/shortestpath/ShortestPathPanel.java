@@ -433,6 +433,20 @@ public class ShortestPathPanel extends PluginPanel
 	 * A message banner: a coloured left accent bar, an icon, and wrapped text — used for status and
 	 * warnings instead of loose labels.
 	 */
+	/**
+	 * A titled banner: a bold white title on the first line, the description beneath it. For
+	 * warnings/notices that read better as heading + body than one run.
+	 */
+	private JPanel buildBanner(Icon icon, String title, String body, Color accent)
+	{
+		String html = "<font color='#FFFFFF'><b>" + escapeHtml(title) + "</b></font>";
+		if (body != null && !body.isEmpty())
+		{
+			html += "<br>" + body;
+		}
+		return buildBanner(icon, html, accent);
+	}
+
 	private JPanel buildBanner(Icon icon, String innerHtml, Color accent)
 	{
 		JPanel banner = new JPanel(new BorderLayout(7, 0));
@@ -442,10 +456,8 @@ public class ShortestPathPanel extends PluginPanel
 			new EmptyBorder(5, 7, 5, 6)));
 		banner.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-		JLabel iconLabel = new JLabel(icon);
-		iconLabel.setVerticalAlignment(SwingConstants.TOP);
-		iconLabel.setBorder(new EmptyBorder(1, 0, 0, 0));
-		banner.add(iconLabel, BorderLayout.WEST);
+		// The icon sits vertically centred against the (possibly multi-line) text.
+		banner.add(verticallyCentered(new JLabel(icon)), BorderLayout.WEST);
 
 		JLabel text = new JLabel("<html><body style='width:" + BANNER_TEXT_WIDTH + "px'>" + innerHtml + "</body></html>");
 		text.setFont(FontManager.getRunescapeSmallFont());
@@ -552,7 +564,8 @@ public class ShortestPathPanel extends PluginPanel
 		if (plugin.getRoutesMode() == AlternativeRoutesMode.OWNED_WITH_BANK && !plugin.isBankContentsKnown())
 		{
 			notes.add(buildBanner(RouteIcons.BANNER_WARNING,
-				"<b>Bank contents unknown</b> — open your bank once so banked items can be found.",
+				"Bank contents unknown",
+				"Open your bank once so banked items can be found.",
 				ColorScheme.PROGRESS_ERROR_COLOR));
 			notes.add(verticalGap(4));
 		}
@@ -688,13 +701,12 @@ public class ShortestPathPanel extends PluginPanel
 			methods.add(noteRow("<font color='#FF981F'>Can't reach the target — ends at the closest point.</font>",
 				"This destination isn't reachable; the route stops at the nearest tile GPS can get to."));
 		}
-		// The exclude controls rest nearly invisible and colour up while the pointer is over the
-		// card — always-on they were the loudest element on every row for the least-used action.
-		List<JLabel> hoverControls = new ArrayList<>();
+		// Each method row reveals its OWN exclude control (in red) only while the pointer is over
+		// that row — see buildMethodRow.
 		for (int m = 0; m < route.getMethods().size(); m++)
 		{
 			methods.add(buildMethodRow(route.getMethods().get(m), route.getBankMethods(),
-				route.walkBefore(m), hoverControls));
+				route.walkBefore(m)));
 		}
 		// One walking row for the WHOLE route: every leg between methods plus the trailing leg —
 		// per-method walk counts live in the method tooltips instead of cluttering each row.
@@ -712,21 +724,13 @@ public class ShortestPathPanel extends PluginPanel
 		card.setToolTipText(selected ? "Showing on map — click to hide" : "Click to show this route on the map");
 		card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		makeSelectable(card, index);
-		// Attached last so the recursion covers every child added above.
-		addHoverRecursively(card, hovered ->
-		{
-			for (JLabel excludeControl : hoverControls)
-			{
-				excludeControl.setIcon(hovered ? RouteIcons.EXCLUDE : RouteIcons.EXCLUDE_DIM);
-			}
-		});
 		return card;
 	}
 
 	/**
 	 * Fires the handler with true when the pointer enters the component tree and false when it
 	 * truly leaves it (Swing fires exit when moving onto a CHILD, so exits are checked against the
-	 * root's bounds). Used to reveal a card's exclude controls only while hovering it.
+	 * root's bounds). Used to reveal a route row's exclude control only while hovering that row.
 	 */
 	private static void addHoverRecursively(Component root, java.util.function.Consumer<Boolean> handler)
 	{
@@ -844,8 +848,7 @@ public class ShortestPathPanel extends PluginPanel
 	 * method the route's bank detour is for. {@code walkBefore} tiles of walking to reach the method
 	 * are shown as a "(N)" prefix on the label.
 	 */
-	private JPanel buildMethodRow(TeleportMethod method, Set<TeleportMethod> bankMethods, int walkBefore,
-		List<JLabel> hoverControls)
+	private JPanel buildMethodRow(TeleportMethod method, Set<TeleportMethod> bankMethods, int walkBefore)
 	{
 		JPanel row = new JPanel(new BorderLayout(5, 0));
 		row.setOpaque(false);
@@ -903,18 +906,19 @@ public class ShortestPathPanel extends PluginPanel
 			: methodTooltip(method));
 		row.add(text, BorderLayout.CENTER);
 
-		IconActionLabel exclude = new IconActionLabel(RouteIcons.EXCLUDE, RouteIcons.EXCLUDE_HOVER,
+		// Nearly invisible at rest (always present, so the row never resizes), it reveals in red
+		// while the pointer is over THIS row — and redder still directly over the icon.
+		IconActionLabel exclude = new IconActionLabel(RouteIcons.EXCLUDE_DIM, RouteIcons.EXCLUDE_HOVER,
 			"Exclude \"" + method.label() + "\" from teleportation methods", () -> plugin.excludeMethod(method));
-		// Nearly invisible at rest, coloured up while the card is hovered (see buildRouteCard) —
-		// always present, so nothing in the row ever resizes or shifts.
-		exclude.setIcon(RouteIcons.EXCLUDE_DIM);
-		hoverControls.add(exclude);
 		JPanel actionWrap = new JPanel(new GridBagLayout());
 		actionWrap.setOpaque(false);
 		actionWrap.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
 		actionWrap.add(control(exclude));
 		row.add(actionWrap, BorderLayout.EAST);
 
+		// Reveal only this row's control on hover — not the whole card.
+		addHoverRecursively(row, hovered ->
+			exclude.setRestIcon(hovered ? RouteIcons.EXCLUDE_HOVER : RouteIcons.EXCLUDE_DIM));
 		return row;
 	}
 
@@ -1552,9 +1556,8 @@ public class ShortestPathPanel extends PluginPanel
 		destinationPopup.setLayout(new BorderLayout());
 		destinationPopup.add(destinationResults, BorderLayout.CENTER);
 
-		// "Nearest X": a single button opening a menu of amenity types; picking one routes to the
+		// "Find nearest": a single button opening a menu of amenity types; picking one routes to the
 		// closest of that type using available teleports.
-		wrap.add(fullWidth(sectionLabel("Find nearest")));
 		wrap.add(buildNearestButton());
 		return wrap;
 	}
@@ -1577,7 +1580,7 @@ public class ShortestPathPanel extends PluginPanel
 
 	private JButton buildNearestButton()
 	{
-		JButton button = new JButton("Nearest…");
+		JButton button = new JButton("Find nearest…");
 		button.setFont(FontManager.getRunescapeSmallFont());
 		button.setForeground(Color.WHITE);
 		button.setFocusPainted(false);

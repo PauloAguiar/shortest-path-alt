@@ -13,8 +13,14 @@ import javax.swing.SwingUtilities;
  */
 class IconActionLabel extends JLabel
 {
+	// The at-rest icon, swappable so a container (e.g. a route row) can reveal the control on its
+	// own hover; the direct-hover icon still wins while the cursor is over the control itself.
+	private ImageIcon restIcon;
+	private boolean hovered;
+
 	IconActionLabel(ImageIcon icon, ImageIcon hoverIcon, String tooltip, Runnable onClick)
 	{
+		this.restIcon = icon;
 		setIcon(icon);
 		setToolTipText(tooltip);
 		setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -32,14 +38,26 @@ class IconActionLabel extends JLabel
 			@Override
 			public void mouseEntered(MouseEvent e)
 			{
+				hovered = true;
 				setIcon(hoverIcon);
 			}
 
 			@Override
 			public void mouseExited(MouseEvent e)
 			{
-				setIcon(icon);
+				hovered = false;
+				setIcon(restIcon);
 			}
 		});
+	}
+
+	/** Sets the at-rest icon; applied immediately unless the cursor is directly over this control. */
+	void setRestIcon(ImageIcon icon)
+	{
+		restIcon = icon;
+		if (!hovered)
+		{
+			setIcon(icon);
+		}
 	}
 }
