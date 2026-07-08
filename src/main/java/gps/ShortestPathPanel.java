@@ -1557,14 +1557,36 @@ public class ShortestPathPanel extends PluginPanel
 
 	private JButton buildNearestButton()
 	{
-		JButton button = new JButton("Find nearest…");
-		button.setFont(FontManager.getRunescapeSmallFont());
+		// A proper call-to-action: pin icon, centred full-weight label, padded and outlined, with
+		// a hover lift — the plain left-aligned small-font button read as another loose label.
+		JButton button = new JButton("Find nearest…", RouteIcons.destinationIcon("pin"));
+		button.setIconTextGap(6);
+		button.setFont(FontManager.getRunescapeFont());
 		button.setForeground(Color.WHITE);
+		button.setBackground(ColorScheme.DARKER_GRAY_HOVER_COLOR);
 		button.setFocusPainted(false);
-		button.setHorizontalAlignment(SwingConstants.LEFT);
+		button.setHorizontalAlignment(SwingConstants.CENTER);
+		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		button.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
+			new EmptyBorder(6, 10, 6, 10)));
 		button.setAlignmentX(LEFT_ALIGNMENT);
 		button.setMaximumSize(new Dimension(Integer.MAX_VALUE, button.getPreferredSize().height));
 		button.setToolTipText("Route to the nearest bank / altar / water source / … using available teleports");
+		button.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				button.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				button.setBackground(ColorScheme.DARKER_GRAY_HOVER_COLOR);
+			}
+		});
 		button.addActionListener(e -> showNearestMenu(button));
 		return button;
 	}
