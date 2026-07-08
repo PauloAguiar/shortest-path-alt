@@ -1566,7 +1566,7 @@ public class ShortestPathPanel extends PluginPanel
 
 		// "Find nearest": a single button opening a menu of amenity types; picking one routes to the
 		// closest of that type using available teleports.
-		wrap.add(buildNearestButton());
+		wrap.add(buildNearestRow());
 		return wrap;
 	}
 
@@ -1586,25 +1586,65 @@ public class ShortestPathPanel extends PluginPanel
 		return component;
 	}
 
-	private JButton buildNearestButton()
+	/**
+	 * The nearest-X row: a compact, content-hugging "Find nearest…" opener plus icon-only quick
+	 * buttons for the most common targets (bank, bank-and-back) — the full-width button pulled
+	 * attention away from the search box above, the section's primary control.
+	 */
+	private JPanel buildNearestRow()
 	{
-		// Reads as a button (icon, centred, outlined, hover lift) but stays subordinate to the
-		// search box above it: small font and tight padding, so it doesn't outweigh the primary
-		// control.
-		JButton button = new JButton("Find nearest…", RouteIcons.destinationIcon("pin"));
-		button.setIconTextGap(5);
+		JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 4, 0));
+		row.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		row.setBorder(new EmptyBorder(4, 0, 0, 0));
+		row.setAlignmentX(LEFT_ALIGNMENT);
+
+		JButton menuButton = subtleButton(new JButton("Find nearest…"));
+		menuButton.setToolTipText("Route to the nearest altar / water source / furnace / … using available teleports");
+		menuButton.addActionListener(e -> showNearestMenu(menuButton));
+		row.add(menuButton);
+
+		JButton bank = nearestQuickButton("bank");
+		if (bank != null)
+		{
+			row.add(bank);
+		}
+		JButton bankAndBack = nearestQuickButton("bank_round_trip");
+		if (bankAndBack != null)
+		{
+			row.add(bankAndBack);
+		}
+
+		row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+		return row;
+	}
+
+	/** An icon-only quick button running one nearest-X option directly (tooltip names it). */
+	private JButton nearestQuickButton(String optionId)
+	{
+		for (Destinations.NearestOption option : Destinations.NEAREST_OPTIONS)
+		{
+			if (option.id.equals(optionId))
+			{
+				JButton button = subtleButton(new JButton(RouteIcons.destinationIcon(option.id)));
+				button.setToolTipText("Nearest " + option.label.toLowerCase(java.util.Locale.ROOT));
+				button.addActionListener(e -> runNearestOption(option));
+				return button;
+			}
+		}
+		return null;
+	}
+
+	/** Shared subtle-button chrome: small font, outline, tight padding, hand cursor, hover lift. */
+	private static JButton subtleButton(JButton button)
+	{
 		button.setFont(FontManager.getRunescapeSmallFont());
 		button.setForeground(Color.WHITE);
 		button.setBackground(ColorScheme.DARKER_GRAY_HOVER_COLOR);
 		button.setFocusPainted(false);
-		button.setHorizontalAlignment(SwingConstants.CENTER);
 		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		button.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
 			new EmptyBorder(3, 8, 3, 8)));
-		button.setAlignmentX(LEFT_ALIGNMENT);
-		button.setMaximumSize(new Dimension(Integer.MAX_VALUE, button.getPreferredSize().height));
-		button.setToolTipText("Route to the nearest bank / altar / water source / … using available teleports");
 		button.addMouseListener(new MouseAdapter()
 		{
 			@Override
@@ -1619,8 +1659,17 @@ public class ShortestPathPanel extends PluginPanel
 				button.setBackground(ColorScheme.DARKER_GRAY_HOVER_COLOR);
 			}
 		});
-		button.addActionListener(e -> showNearestMenu(button));
 		return button;
+	}
+
+	/** Runs one nearest-X option — shared by the menu items and the quick buttons. */
+	private void runNearestOption(Destinations.NearestOption option)
+	{
+		Set<Integer> tiles = Destinations.tilesForCategory(option.id, plugin.getTransports());
+		boolean roundTrip = "bank_round_trip".equals(option.id);
+		plugin.setNearestCategory(tiles,
+			"nearest " + option.label.toLowerCase(java.util.Locale.ROOT), roundTrip);
+		destinationSearch.setText("");
 	}
 
 	private void showNearestMenu(JComponent anchor)
@@ -1635,14 +1684,7 @@ public class ShortestPathPanel extends PluginPanel
 			item.setForeground(Color.WHITE);
 			item.setFont(FontManager.getRunescapeSmallFont());
 			item.setIconTextGap(6);
-			item.addActionListener(e ->
-			{
-				Set<Integer> tiles = Destinations.tilesForCategory(option.id, plugin.getTransports());
-				boolean roundTrip = "bank_round_trip".equals(option.id);
-				plugin.setNearestCategory(tiles,
-					"nearest " + option.label.toLowerCase(java.util.Locale.ROOT), roundTrip);
-				destinationSearch.setText("");
-			});
+			item.addActionListener(e -> runNearestOption(option));
 			menu.add(item);
 		}
 		menu.show(anchor, 0, anchor.getHeight());
