@@ -8,6 +8,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Point;
@@ -791,6 +792,21 @@ public class ShortestPathPanel extends PluginPanel
 	private static final Color PERMANENT_ITEM_DOT = new Color(0x4D, 0xB6, 0xAC); // teal
 	private static final Color CHARGED_ITEM_DOT = new Color(0xF2, 0xC1, 0x4E);   // amber
 
+	/**
+	 * Wraps a component so that, in a BorderLayout WEST/EAST cell (stretched to the row's full
+	 * height), it sits vertically centred against the — possibly two-line — label in CENTER, while
+	 * staying left-aligned horizontally.
+	 */
+	private static JPanel verticallyCentered(Component content)
+	{
+		JPanel wrap = new JPanel(new GridBagLayout());
+		wrap.setOpaque(false);
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.anchor = GridBagConstraints.WEST;
+		wrap.add(content, gbc);
+		return wrap;
+	}
+
 	/** The category dot for a route-card method, splitting teleport items by charge model. */
 	private static Icon methodDot(TeleportMethod method)
 	{
@@ -811,14 +827,13 @@ public class ShortestPathPanel extends PluginPanel
 		row.setOpaque(false);
 
 		JLabel dot = new JLabel(dot(WALK_DOT_COLOUR));
-		dot.setVerticalAlignment(SwingConstants.TOP);
-		dot.setBorder(new EmptyBorder(2, 0, 0, 0));
 		dot.setToolTipText("Walking");
-		row.add(dot, BorderLayout.WEST);
+		row.add(verticallyCentered(dot), BorderLayout.WEST);
 
 		JLabel text = wrappedLabel(steps > 0
 			? "Walk <font color='#9E9E9E'>" + steps + " tiles</font>"
 			: "Walk");
+		text.setVerticalAlignment(SwingConstants.CENTER);
 		text.setToolTipText("Total walking across this route — every leg between methods plus the final stretch");
 		row.add(text, BorderLayout.CENTER);
 		return row;
@@ -837,17 +852,14 @@ public class ShortestPathPanel extends PluginPanel
 		row.setOpaque(false);
 
 		JLabel dot = new JLabel(methodDot(method));
-		dot.setBorder(new EmptyBorder(2, 0, 0, 0));
+		dot.setAlignmentY(Component.CENTER_ALIGNMENT);
 		dot.setToolTipText(method.getType() == TransportType.TELEPORTATION_ITEM
 			? (method.isConsumable() ? "Item (charged — consumes a charge or the item)" : "Item (permanent — reusable)")
 			: method.category());
-		dot.setAlignmentY(Component.TOP_ALIGNMENT);
 		MethodAvailability status = cachedUnavailable.get(method);
 		boolean bankGated = bankMethods.contains(method);
-		// One structure whether or not glyphs follow, so the dot sits at the exact same spot on
-		// every row: a left-to-right box (dot first, at x=0), top-anchored like the plain rows —
-		// the old FlowLayout wrapper both indented the dot by its leading gap and re-centred it
-		// vertically, so rows with a bank/status glyph looked out of line.
+		// The dot and any inline glyphs form a left-to-right box, centred against each other; the
+		// whole box is then centred vertically against the (possibly two-line) label.
 		JPanel west = new JPanel();
 		west.setLayout(new BoxLayout(west, BoxLayout.X_AXIS));
 		west.setOpaque(false);
@@ -859,7 +871,7 @@ public class ShortestPathPanel extends PluginPanel
 		if (networkGlyph != null)
 		{
 			JLabel glyph = new JLabel(RouteIcons.destinationIcon(networkGlyph));
-			glyph.setAlignmentY(Component.TOP_ALIGNMENT);
+			glyph.setAlignmentY(Component.CENTER_ALIGNMENT);
 			glyph.setBorder(new EmptyBorder(0, 3, 0, 0));
 			glyph.setToolTipText(method.category());
 			west.add(glyph);
@@ -867,7 +879,7 @@ public class ShortestPathPanel extends PluginPanel
 		if (bankGated)
 		{
 			JLabel bankMarker = new JLabel(RouteIcons.IN_BANK);
-			bankMarker.setAlignmentY(Component.TOP_ALIGNMENT);
+			bankMarker.setAlignmentY(Component.CENTER_ALIGNMENT);
 			bankMarker.setBorder(new EmptyBorder(0, 3, 0, 0));
 			bankMarker.setToolTipText("This method needs an item from your bank — the route walks to a bank to withdraw it first");
 			west.add(bankMarker);
@@ -877,18 +889,16 @@ public class ShortestPathPanel extends PluginPanel
 		if (status != null && !bankGated)
 		{
 			JLabel statusMarker = statusLabel(status);
-			statusMarker.setAlignmentY(Component.TOP_ALIGNMENT);
+			statusMarker.setAlignmentY(Component.CENTER_ALIGNMENT);
 			statusMarker.setBorder(new EmptyBorder(0, 3, 0, 0));
 			west.add(statusMarker);
 		}
-		JPanel westWrap = new JPanel(new BorderLayout());
-		westWrap.setOpaque(false);
-		westWrap.add(west, BorderLayout.NORTH);
-		row.add(westWrap, BorderLayout.WEST);
+		row.add(verticallyCentered(west), BorderLayout.WEST);
 
 		// No per-row step counts: the card's walk row totals every leg, and this row's tooltip
 		// still carries its own walk-to-reach detail.
 		JLabel text = wrappedLabel(escapeHtml(method.label()));
+		text.setVerticalAlignment(SwingConstants.CENTER);
 		text.setToolTipText(walkBefore > 0
 			? "<html>Walk " + walkBefore + " tiles to reach this method.<br>" + methodTooltipBody(method) + "</html>"
 			: methodTooltip(method));
@@ -900,10 +910,10 @@ public class ShortestPathPanel extends PluginPanel
 		// always present, so nothing in the row ever resizes or shifts.
 		exclude.setIcon(RouteIcons.EXCLUDE_DIM);
 		hoverControls.add(exclude);
-		JPanel actionWrap = new JPanel(new BorderLayout());
+		JPanel actionWrap = new JPanel(new GridBagLayout());
 		actionWrap.setOpaque(false);
 		actionWrap.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
-		actionWrap.add(control(exclude), BorderLayout.NORTH);
+		actionWrap.add(control(exclude));
 		row.add(actionWrap, BorderLayout.EAST);
 
 		return row;
