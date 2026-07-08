@@ -632,9 +632,11 @@ public class ShortestPathPanel extends PluginPanel
 		topRow.setBorder(new EmptyBorder(4, 7, 2, 5));
 
 		boolean reaches = plugin.routeReachesTarget(route);
-		// The ETA is the decision-making number, so it leads the card; the rank is a quiet chip.
+		// Shown-on-map pin leads the card (orange when this route is the one drawn), then the
+		// quiet rank chip, then the ETA — the decision-making number.
 		JPanel left = new JPanel(new FlowLayout(FlowLayout.LEADING, 5, 0));
 		left.setOpaque(false);
+		left.add(new JLabel(selected ? RouteIcons.SHOW_ACTIVE : RouteIcons.SHOW));
 		JLabel rank = new JLabel("#" + (index + 1));
 		rank.setFont(FontManager.getRunescapeSmallFont());
 		rank.setForeground(Color.GRAY);
@@ -667,8 +669,6 @@ public class ShortestPathPanel extends PluginPanel
 				+ escapeHtml(joinLabels(route.getBankMethods())) + "</b></html>");
 			right.add(bankChip);
 		}
-		// Status indicator (orange when shown); the whole card is the click target, see makeSelectable.
-		right.add(control(new JLabel(selected ? RouteIcons.SHOW_ACTIVE : RouteIcons.SHOW)));
 		topRow.add(right, BorderLayout.EAST);
 		card.add(topRow, BorderLayout.NORTH);
 
@@ -681,9 +681,9 @@ public class ShortestPathPanel extends PluginPanel
 			methods.add(noteRow("<font color='#FF981F'>Can't reach the target — ends at the closest point.</font>",
 				"This destination isn't reachable; the route stops at the nearest tile GPS can get to."));
 		}
-		// The exclude controls only show while the pointer is over the card — always-on they were
-		// the loudest element on every row for the least-used action.
-		List<JComponent> hoverControls = new ArrayList<>();
+		// The exclude controls rest nearly invisible and colour up while the pointer is over the
+		// card — always-on they were the loudest element on every row for the least-used action.
+		List<JLabel> hoverControls = new ArrayList<>();
 		for (int m = 0; m < route.getMethods().size(); m++)
 		{
 			methods.add(buildMethodRow(route.getMethods().get(m), route.getBankMethods(),
@@ -700,11 +700,11 @@ public class ShortestPathPanel extends PluginPanel
 		card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		makeSelectable(card, index);
 		// Attached last so the recursion covers every child added above.
-		addHoverRecursively(card, visible ->
+		addHoverRecursively(card, hovered ->
 		{
-			for (JComponent hidden : hoverControls)
+			for (JLabel excludeControl : hoverControls)
 			{
-				hidden.setVisible(visible);
+				excludeControl.setIcon(hovered ? RouteIcons.EXCLUDE : RouteIcons.EXCLUDE_DIM);
 			}
 		});
 		return card;
@@ -818,7 +818,7 @@ public class ShortestPathPanel extends PluginPanel
 	 * are shown as a "(N)" prefix on the label.
 	 */
 	private JPanel buildMethodRow(TeleportMethod method, Set<TeleportMethod> bankMethods, int walkBefore,
-		List<JComponent> hoverControls)
+		List<JLabel> hoverControls)
 	{
 		JPanel row = new JPanel(new BorderLayout(5, 0));
 		row.setOpaque(false);
@@ -873,9 +873,9 @@ public class ShortestPathPanel extends PluginPanel
 
 		IconActionLabel exclude = new IconActionLabel(RouteIcons.EXCLUDE, RouteIcons.EXCLUDE_HOVER,
 			"Exclude \"" + method.label() + "\" from teleportation methods", () -> plugin.excludeMethod(method));
-		// Hidden until the card is hovered (see buildRouteCard); the wrapper keeps its size so the
-		// text doesn't reflow when the control appears.
-		exclude.setVisible(false);
+		// Nearly invisible at rest, coloured up while the card is hovered (see buildRouteCard) —
+		// always present, so nothing in the row ever resizes or shifts.
+		exclude.setIcon(RouteIcons.EXCLUDE_DIM);
 		hoverControls.add(exclude);
 		JPanel actionWrap = new JPanel(new BorderLayout());
 		actionWrap.setOpaque(false);

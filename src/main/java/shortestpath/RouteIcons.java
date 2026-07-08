@@ -41,6 +41,9 @@ final class RouteIcons
 	// Exclude a method from the next search (no-entry).
 	static final ImageIcon EXCLUDE = new ImageIcon(ban(GREY));
 	static final ImageIcon EXCLUDE_HOVER = new ImageIcon(ban(RED));
+	// Resting state on route cards: present but nearly invisible, coloured up while the card is
+	// hovered — toggling visibility instead shifted the row height.
+	static final ImageIcon EXCLUDE_DIM = new ImageIcon(ban(new Color(0x45, 0x45, 0x45)));
 	// Re-include an excluded method (plus).
 	static final ImageIcon INCLUDE = new ImageIcon(plus(GREY));
 	static final ImageIcon INCLUDE_HOVER = new ImageIcon(plus(GREEN));
