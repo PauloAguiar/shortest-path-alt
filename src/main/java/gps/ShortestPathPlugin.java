@@ -2712,7 +2712,9 @@ public class ShortestPathPlugin extends Plugin
 					routesMode = AlternativeRoutesMode.OWNED_WITH_BANK;
 					break;
 				case "ALL_TELEPORTS":
-					routesMode = AlternativeRoutesMode.ALL_UNLOCKED;
+				case "ALL_UNLOCKED":
+					// Legacy names; the unlocked-only middle mode was folded into All.
+					routesMode = AlternativeRoutesMode.ALL_EVERYTHING;
 					break;
 				default:
 					log.warn("Unknown alternative-routes mode '{}'", value);

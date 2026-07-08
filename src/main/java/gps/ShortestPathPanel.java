@@ -122,10 +122,9 @@ public class ShortestPathPanel extends PluginPanel
 	// The name-search index (places + dungeons + minigames), built once the transport data is
 	// available: it's session-static, so caching avoids rescanning transports on every keystroke.
 	private List<Destinations.Entry> destinationIndex;
-	private JButton ownedButton;
-	private JButton allButton;
-	private JButton variantOneButton;
-	private JButton variantTwoButton;
+	private JButton inventoryModeButton;
+	private JButton bankModeButton;
+	private JButton allModeButton;
 
 	// Cached last render input so expand/collapse can re-render without a round-trip to the plugin.
 	private List<RouteOption> cachedRoutes = List.of();
@@ -338,61 +337,36 @@ public class ShortestPathPanel extends PluginPanel
 
 		// Two-level mode picker: family (Owned / All) on top, its two variants indented beneath so they
 		// read as sub-options of whichever family is selected.
-		JPanel modeRows = new JPanel(new BorderLayout(0, 4));
-		modeRows.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		modeRows.setBorder(new EmptyBorder(8, 0, 0, 0));
+		// One segmented row, ordered by inclusiveness (each step considers strictly more methods):
+		// what you carry -> plus your bank -> everything in the game. Replaces the old two-level
+		// family/variant picker, whose nesting read as two unrelated button rows.
+		JPanel modeRow = new JPanel(new GridLayout(1, 3, 4, 0));
+		modeRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		modeRow.setBorder(new EmptyBorder(8, 0, 0, 0));
+		inventoryModeButton = new JButton("Inventory");
+		inventoryModeButton.setToolTipText("<html><b>Available now</b> — only methods usable with what you carry<br>"
+			+ "(inventory + equipment).</html>");
+		inventoryModeButton.setFont(FontManager.getRunescapeSmallFont());
+		inventoryModeButton.setFocusPainted(false);
+		inventoryModeButton.addActionListener(e -> plugin.setRoutesMode(AlternativeRoutesMode.OWNED_INVENTORY));
+		bankModeButton = new JButton("+ Bank");
+		bankModeButton.setToolTipText("<html><b>Available via your bank</b> — also counts banked items;<br>"
+			+ "routes detour to a bank to withdraw them.<br>"
+			+ "Open your bank once per session so its contents are known.</html>");
+		bankModeButton.setFont(FontManager.getRunescapeSmallFont());
+		bankModeButton.setFocusPainted(false);
+		bankModeButton.addActionListener(e -> plugin.setRoutesMode(AlternativeRoutesMode.OWNED_WITH_BANK));
+		allModeButton = new JButton("All");
+		allModeButton.setToolTipText("<html><b>Every method in the game</b>, regardless of items or unlocks —<br>"
+			+ "the planning view. Markers in the catalog show what each one is missing.</html>");
+		allModeButton.setFont(FontManager.getRunescapeSmallFont());
+		allModeButton.setFocusPainted(false);
+		allModeButton.addActionListener(e -> plugin.setRoutesMode(AlternativeRoutesMode.ALL_EVERYTHING));
+		modeRow.add(inventoryModeButton);
+		modeRow.add(bankModeButton);
+		modeRow.add(allModeButton);
 
-		JPanel familyRow = new JPanel(new GridLayout(1, 2, 4, 0));
-		familyRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		ownedButton = new JButton("Owned");
-		ownedButton.setToolTipText("Only methods whose items you actually possess");
-		ownedButton.setFocusPainted(false);
-		ownedButton.addActionListener(e -> plugin.setRoutesMode(
-			plugin.getRoutesMode().isSecondVariant()
-				? AlternativeRoutesMode.OWNED_WITH_BANK : AlternativeRoutesMode.OWNED_INVENTORY));
-		allButton = new JButton("All");
-		allButton.setToolTipText("Ignore item possession");
-		allButton.setFocusPainted(false);
-		allButton.addActionListener(e -> plugin.setRoutesMode(
-			plugin.getRoutesMode().isSecondVariant()
-				? AlternativeRoutesMode.ALL_EVERYTHING : AlternativeRoutesMode.ALL_UNLOCKED));
-		familyRow.add(ownedButton);
-		familyRow.add(allButton);
-		modeRows.add(familyRow, BorderLayout.NORTH);
-
-		JPanel variantRow = new JPanel(new GridLayout(1, 2, 4, 0));
-		variantRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		variantOneButton = new JButton();
-		variantOneButton.setFont(FontManager.getRunescapeSmallFont());
-		variantOneButton.setFocusPainted(false);
-		variantOneButton.addActionListener(e -> plugin.setRoutesMode(
-			plugin.getRoutesMode().isOwned()
-				? AlternativeRoutesMode.OWNED_INVENTORY : AlternativeRoutesMode.ALL_UNLOCKED));
-		variantTwoButton = new JButton();
-		variantTwoButton.setFont(FontManager.getRunescapeSmallFont());
-		variantTwoButton.setFocusPainted(false);
-		variantTwoButton.addActionListener(e -> plugin.setRoutesMode(
-			plugin.getRoutesMode().isOwned()
-				? AlternativeRoutesMode.OWNED_WITH_BANK : AlternativeRoutesMode.ALL_EVERYTHING));
-		variantRow.add(variantOneButton);
-		variantRow.add(variantTwoButton);
-
-		// Nest the variants under the family row: a short left indent, a vertical rail acting as the
-		// "belongs to" connector, then the two variant buttons.
-		JPanel variantNest = new JPanel(new BorderLayout());
-		variantNest.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		JPanel rail = new JPanel();
-		rail.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
-		rail.setPreferredSize(new Dimension(2, 1));
-		JPanel railWrap = new JPanel(new BorderLayout());
-		railWrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		railWrap.setBorder(new EmptyBorder(0, 10, 0, 6));
-		railWrap.add(rail, BorderLayout.CENTER);
-		variantNest.add(railWrap, BorderLayout.WEST);
-		variantNest.add(variantRow, BorderLayout.CENTER);
-		modeRows.add(variantNest, BorderLayout.CENTER);
-
-		bottom.add(modeRows, BorderLayout.NORTH);
+		bottom.add(modeRow, BorderLayout.NORTH);
 
 		JPanel lower = new JPanel(new BorderLayout());
 		lower.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -538,7 +512,7 @@ public class ShortestPathPanel extends PluginPanel
 		{
 			// A search ran for the current target but produced nothing — distinct from "no target set".
 			status = "<b>No routes found to the target.</b>"
-				+ (plugin.getRoutesMode() == AlternativeRoutesMode.ALL_EVERYTHING ? "" : "<br>Try a broader mode (Inv + bank, or All).");
+				+ (plugin.getRoutesMode() == AlternativeRoutesMode.ALL_EVERYTHING ? "" : "<br>Try a broader mode (+ Bank, or All).");
 			statusIcon = RouteIcons.BANNER_WARNING;
 			statusAccent = BANNER_WARN_ACCENT;
 		}
@@ -1460,25 +1434,9 @@ public class ShortestPathPanel extends PluginPanel
 	private void updateModeButtons()
 	{
 		AlternativeRoutesMode mode = plugin.getRoutesMode();
-		boolean owned = mode.isOwned();
-		styleModeButton(ownedButton, owned);
-		styleModeButton(allButton, !owned);
-		if (owned)
-		{
-			variantOneButton.setText("Inventory");
-			variantOneButton.setToolTipText("Only items you carry (inventory + equipment)");
-			variantTwoButton.setText("Inv + bank");
-			variantTwoButton.setToolTipText("Also items in your bank — routes walk to a bank to withdraw them");
-		}
-		else
-		{
-			variantOneButton.setText("Available");
-			variantOneButton.setToolTipText("Ignore item possession, but only methods your character has unlocked (skills, quests, diaries)");
-			variantTwoButton.setText("Everything");
-			variantTwoButton.setToolTipText("Every method in the game, including ones your character can't use yet");
-		}
-		styleModeButton(variantOneButton, !mode.isSecondVariant());
-		styleModeButton(variantTwoButton, mode.isSecondVariant());
+		styleModeButton(inventoryModeButton, mode == AlternativeRoutesMode.OWNED_INVENTORY);
+		styleModeButton(bankModeButton, mode == AlternativeRoutesMode.OWNED_WITH_BANK);
+		styleModeButton(allModeButton, mode == AlternativeRoutesMode.ALL_EVERYTHING);
 	}
 
 	private static void styleModeButton(JButton button, boolean active)

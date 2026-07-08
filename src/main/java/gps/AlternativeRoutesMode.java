@@ -1,48 +1,38 @@
 package gps;
 
 /**
- * Which teleport/transport methods the alternative-routes feature considers when searching.
- * Two families, each with two variants:
+ * Which teleport/transport methods the alternative-routes feature considers when searching — an
+ * inclusiveness scale with three steps:
  * <ul>
- * <li><b>Owned</b> — only methods whose required items the player actually possesses:
- * {@link #OWNED_INVENTORY} (inventory + equipment) or {@link #OWNED_WITH_BANK} (also items stored in
- * the bank, routing through a bank to pick them up).</li>
- * <li><b>All</b> — possession is ignored: {@link #ALL_UNLOCKED} still respects character unlocks
- * (skill levels, quests, varbits/diaries), while {@link #ALL_EVERYTHING} shows every method in the
- * game, including ones known to be unavailable to this character.</li>
+ * <li>{@link #OWNED_INVENTORY} — <b>Inventory</b>: only methods usable with what the player
+ * carries (inventory + equipment).</li>
+ * <li>{@link #OWNED_WITH_BANK} — <b>+ Bank</b>: also items stored in the bank, routing through a
+ * bank to withdraw them (mirrors Shortest Path's {@code INVENTORY_AND_BANK} +
+ * {@code includeBankPath}).</li>
+ * <li>{@link #ALL_EVERYTHING} — <b>All</b>: every method in the game, regardless of items or
+ * character unlocks — the planning view; the availability markers show what each method is
+ * missing.</li>
  * </ul>
+ * The enum names are the persisted config values, kept stable across the UI's renames (the old
+ * ALL_UNLOCKED middle mode was folded into ALL_EVERYTHING and is mapped on load).
  */
 public enum AlternativeRoutesMode
 {
 	/**
-	 * Owned: items in inventory or equipment only (forces the INVENTORY teleport-item setting).
+	 * Inventory: items in inventory or equipment only (forces the INVENTORY teleport-item setting).
 	 */
 	OWNED_INVENTORY,
 	/**
-	 * Owned: inventory + equipment + bank, routing through a bank to withdraw banked items (mirrors
-	 * Shortest Path's {@code INVENTORY_AND_BANK} + {@code includeBankPath}).
+	 * + Bank: inventory + equipment + bank, routing through a bank to withdraw banked items.
 	 */
 	OWNED_WITH_BANK,
 	/**
-	 * All: possession ignored, but character unlocks (skills, quests, varbits) still apply — methods
-	 * the player could use if they obtained the item.
-	 */
-	ALL_UNLOCKED,
-	/**
-	 * All: every method in the game, including ones known to be unavailable (quest/skill-locked).
+	 * All: every method in the game, including ones this character can't use yet.
 	 */
 	ALL_EVERYTHING;
 
 	public boolean isOwned()
 	{
 		return this == OWNED_INVENTORY || this == OWNED_WITH_BANK;
-	}
-
-	/**
-	 * The second sub-option of each family (Inventory+bank under Owned, Everything under All).
-	 */
-	public boolean isSecondVariant()
-	{
-		return this == OWNED_WITH_BANK || this == ALL_EVERYTHING;
 	}
 }
