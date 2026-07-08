@@ -689,10 +689,16 @@ public class ShortestPathPanel extends PluginPanel
 			methods.add(buildMethodRow(route.getMethods().get(m), route.getBankMethods(),
 				route.walkBefore(m), hoverControls));
 		}
-		// Trailing walking leg after the last method — the whole route for walk-only ones.
-		if (route.getTrailingWalkSteps() > 0 || route.isWalkOnly())
+		// One walking row for the WHOLE route: every leg between methods plus the trailing leg —
+		// per-method walk counts live in the method tooltips instead of cluttering each row.
+		int totalWalk = route.getTrailingWalkSteps();
+		for (int m = 0; m < route.getMethods().size(); m++)
 		{
-			methods.add(buildWalkRow(route.getTrailingWalkSteps()));
+			totalWalk += route.walkBefore(m);
+		}
+		if (totalWalk > 0 || route.isWalkOnly())
+		{
+			methods.add(buildWalkRow(totalWalk));
 		}
 		card.add(methods, BorderLayout.CENTER);
 
@@ -806,7 +812,7 @@ public class ShortestPathPanel extends PluginPanel
 		JLabel text = wrappedLabel(steps > 0
 			? "Walk <font color='#9E9E9E'>" + steps + " tiles</font>"
 			: "Walk");
-		text.setToolTipText("Walk " + steps + " tiles to the destination");
+		text.setToolTipText("Total walking across this route — every leg between methods plus the final stretch");
 		row.add(text, BorderLayout.CENTER);
 		return row;
 	}
@@ -823,12 +829,28 @@ public class ShortestPathPanel extends PluginPanel
 		JPanel row = new JPanel(new BorderLayout(5, 0));
 		row.setOpaque(false);
 
-		JLabel dot = new JLabel(methodDot(method));
+		// Network methods get their real glyph (like the overlay's fairy-ring step); everything
+		// else keeps the category dot.
+		JLabel dot;
+		if (method.getType() == TransportType.FAIRY_RING)
+		{
+			dot = new JLabel(RouteIcons.destinationIcon("fairy_ring"));
+			dot.setToolTipText("Fairy ring");
+		}
+		else if (method.getType() == TransportType.SPIRIT_TREE)
+		{
+			dot = new JLabel(RouteIcons.destinationIcon("spirit_tree"));
+			dot.setToolTipText("Spirit tree");
+		}
+		else
+		{
+			dot = new JLabel(methodDot(method));
+			dot.setBorder(new EmptyBorder(2, 0, 0, 0));
+			dot.setToolTipText(method.getType() == TransportType.TELEPORTATION_ITEM
+				? (method.isConsumable() ? "Item (charged — consumes a charge or the item)" : "Item (permanent — reusable)")
+				: method.category());
+		}
 		dot.setAlignmentY(Component.TOP_ALIGNMENT);
-		dot.setBorder(new EmptyBorder(2, 0, 0, 0));
-		dot.setToolTipText(method.getType() == TransportType.TELEPORTATION_ITEM
-			? (method.isConsumable() ? "Item (charged — consumes a charge or the item)" : "Item (permanent — reusable)")
-			: method.category());
 		MethodAvailability status = cachedUnavailable.get(method);
 		boolean bankGated = bankMethods.contains(method);
 		// One structure whether or not glyphs follow, so the dot sits at the exact same spot on
@@ -861,11 +883,9 @@ public class ShortestPathPanel extends PluginPanel
 		westWrap.add(west, BorderLayout.NORTH);
 		row.add(westWrap, BorderLayout.WEST);
 
-		// The walk leg to reach the method reads as a quiet grey prefix ("12 · Fairy ring") instead
-		// of the old cryptic "(12)"; the tooltip spells it out.
-		String prefix = walkBefore > 0
-			? "<font color='#9E9E9E'>" + walkBefore + " · </font>" : "";
-		JLabel text = wrappedLabel(prefix + escapeHtml(method.label()));
+		// No per-row step counts: the card's walk row totals every leg, and this row's tooltip
+		// still carries its own walk-to-reach detail.
+		JLabel text = wrappedLabel(escapeHtml(method.label()));
 		text.setToolTipText(walkBefore > 0
 			? "<html>Walk " + walkBefore + " tiles to reach this method.<br>" + methodTooltipBody(method) + "</html>"
 			: methodTooltip(method));
