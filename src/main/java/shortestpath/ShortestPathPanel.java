@@ -629,20 +629,26 @@ public class ShortestPathPanel extends PluginPanel
 
 		JPanel topRow = new JPanel(new BorderLayout());
 		topRow.setOpaque(false);
-		topRow.setBorder(new EmptyBorder(4, 7, 2, 5));
+		// Left inset 4 (not the methods' 8): the pin glyph is centred in its 16px canvas while the
+		// method dots start at their canvas edge, so the smaller inset lines the pin up with the
+		// dot column below.
+		topRow.setBorder(new EmptyBorder(4, 4, 2, 5));
 
 		boolean reaches = plugin.routeReachesTarget(route);
 		// Shown-on-map pin leads the card (orange when this route is the one drawn), then the
 		// quiet rank chip, then the ETA — the decision-making number.
-		JPanel left = new JPanel(new FlowLayout(FlowLayout.LEADING, 5, 0));
+		JPanel left = new JPanel(new FlowLayout(FlowLayout.LEADING, 0, 0));
 		left.setOpaque(false);
 		left.add(new JLabel(selected ? RouteIcons.SHOW_ACTIVE : RouteIcons.SHOW));
 		JLabel rank = new JLabel("#" + (index + 1));
 		rank.setFont(FontManager.getRunescapeSmallFont());
 		rank.setForeground(Color.GRAY);
+		rank.setBorder(new EmptyBorder(0, 4, 0, 0));
 		left.add(rank);
 		boolean weighted = route.getRawCost() != route.getTotalCost();
-		JLabel eta = new JLabel(formatDuration(routeEtaSeconds(route)));
+		JLabel eta = new JLabel(formatDuration(routeEtaSeconds(route)), RouteIcons.CLOCK, SwingConstants.LEADING);
+		eta.setIconTextGap(4);
+		eta.setBorder(new EmptyBorder(0, 6, 0, 0));
 		eta.setFont(FontManager.getRunescapeBoldFont());
 		eta.setForeground(selected ? ColorScheme.BRAND_ORANGE : Color.WHITE);
 		eta.setToolTipText("<html>Estimated travel time, assuming you run.<br>"

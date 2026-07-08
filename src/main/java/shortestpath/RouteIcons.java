@@ -44,6 +44,8 @@ final class RouteIcons
 	// Resting state on route cards: present but nearly invisible, coloured up while the card is
 	// hovered — toggling visibility instead shifted the row height.
 	static final ImageIcon EXCLUDE_DIM = new ImageIcon(ban(new Color(0x45, 0x45, 0x45)));
+	// Marks the route card's ETA.
+	static final ImageIcon CLOCK = new ImageIcon(clock(GREY));
 	// Re-include an excluded method (plus).
 	static final ImageIcon INCLUDE = new ImageIcon(plus(GREY));
 	static final ImageIcon INCLUDE_HOVER = new ImageIcon(plus(GREEN));
@@ -641,6 +643,18 @@ final class RouteIcons
 			f.lineTo(7, 8);
 			f.closePath();
 			g.fill(f);
+		});
+	}
+
+	private static BufferedImage clock(Color colour)
+	{
+		return render(g ->
+		{
+			g.setColor(colour);
+			g.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.draw(new Ellipse2D.Double(2.5, 2.5, 11, 11));
+			g.draw(new Line2D.Double(8, 8, 8, 4.5));     // minute hand, pointing up
+			g.draw(new Line2D.Double(8, 8, 10.5, 9.5));  // hour hand, pointing ~4 o'clock
 		});
 	}
 
