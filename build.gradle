@@ -16,7 +16,7 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
-def pluginMainClass = 'shortestpath.ShortestPathPluginTest'
+def pluginMainClass = 'gps.ShortestPathPluginTest'
 
 dependencies {
     compileOnly "net.runelite:client:$runeLiteVersion"
@@ -35,7 +35,7 @@ dependencies {
 
 }
 
-group = 'shortestpath'
+group = 'gps'
 
 
 // Toolchain pin removed: requires a JDK 11 install. The JavaCompile config below already sets
