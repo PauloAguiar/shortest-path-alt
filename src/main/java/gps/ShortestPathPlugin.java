@@ -1241,8 +1241,10 @@ public class ShortestPathPlugin extends Plugin
 		bankContentsKnown = true;
 		if (firstSight)
 		{
-			// Clear the panel's "bank contents unknown" warning the moment the bank is first seen.
-			refreshPanel(altGenerationInFlight);
+			// First sight of the bank this session: regenerate so the availability map is rebuilt
+			// with the bank contents — banked teleports classify IN_BANK (usable in Inv + bank
+			// mode) and the catalog header count updates. Also clears the panel warning.
+			recomputeAlternatives();
 		}
 	}
 
@@ -1276,6 +1278,13 @@ public class ShortestPathPlugin extends Plugin
 		if (event.getGroupId() == InterfaceID.FAIRYRINGS_LOG)
 		{
 			fairyRingPanelOpen = false;
+		}
+		// Bank closed: one regeneration per bank session, so items withdrawn or deposited are
+		// reflected in the method availability (and the catalog counts) — recomputing on every
+		// in-bank container change would run a generation per deposit.
+		if (event.getGroupId() == InterfaceID.BANKMAIN && bankContentsKnown)
+		{
+			recomputeAlternatives();
 		}
 	}
 
