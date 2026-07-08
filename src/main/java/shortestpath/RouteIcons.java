@@ -82,11 +82,6 @@ final class RouteIcons
 	static final ImageIcon FILTER_HOVER = new ImageIcon(funnel(LIGHT));
 	static final ImageIcon FILTER_ACTIVE = new ImageIcon(funnel(ORANGE));
 	static final ImageIcon FILTER_ACTIVE_HOVER = new ImageIcon(funnel(ORANGE_LIGHT));
-	// Opt-in toggle for seasonal (Leagues) transports (leaf). Orange = included in routing.
-	static final ImageIcon SEASONAL = new ImageIcon(leaf(GREY));
-	static final ImageIcon SEASONAL_HOVER = new ImageIcon(leaf(LIGHT));
-	static final ImageIcon SEASONAL_ACTIVE = new ImageIcon(leaf(ORANGE));
-	static final ImageIcon SEASONAL_ACTIVE_HOVER = new ImageIcon(leaf(ORANGE_LIGHT));
 
 	// The plugin's identity mark: the navigation-blue location pin, matching the GPS overlay's
 	// title glyph. Used for the sidebar tab (and exportable for the hub listing icon).
@@ -655,23 +650,6 @@ final class RouteIcons
 			g.draw(new Ellipse2D.Double(2.5, 2.5, 11, 11));
 			g.draw(new Line2D.Double(8, 8, 8, 4.5));     // minute hand, pointing up
 			g.draw(new Line2D.Double(8, 8, 10.5, 9.5));  // hour hand, pointing ~4 o'clock
-		});
-	}
-
-	private static BufferedImage leaf(Color colour)
-	{
-		return render(g ->
-		{
-			g.setColor(colour);
-			// A leaf: almond blade from the top-right, stem trailing to the bottom-left.
-			Path2D blade = new Path2D.Double();
-			blade.moveTo(13.5, 2.5);
-			blade.curveTo(13.5, 9.5, 9.5, 13, 5.5, 11.5);
-			blade.curveTo(3.5, 8, 6.5, 3, 13.5, 2.5);
-			blade.closePath();
-			g.fill(blade);
-			g.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-			g.draw(new Line2D.Double(2.5, 14, 8.5, 8));   // stem into the blade (midrib)
 		});
 	}
 

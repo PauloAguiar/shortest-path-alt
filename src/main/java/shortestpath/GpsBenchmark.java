@@ -77,17 +77,18 @@ public final class GpsBenchmark
 	private final Gson gson;
 	private final Consumer<String> notify;
 	private final Runnable onDone;
-	// Recorded in the report header: seasonal (Leagues) transports change the method universe, so
-	// two reports are only comparable when this flag matches.
-	private final boolean seasonalTransports;
+	// The method exclusions each scenario runs with — the player's set, which by default excludes
+	// seasonal (Leagues) methods. Recorded (as a count) in the report header, since the excluded
+	// set changes the method universe: two reports are only comparable when it matches.
+	private final Set<TeleportMethod> exclusions;
 
 	public GpsBenchmark(AlternativeRoutesService service, List<Scenario> scenarios, File outputDir,
-		boolean seasonalTransports, Gson gson, Consumer<String> notify, Runnable onDone)
+		Set<TeleportMethod> exclusions, Gson gson, Consumer<String> notify, Runnable onDone)
 	{
 		this.service = service;
 		this.scenarios = scenarios;
 		this.outputDir = outputDir;
-		this.seasonalTransports = seasonalTransports;
+		this.exclusions = exclusions != null ? Set.copyOf(exclusions) : Set.of();
 		this.gson = gson;
 		this.notify = notify;
 		this.onDone = onDone;
@@ -99,7 +100,7 @@ public final class GpsBenchmark
 	 * whose target sets range from dense (water sources) to the canonical bank case.
 	 */
 	public static GpsBenchmark standard(AlternativeRoutesService service,
-		PrimitiveIntHashMap<Transport[]> transports, boolean seasonalTransports, Gson gson,
+		PrimitiveIntHashMap<Transport[]> transports, Set<TeleportMethod> exclusions, Gson gson,
 		Consumer<String> notify, Runnable onDone)
 	{
 		int lumbridge = WorldPointUtil.packWorldPoint(3222, 3218, 0);
@@ -120,7 +121,7 @@ public final class GpsBenchmark
 			Scenario.nearest("Nearest anvil from Varrock", varrock,
 				Destinations.tilesForCategory("anvil", transports)));
 		return new GpsBenchmark(service, scenarios,
-			new File(net.runelite.client.RuneLite.RUNELITE_DIR, "gps-debug"), seasonalTransports,
+			new File(net.runelite.client.RuneLite.RUNELITE_DIR, "gps-debug"), exclusions,
 			gson, notify, onDone);
 	}
 
@@ -176,7 +177,7 @@ public final class GpsBenchmark
 			report.put("benchmark", "gps-fixed-suite");
 			report.put("capturedAt", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 			report.put("mode", String.valueOf(AlternativeRoutesMode.ALL_EVERYTHING));
-			report.put("seasonalTransports", seasonalTransports);
+			report.put("excludedMethods", exclusions.size());
 			report.put("routeLimit", LIMIT);
 			report.put("warmupRuns", WARMUP_RUNS);
 			report.put("measuredRuns", MEASURED_RUNS);
@@ -224,7 +225,7 @@ public final class GpsBenchmark
 		AtomicReference<List<RouteOption>> finalRoutes = new AtomicReference<>(List.of());
 		AtomicInteger catalogSize = new AtomicInteger(-1);
 		long outerStart = System.nanoTime();
-		service.generate(scenario.start, scenario.targets, Set.of(), AlternativeRoutesMode.ALL_EVERYTHING, LIMIT,
+		service.generate(scenario.start, scenario.targets, exclusions, AlternativeRoutesMode.ALL_EVERYTHING, LIMIT,
 			(routes, catalog, unavailable, isDone) ->
 			{
 				if (isDone)

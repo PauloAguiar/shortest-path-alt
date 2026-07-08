@@ -337,13 +337,14 @@ public interface ShortestPathConfig extends Config
 		hidden = true,
 		keyName = "useSeasonalTransports",
 		name = "Use seasonal transports",
-		description = "Whether to include seasonal transports like League teleports in the path",
+		description = "Whether seasonal (Leagues) transports are enabled as a type. GPS controls them "
+			+ "per-method instead (excluded by default via the method catalog), so this stays on.",
 		position = 22,
 		section = sectionSettings
 	)
 	default boolean useSeasonalTransports()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(

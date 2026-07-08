@@ -146,10 +146,6 @@ public class PathfinderConfig
 	private long calculationCutoffMillis;
 	@Getter
 	private boolean avoidWilderness;
-	// Whether seasonal (Leagues) transports are included at all. Structural: they only exist on
-	// seasonal game worlds, so by default they're excluded from every mode, the classic path and
-	// the catalog alike — the panel's toggle opts in explicitly.
-	private boolean useSeasonalTransports;
 	// POH-specific settings (not tied to a single TransportType)
 	private boolean usePohFairyRing,
 		usePohSpiritTree,
@@ -507,7 +503,6 @@ public class PathfinderConfig
 		calculationCutoffMillis = (long) config.calculationCutoff() * Constants.GAME_TICK_LENGTH;
 		avoidWilderness = ShortestPathPlugin.override("avoidWilderness", config.avoidWilderness());
 		usePoh = ShortestPathPlugin.override("usePoh", config.usePoh());
-		useSeasonalTransports = ShortestPathPlugin.override("useSeasonalTransports", config.useSeasonalTransports());
 		leagueModeState.refresh(client);
 
 		// Refresh transport type enabled states
@@ -1183,14 +1178,9 @@ public class PathfinderConfig
 			return false;
 		}
 
-		// Seasonal (Leagues) transports only exist on seasonal game worlds. Unless the user opts in
-		// (the panel's seasonal toggle), exclude them everywhere — otherwise the "All" modes fill
-		// with Banker's Briefcase-style routes that are impossible on a normal world.
-		if (TransportType.SEASONAL_TRANSPORTS.equals(type) && !useSeasonalTransports)
-		{
-			return false;
-		}
-
+		// Seasonal (Leagues) transports appear in the method catalog like any other type and are
+		// excluded by default (the plugin seeds them into the user exclusions), so the player enables
+		// them individually — no structural gate here.
 		if (TransportType.SPIRIT_TREE.equals(type) || TransportType.SEASONAL_TRANSPORTS.equals(type))
 		{
 			return checkPlantedSpiritTrees(transport);

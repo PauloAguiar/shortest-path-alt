@@ -214,6 +214,11 @@ public class ShortestPathPlugin extends Plugin
 	private AlternativeRoutesService altRoutesService;
 	private static final String CONFIG_KEY_EXCLUSIONS = "alternativeRoutesExclusions";
 	private static final String CONFIG_KEY_MODE = "alternativeRoutesMode";
+	// One-shot marker: seasonal (Leagues) methods are excluded by default, seeded into the user
+	// exclusions the first time the catalog appears. After that the player controls them like any
+	// other method (so re-enabled ones aren't re-disabled).
+	private static final String CONFIG_KEY_SEASONAL_DEFAULTED = "seasonalMethodsDefaultExcluded";
+	private volatile boolean seasonalDefaultsApplied = false;
 	private final Set<TeleportMethod> userExclusions = ConcurrentHashMap.newKeySet();
 	// The exclusions the current route list was generated with; diverging from userExclusions means
 	// the list is stale until the user refreshes (method toggles no longer auto-recalculate).
@@ -422,6 +427,8 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		loadExclusions();
+		seasonalDefaultsApplied = Boolean.parseBoolean(
+			configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_SEASONAL_DEFAULTED));
 		loadRoutesMode();
 		routeLimit = defaultRouteLimit();
 		altPanel = new ShortestPathPanel(this);
@@ -1964,6 +1971,37 @@ public class ShortestPathPlugin extends Plugin
 		return new HashSet<>(userExclusions);
 	}
 
+	/**
+	 * The first time the catalog is delivered, seed every seasonal (Leagues) method into the user
+	 * exclusions so they're disabled by default — the player then enables them individually like any
+	 * other method. A one-shot config marker guards it, so a method the player later re-enables is
+	 * never re-disabled. Runs on the alt-routes worker thread; the set and configManager are both
+	 * thread-safe, and the panel picks up the change via the {@code getUserExclusions()} it's about
+	 * to be handed in the same update.
+	 */
+	private void applySeasonalDefaultExclusions(List<TeleportMethod> catalog)
+	{
+		if (seasonalDefaultsApplied || catalog == null || catalog.isEmpty())
+		{
+			return;
+		}
+		seasonalDefaultsApplied = true;
+		boolean changed = false;
+		for (TeleportMethod method : catalog)
+		{
+			if (method.getType() == shortestpath.transport.TransportType.SEASONAL_TRANSPORTS
+				&& userExclusions.add(method))
+			{
+				changed = true;
+			}
+		}
+		if (changed)
+		{
+			saveExclusions();
+		}
+		configManager.setConfiguration(CONFIG_GROUP, CONFIG_KEY_SEASONAL_DEFAULTED, true);
+	}
+
 	public void selectRoute(int index)
 	{
 		List<RouteOption> routes = alternativeRoutes;
@@ -2189,7 +2227,7 @@ public class ShortestPathPlugin extends Plugin
 		{
 			return;
 		}
-		GpsBenchmark.standard(altRoutesService, getTransports(), isSeasonalTransportsEnabled(), gson,
+		GpsBenchmark.standard(altRoutesService, getTransports(), getUserExclusions(), gson,
 			message -> clientThread.invokeLater(() ->
 			{
 				log.info(message);
@@ -2391,25 +2429,6 @@ public class ShortestPathPlugin extends Plugin
 		triggerAlternatives(lastAltStart, new HashSet<>(lastAltTargets));
 	}
 
-	/** Whether seasonal (Leagues) transports are opted in — see {@link #toggleSeasonalTransports()}. */
-	public boolean isSeasonalTransportsEnabled()
-	{
-		return override("useSeasonalTransports", config.useSeasonalTransports());
-	}
-
-	/**
-	 * Opt-in toggle for seasonal (Leagues) transports. They only exist on seasonal game worlds, so
-	 * they're excluded by default from every mode, the classic path and the catalog; the panel's
-	 * seasonal button flips this. Persisted (config key {@code useSeasonalTransports}); the classic
-	 * path restarts via onConfigChanged and the catalog/routes regenerate here.
-	 */
-	public void toggleSeasonalTransports()
-	{
-		configManager.setConfiguration(CONFIG_GROUP, "useSeasonalTransports",
-			!config.useSeasonalTransports());
-		recomputeAlternatives();
-	}
-
 	/**
 	 * Light auto-detect, run each game tick: when GPS's destination changes (a new target set
 	 * manually, by Quest Helper, on reaching the previous one, etc.) compute the alternatives once.
@@ -2498,6 +2517,7 @@ public class ShortestPathPlugin extends Plugin
 		alternativeRoutes = routes;
 		teleportCatalog = catalog;
 		unavailableMethods = unavailable;
+		applySeasonalDefaultExclusions(catalog);
 		if (done)
 		{
 			// If walking there is already on the list we've stopped at it, so there's nothing more to

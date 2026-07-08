@@ -319,7 +319,6 @@ public class ShortestPathPanel extends PluginPanel
 
 		JPanel actions = new JPanel(new FlowLayout(FlowLayout.TRAILING, 6, 0));
 		actions.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		actions.add(control(buildSeasonalToggle()));
 		actions.add(control(new IconActionLabel(RouteIcons.BENCHMARK, RouteIcons.BENCHMARK_HOVER,
 			"<html>Run the fixed performance benchmark (prepared trips + nearest-X queries)<br>"
 				+ "and save a profiling report for comparing plugin versions.<br>"
@@ -917,54 +916,6 @@ public class ShortestPathPanel extends PluginPanel
 		row.add(actionWrap, BorderLayout.EAST);
 
 		return row;
-	}
-
-	/**
-	 * The leaf icon toggling seasonal (Leagues) transports — excluded by default because they only
-	 * exist on seasonal game worlds; orange while opted in. Lives in the header so the opt-in is
-	 * visible whenever routes are.
-	 */
-	private JLabel buildSeasonalToggle()
-	{
-		JLabel leaf = new JLabel();
-		leaf.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		Runnable refresh = () ->
-		{
-			boolean on = plugin.isSeasonalTransportsEnabled();
-			leaf.setIcon(on ? RouteIcons.SEASONAL_ACTIVE : RouteIcons.SEASONAL);
-			leaf.setToolTipText(on
-				? "<html><b>Seasonal (Leagues) transports are included.</b><br>"
-					+ "Routes may use League-only teleports (e.g. Banker's Briefcase) that don't exist<br>"
-					+ "on normal worlds. Click to exclude them again.</html>"
-				: "<html><b>Seasonal (Leagues) transports are excluded.</b><br>"
-					+ "They only exist on seasonal/Leagues worlds, so routes ignore them by default.<br>"
-					+ "Click to include them (e.g. while playing a League).</html>");
-		};
-		refresh.run();
-		leaf.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mousePressed(MouseEvent e)
-			{
-				plugin.toggleSeasonalTransports();
-				refresh.run();
-			}
-
-			@Override
-			public void mouseEntered(MouseEvent e)
-			{
-				leaf.setIcon(plugin.isSeasonalTransportsEnabled()
-					? RouteIcons.SEASONAL_ACTIVE_HOVER : RouteIcons.SEASONAL_HOVER);
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e)
-			{
-				leaf.setIcon(plugin.isSeasonalTransportsEnabled()
-					? RouteIcons.SEASONAL_ACTIVE : RouteIcons.SEASONAL);
-			}
-		});
-		return leaf;
 	}
 
 	/** The funnel icon that opens the catalog filter menu; orange while a filter is active. */
