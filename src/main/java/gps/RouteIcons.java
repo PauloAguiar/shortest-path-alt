@@ -14,11 +14,13 @@ import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
+import net.runelite.client.util.ImageUtil;
 
 /**
- * Small 16px UI icons for the alternative-routes panel, rendered with Java2D so the plugin carries no
- * image assets. Each action has a base (grey) and a hover (accent) variant, mirroring the
- * base/hover icon swap used by the tile-packs panel controls.
+ * Small 16px UI icons for the alternative-routes panel, rendered with Java2D so the plugin carries
+ * (almost) no image assets — the GitHub mark is the one bundled PNG, since the logo isn't ours to
+ * redraw. Each action has a base (grey) and a hover (accent) variant, mirroring the base/hover icon
+ * swap used by the tile-packs panel controls.
  */
 final class RouteIcons
 {
@@ -92,6 +94,12 @@ final class RouteIcons
 	static final ImageIcon FILTER_HOVER = new ImageIcon(funnel(LIGHT));
 	static final ImageIcon FILTER_ACTIVE = new ImageIcon(funnel(ORANGE));
 	static final ImageIcon FILTER_ACTIVE_HOVER = new ImageIcon(funnel(ORANGE_LIGHT));
+	// Header burger menu holding the secondary actions (benchmark, debug snapshot, reset exclusions).
+	static final ImageIcon MENU = new ImageIcon(hamburger(GREY));
+	static final ImageIcon MENU_HOVER = new ImageIcon(hamburger(LIGHT));
+	// GitHub mark linking to the plugin's repository (report issues / contribute).
+	static final ImageIcon GITHUB = new ImageIcon(github(false));
+	static final ImageIcon GITHUB_HOVER = new ImageIcon(github(true));
 
 	// The plugin's identity mark: the navigation-blue location pin, matching the GPS overlay's
 	// title glyph. Used for the sidebar tab (and exportable for the hub listing icon).
@@ -485,6 +493,25 @@ final class RouteIcons
 		drawer.draw(g);
 		g.dispose();
 		return image;
+	}
+
+	private static BufferedImage hamburger(Color colour)
+	{
+		return render(g ->
+		{
+			g.setColor(colour);
+			g.draw(new Line2D.Double(3, 4.5, 13, 4.5));
+			g.draw(new Line2D.Double(3, 8, 13, 8));
+			g.draw(new Line2D.Double(3, 11.5, 13, 11.5));
+		});
+	}
+
+	private static BufferedImage github(boolean hover)
+	{
+		BufferedImage img = ImageUtil.resizeImage(
+			ImageUtil.loadImageResource(RouteIcons.class, "/github.png"), SIZE, SIZE);
+		// The rest state sits at the panel's grey-icon weight; hover brings it to full strength.
+		return hover ? img : ImageUtil.alphaOffset(img, -70);
 	}
 
 	private static BufferedImage pin(Color colour)

@@ -47,6 +47,7 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.IconTextField;
+import net.runelite.client.util.LinkBrowser;
 import gps.transport.TransportType;
 
 /**
@@ -71,6 +72,8 @@ public class ShortestPathPanel extends PluginPanel
 	private static final Color BANNER_OK_ACCENT = new Color(0x4C, 0xAF, 0x50);     // green
 	// Tallest the expanded teleport-methods box may grow before it scrolls internally.
 	private static final int CATALOG_MAX_HEIGHT = 240;
+	// Where the header's GitHub mark points: straight at the issue tracker.
+	private static final String GITHUB_ISSUES_URL = "https://github.com/PauloAguiar/runelite-gps-plugin/issues";
 
 	// Stable, distinct-ish palette; categories hash into it so the same category always gets the
 	// same dot colour.
@@ -321,16 +324,30 @@ public class ShortestPathPanel extends PluginPanel
 
 		JPanel actions = new JPanel(new FlowLayout(FlowLayout.TRAILING, 6, 0));
 		actions.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		actions.add(control(new IconActionLabel(RouteIcons.BENCHMARK, RouteIcons.BENCHMARK_HOVER,
-			"<html>Run the fixed performance benchmark (prepared trips + nearest-X queries)<br>"
-				+ "and save a profiling report for comparing plugin versions.<br>"
-				+ "Takes a minute or two and cancels any in-progress route search.</html>",
-			plugin::runBenchmark)));
-		actions.add(control(new IconActionLabel(RouteIcons.DEBUG, RouteIcons.DEBUG_HOVER,
-			"Save a debug snapshot of the current routes to disk (for reproducing issues)",
-			plugin::captureDebugSnapshot)));
-		actions.add(control(new IconActionLabel(RouteIcons.CLEAR, RouteIcons.CLEAR_HOVER,
-			"Re-include all excluded methods", plugin::clearExclusions)));
+		// The GitHub link sits in the open (like Quest Helper's): the shortest path to reporting an
+		// issue. Everything else — the occasional-use actions — tucks into the burger menu beside it.
+		actions.add(control(new IconActionLabel(RouteIcons.GITHUB, RouteIcons.GITHUB_HOVER,
+			"Report issues or contribute on GitHub",
+			() -> LinkBrowser.browse(GITHUB_ISSUES_URL))));
+		JPopupMenu actionsMenu = new JPopupMenu();
+		JMenuItem benchmarkItem = new JMenuItem("Run benchmark", RouteIcons.BENCHMARK);
+		benchmarkItem.setToolTipText("<html>Run the fixed performance benchmark (prepared trips + nearest-X queries)<br>"
+			+ "and save a profiling report for comparing plugin versions.<br>"
+			+ "Takes a minute or two and cancels any in-progress route search.</html>");
+		benchmarkItem.addActionListener(e -> plugin.runBenchmark());
+		actionsMenu.add(benchmarkItem);
+		JMenuItem debugItem = new JMenuItem("Save debug snapshot", RouteIcons.DEBUG);
+		debugItem.setToolTipText("Save a debug snapshot of the current routes to disk (for reproducing issues)");
+		debugItem.addActionListener(e -> plugin.captureDebugSnapshot());
+		actionsMenu.add(debugItem);
+		JMenuItem resetItem = new JMenuItem("Reset excluded methods", RouteIcons.CLEAR);
+		resetItem.setToolTipText("Return the method exclusions to their defaults (seasonal methods stay off)");
+		resetItem.addActionListener(e -> plugin.clearExclusions());
+		actionsMenu.add(resetItem);
+		IconActionLabel[] menuButton = new IconActionLabel[1];
+		menuButton[0] = new IconActionLabel(RouteIcons.MENU, RouteIcons.MENU_HOVER, "More actions",
+			() -> actionsMenu.show(menuButton[0], 0, menuButton[0].getHeight()));
+		actions.add(control(menuButton[0]));
 		titleRow.add(actions, BorderLayout.EAST);
 
 		header.add(titleRow, BorderLayout.NORTH);
