@@ -54,7 +54,10 @@ import gps.transport.Transport;
 public class AlternativeRoutesService
 {
 	public static final int MAX_ROUTES = 10;
-	private static final int MAX_ROUTES_CAP = 50;
+	// Absolute safety backstop on how many routes one generation may enumerate. "Poll more" grows the
+	// live limit toward this; it exists only so a runaway query can't enumerate without bound, not as a
+	// user-facing ceiling — in practice the walk-cost cap ends enumeration long before this.
+	public static final int MAX_ROUTES_CAP = 250;
 	private static final long CLIENT_THREAD_TIMEOUT_SECONDS = 10;
 	/**
 	 * When the exact target is unreachable, routes are accepted while their endpoint stays within this
@@ -242,6 +245,10 @@ public class AlternativeRoutesService
 		// search couldn't reach within the band. If so, "show more" (a higher multiple) can surface
 		// it. Set only for cost-cap truncations, not method exhaustion or the walk ceiling.
 		boolean cappedByCost = false;
+		// Set when the chain stops on its own terms (methods exhausted, a duplicate signature, a
+		// walk-only route, or the target drifting out of reach). If it stays false the loop simply ran
+		// out of route-count budget — the count was binding, so a higher limit can surface more.
+		boolean chainExhausted = false;
 
 		for (int i = 0; i < limit; i++)
 		{
@@ -280,6 +287,7 @@ public class AlternativeRoutesService
 					i, result == null ? "null" : "empty",
 					result == null ? "n/a" : result.getTerminationReason());
 				cappedByCost |= costLimited;
+				chainExhausted = true;
 				break;
 			}
 
@@ -298,6 +306,7 @@ public class AlternativeRoutesService
 					i, remaining, bestRemaining, routes.size());
 				// The search couldn't reach within the cost band — that route is beyond the cap.
 				cappedByCost |= costLimited;
+				chainExhausted = true;
 				break;
 			}
 
@@ -308,6 +317,7 @@ public class AlternativeRoutesService
 			// one, excluding more would only reshuffle, so stop.
 			if (!seenSignatures.add(signature(methods)))
 			{
+				chainExhausted = true;
 				break;
 			}
 			routes.add(new RouteOption(path, methods, scan.methodEdges, scan.methodDurations,
@@ -324,6 +334,7 @@ public class AlternativeRoutesService
 			{
 				// Walk-only route: the exclusion strategy has nothing left to remove. Seeding below can
 				// still surface teleport routes that lost to walking on cost.
+				chainExhausted = true;
 				break;
 			}
 			excluded.add(primary);
@@ -340,10 +351,14 @@ public class AlternativeRoutesService
 				seedCandidates, routes, seenSignatures, catalog, unavailable, roundTrip ? null : listener,
 				bestRemaining, cappedByBestCost(capOf(walkFuture), routes, costMultiple), field, timer);
 		}
-		// The cost cap held routes back (they exist beyond it, below walking) only when it sat below
-		// the walk ceiling; once it reaches walking there's nothing more to reveal.
-		lastGenerationMoreLikely = cappedByCost
-			&& cappedByBestCost(capOf(walkFuture), routes, costMultiple) < capOf(walkFuture);
+		// More routes are worth polling for when the count budget was the binding limit (the chain kept
+		// finding distinct routes and simply ran out of slots), or the cost cap held routes back — the
+		// latter only while it sat below the walk ceiling, since once it reaches walking there's nothing
+		// cheaper-than-walk left to reveal.
+		int moreWalkCap = capOf(walkFuture);
+		boolean costHeldBack = cappedByCost
+			&& cappedByBestCost(moreWalkCap, routes, costMultiple) < moreWalkCap;
+		lastGenerationMoreLikely = !chainExhausted || costHeldBack;
 
 		// The walk-only route from the concurrent search is the last resort: append it when the
 		// chain didn't derive it (signature dedup skips it when it did), under the same closeness

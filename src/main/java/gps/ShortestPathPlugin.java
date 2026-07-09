@@ -250,11 +250,9 @@ public class ShortestPathPlugin extends Plugin
 	// far-worse alternatives). "Show more" raises it; reset to the default on a new destination.
 	private static final int DEFAULT_COST_MULTIPLE = 3;
 	private static final int COST_MULTIPLE_STEP = 3;
-	// Ceiling on the cost band: at this multiple the cap is effectively off (far past any walk
-	// cost), so "show more" stops — a backstop against endless widening on an unreachable target.
-	private static final int MAX_COST_MULTIPLE = 30;
 	private int routeCostMultiple = DEFAULT_COST_MULTIPLE;
-	// Whether the last generation's cost cap held routes back (raising the multiple could reveal more).
+	// Whether the last generation left routes unshown — the cost cap held some back, or the route-count
+	// budget was the binding limit. Either way another "poll more" can surface more.
 	private volatile boolean moreRoutesLikely = false;
 	private volatile List<RouteOption> alternativeRoutes = new ArrayList<>();
 	private volatile List<TeleportMethod> teleportCatalog = new ArrayList<>();
@@ -2395,9 +2393,12 @@ public class ShortestPathPlugin extends Plugin
 		{
 			return;
 		}
-		// Widen the cost band rather than the route count: reveal routes up to a higher multiple of
-		// the best route's cost (the ones the previous cap held back).
-		routeCostMultiple = Math.min(routeCostMultiple + COST_MULTIPLE_STEP, MAX_COST_MULTIPLE);
+		// Each poll grows both dimensions of the cap so genuinely more routes surface: widen the cost
+		// band (reveal routes up to a higher multiple of the best cost) and raise the route-count budget
+		// by another page. There's no fixed ceiling — the walk cost bounds the band on its own, and the
+		// count grows toward the service's runaway backstop. A new destination resets both.
+		routeCostMultiple += COST_MULTIPLE_STEP;
+		routeLimit = Math.min(routeLimit + defaultRouteLimit(), AlternativeRoutesService.MAX_ROUTES_CAP);
 		triggerAlternatives(lastAltStart, new HashSet<>(lastAltTargets));
 	}
 
@@ -2790,10 +2791,10 @@ public class ShortestPathPlugin extends Plugin
 		applySeasonalDefaultExclusions(catalog);
 		if (done)
 		{
-			// "More" is available when the cost cap held routes back — raising the multiple can
-			// surface them. Once walking is the ceiling, there's nothing cheaper-than-walk left.
+			// "More" is available while the last generation left routes unshown (cost cap or count
+			// budget), until the route-count budget reaches the service's runaway backstop.
 			moreRoutesLikely = !routes.isEmpty() && altRoutesService.wasMoreLikely()
-				&& routeCostMultiple < MAX_COST_MULTIPLE;
+				&& routeLimit < AlternativeRoutesService.MAX_ROUTES_CAP;
 			// Generation finished; if it produced nothing the classic path may draw again as fallback.
 			altGenerationInFlight = false;
 		}
