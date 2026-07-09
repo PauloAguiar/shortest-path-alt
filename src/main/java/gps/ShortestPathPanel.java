@@ -589,7 +589,8 @@ public class ShortestPathPanel extends PluginPanel
 		JPanel section = new JPanel();
 		section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
 		section.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		section.setBorder(new EmptyBorder(2, 0, 6, 0));
+		// Extra top inset separates the routes header from the search controls / notes above it.
+		section.setBorder(new EmptyBorder(10, 0, 6, 0));
 		section.setAlignmentX(Component.LEFT_ALIGNMENT);
 		section.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
