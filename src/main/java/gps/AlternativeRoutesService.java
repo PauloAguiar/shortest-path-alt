@@ -346,11 +346,33 @@ public class AlternativeRoutesService
 			final int walkCost = walk.cap;
 			routes.removeIf(r -> !r.isWalkOnly() && r.getTotalCost() >= walkCost);
 		}
-		if (walk != null && routes.size() < limit
+		// Always surface walking as the baseline option (when the target is reachable on foot and the
+		// chain didn't already derive it), even at the route limit — the player should always see
+		// "…or just walk N tiles" as a complete-picture fallback, whatever teleports were found.
+		if (walk != null && walk.cap != Integer.MAX_VALUE
 			&& (bestRemaining < 0 || walk.remaining <= bestRemaining + CLOSEST_DISTANCE_TOLERANCE)
 			&& seenSignatures.add(signature(walk.route.getMethods())))
 		{
 			routes.add(walk.route);
+			// Keep it within the limit by dropping the costliest teleport route it displaces.
+			while (routes.size() > limit)
+			{
+				int drop = -1;
+				int maxCost = -1;
+				for (int r = 0; r < routes.size(); r++)
+				{
+					if (!routes.get(r).isWalkOnly() && routes.get(r).getTotalCost() > maxCost)
+					{
+						maxCost = routes.get(r).getTotalCost();
+						drop = r;
+					}
+				}
+				if (drop < 0)
+				{
+					break;
+				}
+				routes.remove(drop);
+			}
 		}
 
 		routes.sort(Comparator.comparingInt(RouteOption::getTotalCost));
