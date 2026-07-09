@@ -388,7 +388,25 @@ public interface ShortestPathConfig extends Config
 	)
 	default int recalculateDistance()
 	{
-		return 10;
+		return 15;
+	}
+
+	@Range(
+		min = 0,
+		max = 20000
+	)
+	@ConfigItem(
+		keyName = "offRouteWarnDistance",
+		name = "Off-route warning distance",
+		description = "Distance from the path at which GPS warns you're drifting off route.<br>" +
+			"Below it you're on route; between it and the recalculate distance the overlay shows a<br>" +
+			"red warning; beyond the recalculate distance the route is recomputed.",
+		position = 26,
+		section = sectionSettings
+	)
+	default int offRouteWarnDistance()
+	{
+		return 7;
 	}
 
 	@Range(
@@ -1293,6 +1311,19 @@ public interface ShortestPathConfig extends Config
 		section = sectionDebug
 	)
 	default boolean drawDebugPanel()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "drawRecalculationRanges",
+		name = "Draw off-route ranges",
+		description = "Draw the off-route warning (amber) and recalculate (red) distance boundaries<br>" +
+			"around the player, to visualise when GPS warns and when it recomputes the route",
+		position = 85,
+		section = sectionDebug
+	)
+	default boolean drawRecalculationRanges()
 	{
 		return false;
 	}

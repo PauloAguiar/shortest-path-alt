@@ -21,6 +21,7 @@ import java.util.Set;
 
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
+import net.runelite.api.Player;
 import net.runelite.api.Point;
 import net.runelite.api.Tile;
 import net.runelite.api.coords.LocalPoint;
@@ -183,6 +184,11 @@ public class PathTileOverlay extends Overlay
 		if (plugin.drawCollisionMap)
 		{
 			renderCollisionMap(graphics);
+		}
+
+		if (plugin.drawRecalculationRanges)
+		{
+			drawRecalculationRanges(graphics);
 		}
 
 		if (plugin.drawTiles && plugin.getPathfinder() != null && !plugin.getDisplayPath().isEmpty())
@@ -365,6 +371,58 @@ public class PathTileOverlay extends Overlay
 	 * tile itself (the yaw factor cancels out of a square tile's bounding box, leaving only the
 	 * pitch compression) — so it's a perfect circle seen top-down and flattens as the camera drops.
 	 */
+	/**
+	 * Debug view of the off-route bands: the amber square is the warning distance and the red
+	 * square the recalculate distance, both as Chebyshev-distance boundaries around the player (the
+	 * same metric the recalc check uses). A label reports the live distance from the path. The four
+	 * corners suffice — a straight world edge projects to a straight canvas line.
+	 */
+	private void drawRecalculationRanges(Graphics2D graphics)
+	{
+		final Player player = client.getLocalPlayer();
+		final int recalc = plugin.getRecalculateDistance();
+		if (player == null || recalc < 0)
+		{
+			return;
+		}
+		final int plane = client.getTopLevelWorldView().getPlane();
+		final Stroke previousStroke = graphics.getStroke();
+		graphics.setStroke(new BasicStroke(1.5f));
+		drawChebyshevSquare(graphics, player.getLocalLocation(), plane,
+			plugin.getOffRouteWarnDistance(), new Color(0xFF, 0xC0, 0x40));
+		drawChebyshevSquare(graphics, player.getLocalLocation(), plane, recalc, new Color(0xFF, 0x40, 0x40));
+		graphics.setStroke(previousStroke);
+
+		final int d = plugin.getPathDistance();
+		final Point anchor = Perspective.localToCanvas(client, player.getLocalLocation(), plane);
+		if (anchor != null)
+		{
+			final String label = "off-route: " + (d < 0 ? "?" : d)
+				+ " (warn " + plugin.getOffRouteWarnDistance() + " / recalc " + recalc + ")";
+			graphics.setColor(plugin.isOffRouteWarning() ? new Color(0xFF, 0x4C, 0x4C) : Color.WHITE);
+			graphics.drawString(label, anchor.getX() + 6, anchor.getY());
+		}
+	}
+
+	private void drawChebyshevSquare(Graphics2D graphics, LocalPoint centre, int plane, int radius, Color colour)
+	{
+		final int r = radius * Perspective.LOCAL_TILE_SIZE;
+		final int[][] offsets = {{-r, -r}, {r, -r}, {r, r}, {-r, r}};
+		final Polygon poly = new Polygon();
+		for (int[] offset : offsets)
+		{
+			final LocalPoint corner = new LocalPoint(centre.getX() + offset[0], centre.getY() + offset[1]);
+			final Point canvas = Perspective.localToCanvas(client, corner, plane);
+			if (canvas == null)
+			{
+				return; // a corner off-scene — skip this ring rather than draw a broken one
+			}
+			poly.addPoint(canvas.getX(), canvas.getY());
+		}
+		graphics.setColor(colour);
+		graphics.draw(poly);
+	}
+
 	// The two pulse colours: green marks the journey's end; gold marks a round trip's turnaround
 	// (the bank) while the outbound leg is being walked — an "arrive here first" beacon that
 	// disappears once the player reaches it and the trip continues home.

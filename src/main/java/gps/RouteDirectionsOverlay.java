@@ -40,6 +40,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private static final Color ENDING = new Color(0x8A, 0xB4, 0xF8);
 	private static final Color NEXT = Color.WHITE;
 	private static final Color UPCOMING = new Color(0xB4, 0xB4, 0xB4);
+	private static final Color OFF_ROUTE = new Color(0xFF, 0x4C, 0x4C);
 
 	// Magnifying-glass effect via the fonts' NATIVE sizes only: the RuneScape fonts are bitmap-style
 	// and deform when scaled with deriveFont. Bold (16) > regular (16, lighter) > small.
@@ -167,6 +168,12 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		if (source != null)
 		{
 			lines.add(new Line("Destination set by " + source, FONT_OTHER, UPCOMING, null, null));
+		}
+		// Drifting off the drawn path: warn before the route is recomputed (the middle of the three
+		// distance bands — see ShortestPathPlugin's off-route handling).
+		if (plugin.isOffRouteWarning())
+		{
+			lines.add(new Line("Off route — recomputing if you drift further", FONT_NEXT, OFF_ROUTE, null, null));
 		}
 
 		// Window: collapse all but the most recent completed step into one summary line, then show

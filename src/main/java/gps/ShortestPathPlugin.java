@@ -144,6 +144,7 @@ public class ShortestPathPlugin extends Plugin
 	boolean drawMinimap;
 	boolean drawTiles;
 	boolean drawTransports;
+	boolean drawRecalculationRanges;
 	boolean showTransportInfo;
 	boolean showBankPickupInfo;
 	Color colourCollisionMap;
@@ -563,25 +564,41 @@ public class ShortestPathPlugin extends Plugin
 		restartPathfinding(start, ends, true);
 	}
 
-	public boolean isNearPath(int location)
+	/** The recalculate distance (outer off-route band), or -1 when recalculation is disabled. */
+	public int getRecalculateDistance()
+	{
+		return config.recalculateDistance();
+	}
+
+	/** The off-route warning distance (inner band), clamped below the recalculate distance. */
+	public int getOffRouteWarnDistance()
+	{
+		return Math.max(0, Math.min(config.offRouteWarnDistance(), Math.max(0, config.recalculateDistance())));
+	}
+
+	/** Chebyshev distance from {@code location} to the nearest tile of the current path, or -1. */
+	public int distanceFromPath(int location)
 	{
 		List<PathStep> path;
-		if (pathfinder == null || (path = pathfinder.getPath()) == null || path.isEmpty() ||
-			config.recalculateDistance() < 0 || lastLocation == (lastLocation = location))
+		if (pathfinder == null || (path = pathfinder.getPath()) == null || path.isEmpty())
 		{
-			return true;
+			return -1;
 		}
-
+		int best = Integer.MAX_VALUE;
 		for (PathStep pathStep : path)
 		{
-			if (WorldPointUtil.distanceBetween(location, pathStep.getPackedPosition()) < config.recalculateDistance())
-			{
-				return true;
-			}
+			best = Math.min(best, WorldPointUtil.distanceBetween(location, pathStep.getPackedPosition()));
 		}
-
-		return false;
+		return best;
 	}
+
+	// Off-route state, updated each tick the player moves: how far the player is from the path
+	// (-1 = no path / unknown), and whether that's into the warning band (>= warn, < recalculate),
+	// which the overlay shows in red. At/beyond the recalculate distance the route is recomputed.
+	@Getter
+	private volatile int pathDistance = -1;
+	@Getter
+	private volatile boolean offRouteWarning = false;
 
 	/**
 	 * Progress (path index) along the currently displayed route, from the directions overlay's
@@ -1120,14 +1137,41 @@ public class ShortestPathPlugin extends Plugin
 			return;
 		}
 
-		if (!startPointSet && !isNearPath(currentLocation))
+		// Off-route handling, in three bands of distance from the path: on route (nothing), a
+		// warning band (the overlay shows a red "drifting off route" message), and — on a move that
+		// reaches the recalculate distance — a full recompute. Recalc fires only on movement so a
+		// stationary far position (e.g. just teleported off-path) doesn't loop.
+		int recalc = config.recalculateDistance();
+		if (!startPointSet && recalc >= 0)
 		{
-			if (config.cancelInstead())
+			boolean moved = lastLocation != currentLocation;
+			lastLocation = currentLocation;
+			int d = distanceFromPath(currentLocation);
+			pathDistance = d;
+			if (d < 0)
 			{
-				setTarget(WorldPointUtil.UNDEFINED);
+				offRouteWarning = false;
+			}
+			else if (moved && d >= recalc)
+			{
+				offRouteWarning = false;
+				if (config.cancelInstead())
+				{
+					setTarget(WorldPointUtil.UNDEFINED);
+					return;
+				}
+				restartPathfinding(currentLocation, pathfinder.getTargets());
 				return;
 			}
-			restartPathfinding(currentLocation, pathfinder.getTargets());
+			else
+			{
+				int warn = Math.max(0, Math.min(config.offRouteWarnDistance(), recalc));
+				offRouteWarning = d >= warn;
+			}
+		}
+		else
+		{
+			offRouteWarning = false;
 		}
 	}
 
@@ -1828,6 +1872,7 @@ public class ShortestPathPlugin extends Plugin
 		drawMinimap = override("drawMinimap", config.drawMinimap());
 		drawTiles = override("drawTiles", config.drawTiles());
 		drawTransports = override("drawTransports", config.drawTransports());
+		drawRecalculationRanges = override("drawRecalculationRanges", config.drawRecalculationRanges());
 		showTransportInfo = override("showTransportInfo", config.showTransportInfo());
 		showBankPickupInfo = override("showBankPickupInfo", config.showBankPickupInfo());
 
