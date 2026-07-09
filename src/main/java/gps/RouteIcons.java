@@ -27,8 +27,11 @@ final class RouteIcons
 	private static final Color GREY = new Color(0xA8, 0xA8, 0xA8);
 	private static final Color LIGHT = new Color(0xED, 0xED, 0xED);
 	private static final Color RED = new Color(0xE3, 0x1C, 0x1C);
+	private static final Color RED_LIGHT = new Color(0xFF, 0x5A, 0x5A);
 	private static final Color GREEN = new Color(0x4C, 0xAF, 0x50);
 	private static final Color GREEN_LIGHT = new Color(0x7C, 0xD6, 0x80);
+	private static final Color BLUE = new Color(0x4C, 0x8B, 0xF5);
+	private static final Color BLUE_LIGHT = new Color(0x8B, 0xB4, 0xF9);
 	private static final Color ORANGE = new Color(0xFF, 0x98, 0x1F);
 	private static final Color ORANGE_LIGHT = new Color(0xFF, 0xC0, 0x6A);
 	private static final Color GOLD = new Color(0xF2, 0xC1, 0x4E);
@@ -63,8 +66,13 @@ final class RouteIcons
 	static final ImageIcon DASH = new ImageIcon(dash(ORANGE));
 	static final ImageIcon DASH_HOVER = new ImageIcon(dash(ORANGE_LIGHT));
 	// Expand/collapse a category.
-	static final ImageIcon SHOW_MORE = new ImageIcon(moreChevron(GREY));
-	static final ImageIcon SHOW_MORE_HOVER = new ImageIcon(moreChevron(LIGHT));
+	// Route control panel: a green "+" for more routes, blue refresh, red clear.
+	static final ImageIcon SHOW_MORE = new ImageIcon(plus(GREEN));
+	static final ImageIcon SHOW_MORE_HOVER = new ImageIcon(plus(GREEN_LIGHT));
+	static final ImageIcon CTRL_REFRESH = new ImageIcon(refresh(BLUE));
+	static final ImageIcon CTRL_REFRESH_HOVER = new ImageIcon(refresh(BLUE_LIGHT));
+	static final ImageIcon CTRL_CLEAR = new ImageIcon(cross(RED));
+	static final ImageIcon CTRL_CLEAR_HOVER = new ImageIcon(cross(RED_LIGHT));
 	static final ImageIcon CHEVRON_RIGHT = new ImageIcon(chevron(GREY, false));
 	static final ImageIcon CHEVRON_RIGHT_HOVER = new ImageIcon(chevron(LIGHT, false));
 	static final ImageIcon CHEVRON_DOWN = new ImageIcon(chevron(GREY, true));
@@ -701,24 +709,6 @@ final class RouteIcons
 			}
 			triangle.closePath();
 			g.fill(triangle);
-		});
-	}
-
-	// A stacked double-down chevron: "show more" — distinct from the single expand/collapse chevron.
-	private static BufferedImage moreChevron(Color colour)
-	{
-		return render(g ->
-		{
-			g.setColor(colour);
-			g.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-			for (double y : new double[]{5.0, 8.6})
-			{
-				Path2D v = new Path2D.Double();
-				v.moveTo(4.5, y);
-				v.lineTo(8.0, y + 3.0);
-				v.lineTo(11.5, y);
-				g.draw(v);
-			}
 		});
 	}
 

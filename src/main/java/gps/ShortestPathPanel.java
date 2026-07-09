@@ -580,47 +580,86 @@ public class ShortestPathPanel extends PluginPanel
 	}
 
 	/**
-	 * The results section header: bold orange "Routes (N)" like the teleport-methods header, with
-	 * a quiet grey "calculating…" note (busy glyph) on the right while the generation streams —
-	 * routine result state belongs here, not in a notice banner.
+	 * The results section: a bold orange "Routes (N)" title (with a quiet "calculating…" note while
+	 * the generation streams) over a centred control panel — bordered, coloured icon buttons for
+	 * more routes (green +), refresh (blue) and clear (red). Tooltips explain each.
 	 */
 	private JPanel buildResultsHeader(int count, boolean calculating)
 	{
-		JPanel row = new JPanel(new BorderLayout(5, 0));
-		row.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		row.setBorder(new EmptyBorder(2, 0, 5, 0));
-		row.setAlignmentX(Component.LEFT_ALIGNMENT);
-		row.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		JPanel section = new JPanel();
+		section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+		section.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		section.setBorder(new EmptyBorder(2, 0, 6, 0));
+		section.setAlignmentX(Component.LEFT_ALIGNMENT);
+		section.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
+		JPanel titleRow = new JPanel(new BorderLayout(5, 0));
+		titleRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+		titleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 		JLabel title = new JLabel(calculating && count == 0 ? "Routes" : "Routes (" + count + ")");
 		title.setFont(FontManager.getRunescapeBoldFont());
 		title.setForeground(ColorScheme.BRAND_ORANGE);
-		row.add(title, BorderLayout.WEST);
-
-		// Icon actions beside the title: show-more, refresh, clear — icon-only, tooltips explain.
-		// A quiet busy glyph replaces them while the generation is still streaming.
-		JPanel actions = new JPanel(new FlowLayout(FlowLayout.TRAILING, 4, 0));
-		actions.setOpaque(false);
+		titleRow.add(title, BorderLayout.WEST);
 		if (calculating)
 		{
-			JLabel busy = new JLabel(RouteIcons.BANNER_BUSY);
-			busy.setToolTipText("Calculating routes…");
-			actions.add(busy);
+			JLabel busy = new JLabel("calculating…", RouteIcons.BANNER_BUSY, SwingConstants.LEADING);
+			busy.setIconTextGap(4);
+			busy.setFont(FontManager.getRunescapeSmallFont());
+			busy.setForeground(Color.GRAY);
+			titleRow.add(busy, BorderLayout.EAST);
 		}
-		else
+		section.add(titleRow);
+
+		JPanel controls = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0));
+		controls.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		controls.setAlignmentX(Component.LEFT_ALIGNMENT);
+		controls.setBorder(new EmptyBorder(6, 0, 0, 0));
+		controls.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		if (!calculating && !cachedRoutes.isEmpty() && plugin.canLoadMoreRoutes())
 		{
-			if (!cachedRoutes.isEmpty() && plugin.canLoadMoreRoutes())
-			{
-				actions.add(control(new IconActionLabel(RouteIcons.SHOW_MORE, RouteIcons.SHOW_MORE_HOVER,
-					"Search for more alternative routes", plugin::loadMoreRoutes)));
-			}
-			actions.add(control(new IconActionLabel(RouteIcons.REFRESH, RouteIcons.REFRESH_HOVER,
-				"Recalculate the routes to the current destination", plugin::recomputeAlternatives)));
+			controls.add(controlButton(RouteIcons.SHOW_MORE, RouteIcons.SHOW_MORE_HOVER,
+				"Search for more alternative routes", plugin::loadMoreRoutes));
 		}
-		actions.add(control(new IconActionLabel(RouteIcons.CROSS, RouteIcons.CROSS_HOVER,
-			"Clear the current destination and its route", plugin::clearTarget)));
-		row.add(actions, BorderLayout.EAST);
-		return row;
+		if (!calculating)
+		{
+			controls.add(controlButton(RouteIcons.CTRL_REFRESH, RouteIcons.CTRL_REFRESH_HOVER,
+				"Recalculate the routes to the current destination", plugin::recomputeAlternatives));
+		}
+		controls.add(controlButton(RouteIcons.CTRL_CLEAR, RouteIcons.CTRL_CLEAR_HOVER,
+			"Clear the current destination and its route", plugin::clearTarget));
+		section.add(controls);
+		return section;
+	}
+
+	/** A bordered, colour-icon control button (rollover swaps the icon; the panel lifts on hover). */
+	private JButton controlButton(ImageIcon icon, ImageIcon hover, String tooltip, Runnable action)
+	{
+		JButton button = new JButton(icon);
+		button.setRolloverIcon(hover);
+		button.setFocusPainted(false);
+		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		button.setBackground(ColorScheme.DARKER_GRAY_HOVER_COLOR);
+		button.setToolTipText(tooltip);
+		button.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
+			new EmptyBorder(3, 12, 3, 12)));
+		button.addActionListener(e -> action.run());
+		button.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				button.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				button.setBackground(ColorScheme.DARKER_GRAY_HOVER_COLOR);
+			}
+		});
+		return button;
 	}
 
 	private JPanel buildRouteCard(int index, RouteOption route, boolean selected)
