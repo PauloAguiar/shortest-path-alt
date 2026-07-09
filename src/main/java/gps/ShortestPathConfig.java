@@ -1035,7 +1035,9 @@ public interface ShortestPathConfig extends Config
 	)
 	default int costBankPickup()
 	{
-		return 0;
+		// Non-zero unlike the travel methods: banking mid-route is a real interruption, so a small
+		// friction cost avoids trivial detours that save only a tile or two.
+		return 15;
 	}
 
 	@ConfigSection(
