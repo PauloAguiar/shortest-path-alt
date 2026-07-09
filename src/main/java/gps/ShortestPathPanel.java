@@ -112,6 +112,8 @@ public class ShortestPathPanel extends PluginPanel
 	private Map<TeleportMethod, MethodAvailability> renderedUnavailable;
 	private boolean renderedCatalogExpanded;
 	private final JPanel listPanel = new JPanel();
+	// Refresh + clear actions, pinned below the route list; shown only while a destination is set.
+	private final JPanel routeActions = new JPanel();
 	// "Go to" destination search: type a place or amenity ("Falador bank", "nearest altar")
 	// and pick a result to set it as the GPS destination.
 	private final IconTextField destinationSearch = new IconTextField();
@@ -253,7 +255,35 @@ public class ShortestPathPanel extends PluginPanel
 		scroll.getVerticalScrollBar().setUnitIncrement(16);
 		add(scroll, BorderLayout.CENTER);
 
+		buildRouteActions();
+		add(routeActions, BorderLayout.SOUTH);
+
 		render();
+	}
+
+	/**
+	 * The action strip pinned below the route list: recompute the current destination's routes, or
+	 * clear the destination entirely. Icon buttons, half-width each; hidden when nothing is set.
+	 */
+	private void buildRouteActions()
+	{
+		routeActions.setLayout(new GridLayout(1, 2, 4, 0));
+		routeActions.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		routeActions.setBorder(new EmptyBorder(6, 0, 0, 0));
+
+		JButton refresh = subtleButton(new JButton("Refresh", RouteIcons.REFRESH));
+		refresh.setIconTextGap(4);
+		refresh.setHorizontalAlignment(SwingConstants.CENTER);
+		refresh.setToolTipText("Recalculate the alternative routes to the current destination");
+		refresh.addActionListener(e -> plugin.recomputeAlternatives());
+		routeActions.add(refresh);
+
+		JButton clear = subtleButton(new JButton("Clear", RouteIcons.CROSS));
+		clear.setIconTextGap(4);
+		clear.setHorizontalAlignment(SwingConstants.CENTER);
+		clear.setToolTipText("Clear the current destination and its route");
+		clear.addActionListener(e -> plugin.clearTarget());
+		routeActions.add(clear);
 	}
 
 	/**
@@ -366,23 +396,8 @@ public class ShortestPathPanel extends PluginPanel
 		modeRow.add(bankModeButton);
 		modeRow.add(allModeButton);
 
+		// Refresh + clear moved under the route list (see buildRouteActions).
 		bottom.add(modeRow, BorderLayout.NORTH);
-
-		JPanel lower = new JPanel(new BorderLayout());
-		lower.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-		JButton findButton = new JButton("Refresh routes to target");
-		findButton.setToolTipText("Recalculate alternative routes to the destination GPS is currently set to");
-		findButton.setFocusPainted(false);
-		findButton.addActionListener(e -> plugin.recomputeAlternatives());
-		JPanel findWrap = new JPanel(new BorderLayout());
-		findWrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		findWrap.setBorder(new EmptyBorder(8, 0, 0, 0));
-		findWrap.add(findButton, BorderLayout.CENTER);
-		lower.add(findWrap, BorderLayout.NORTH);
-
-
-		bottom.add(lower, BorderLayout.SOUTH);
 
 		header.add(bottom, BorderLayout.SOUTH);
 
@@ -595,6 +610,9 @@ public class ShortestPathPanel extends PluginPanel
 			listPanel.add(buildShowMoreButton());
 			listPanel.add(verticalGap(6));
 		}
+
+		// Refresh/clear are only meaningful with an active destination.
+		routeActions.setVisible(cachedHasTarget || !cachedRoutes.isEmpty());
 
 		listPanel.revalidate();
 		listPanel.repaint();
@@ -1593,26 +1611,32 @@ public class ShortestPathPanel extends PluginPanel
 	 */
 	private JPanel buildNearestRow()
 	{
-		JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 4, 0));
+		// Full width: the "Find nearest…" opener stretches to fill the row, the icon-only quick
+		// buttons keep their natural size on the right.
+		JPanel row = new JPanel(new BorderLayout(4, 0));
 		row.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		row.setBorder(new EmptyBorder(4, 0, 0, 0));
 		row.setAlignmentX(LEFT_ALIGNMENT);
 
 		JButton menuButton = subtleButton(new JButton("Find nearest…"));
+		menuButton.setHorizontalAlignment(SwingConstants.CENTER);
 		menuButton.setToolTipText("Route to the nearest altar / water source / furnace / … using available teleports");
 		menuButton.addActionListener(e -> showNearestMenu(menuButton));
-		row.add(menuButton);
+		row.add(menuButton, BorderLayout.CENTER);
 
+		JPanel quick = new JPanel(new FlowLayout(FlowLayout.LEADING, 4, 0));
+		quick.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		JButton bank = nearestQuickButton("bank");
 		if (bank != null)
 		{
-			row.add(bank);
+			quick.add(bank);
 		}
 		JButton bankAndBack = nearestQuickButton("bank_round_trip");
 		if (bankAndBack != null)
 		{
-			row.add(bankAndBack);
+			quick.add(bankAndBack);
 		}
+		row.add(quick, BorderLayout.EAST);
 
 		row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
 		return row;

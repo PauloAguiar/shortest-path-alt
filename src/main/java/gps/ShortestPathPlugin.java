@@ -2228,6 +2228,12 @@ public class ShortestPathPlugin extends Plugin
 	 * Manually (re)compute the alternative routes for whatever destination GPS currently has
 	 * set — read live from the active pathfinder. With no target set, just refreshes the methods catalog.
 	 */
+	/** Clears the current destination and its route (panel Clear button / clear-path hotkey). */
+	public void clearTarget()
+	{
+		getClientThread().invokeLater(() -> setTarget(WorldPointUtil.UNDEFINED));
+	}
+
 	public void recomputeAlternatives()
 	{
 		getClientThread().invokeLater(() ->
