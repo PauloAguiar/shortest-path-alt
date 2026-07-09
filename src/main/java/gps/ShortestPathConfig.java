@@ -416,8 +416,8 @@ public interface ShortestPathConfig extends Config
 	@ConfigItem(
 		keyName = "finishDistance",
 		name = "Finish distance",
-		description = "Distance from the target tile at which the path should be ended (-1 for never).<br>" +
-			"Measured along the calculated path, so standing near the goal across a wall doesn't count",
+		description = "Distance from the destination at which the journey counts as complete (-1 for never, 0 for the exact tile).<br>" +
+			"Measured in walking steps around the destination, so a tile across a wall doesn't count",
 		position = 27,
 		section = sectionSettings
 	)

@@ -607,6 +607,129 @@ public class ShortestPathPlugin extends Plugin
 	@Getter
 	private volatile boolean offRouteWarning = false;
 
+	// The arrival zone, cached per (path end, finish distance): recomputed only when the displayed
+	// route's end or the config changes, then read every tick (arrival check) and frame (debug render).
+	private volatile Set<Integer> arrivalZone = Set.of();
+	private int arrivalZoneEnd = WorldPointUtil.UNDEFINED;
+	private int arrivalZoneRadius = Integer.MIN_VALUE;
+
+	/**
+	 * The arrival zone: every tile within the finish distance of the destination in WALKING steps — a
+	 * flood from the displayed path's end over the collision map, using the same movement rules as the
+	 * pathfinder — so a tile across a wall or fence is not part of the zone. Standing on any of these
+	 * tiles completes the journey; the debug overlay renders exactly this set. Empty when there is no
+	 * path or the finish distance is negative (never finish).
+	 */
+	public Set<Integer> getArrivalTiles()
+	{
+		List<PathStep> path = getDisplayPath();
+		int radius = config.reachedDistance();
+		if (path == null || path.isEmpty() || radius < 0)
+		{
+			return Set.of();
+		}
+		int end = path.get(path.size() - 1).getPackedPosition();
+		Set<Integer> zone = arrivalZone;
+		if (end != arrivalZoneEnd || radius != arrivalZoneRadius)
+		{
+			zone = floodArrivalZone(end, radius);
+			arrivalZone = zone;
+			arrivalZoneEnd = end;
+			arrivalZoneRadius = radius;
+		}
+		return zone;
+	}
+
+	/**
+	 * Breadth-first flood from {@code end} over walkable edges, up to {@code maxSteps} moves. Diagonal
+	 * moves mirror {@link gps.pathfinder.CollisionMap}'s corner rules (both cardinals of the corner
+	 * must be open on both sides), so the zone matches where the player can actually walk.
+	 */
+	private Set<Integer> floodArrivalZone(int end, int maxSteps)
+	{
+		Set<Integer> zone = new HashSet<>();
+		zone.add(end);
+		CollisionMap map = pathfinderConfig.getMap();
+		if (map == null || maxSteps <= 0)
+		{
+			return zone;
+		}
+		final int plane = WorldPointUtil.unpackWorldPlane(end);
+		List<Integer> frontier = new ArrayList<>();
+		frontier.add(end);
+		for (int depth = 0; depth < maxSteps && !frontier.isEmpty(); depth++)
+		{
+			List<Integer> next = new ArrayList<>();
+			for (int tile : frontier)
+			{
+				final int x = WorldPointUtil.unpackWorldX(tile);
+				final int y = WorldPointUtil.unpackWorldY(tile);
+				final boolean n = map.n(x, y, plane);
+				final boolean s = map.s(x, y, plane);
+				final boolean e = map.e(x, y, plane);
+				final boolean w = map.w(x, y, plane);
+				growZone(zone, next, x, y + 1, plane, n);
+				growZone(zone, next, x, y - 1, plane, s);
+				growZone(zone, next, x + 1, y, plane, e);
+				growZone(zone, next, x - 1, y, plane, w);
+				growZone(zone, next, x + 1, y + 1, plane, n && e && map.e(x, y + 1, plane) && map.n(x + 1, y, plane));
+				growZone(zone, next, x - 1, y + 1, plane, n && w && map.w(x, y + 1, plane) && map.n(x - 1, y, plane));
+				growZone(zone, next, x + 1, y - 1, plane, s && e && map.e(x, y - 1, plane) && map.s(x + 1, y, plane));
+				growZone(zone, next, x - 1, y - 1, plane, s && w && map.w(x, y - 1, plane) && map.s(x - 1, y, plane));
+			}
+			frontier = next;
+		}
+		return zone;
+	}
+
+	private static void growZone(Set<Integer> zone, List<Integer> next, int x, int y, int plane, boolean open)
+	{
+		if (!open)
+		{
+			return;
+		}
+		int packed = WorldPointUtil.packWorldPoint(x, y, plane);
+		if (zone.add(packed))
+		{
+			next.add(packed);
+		}
+	}
+
+	/**
+	 * Whether the player has arrived: standing inside the arrival zone (within the finish distance of
+	 * the destination over walkable tiles). Guards: a round trip only completes once its turnaround has
+	 * been reached (the zone centres on home, so it would otherwise fire at departure), and while a
+	 * round trip is regenerating (no round-trip route displayed) arrival is suspended rather than
+	 * measured against the outbound fallback path; an unreachable target never completes.
+	 */
+	private boolean hasArrived(int currentLocation)
+	{
+		Set<Integer> zone = getArrivalTiles();
+		if (zone.isEmpty() || !zone.contains(currentLocation))
+		{
+			return false;
+		}
+		RouteOption displayed = getDisplayedRoute();
+		boolean roundTrip = displayed != null && displayed.isRoundTrip();
+		if (altRoundTrip && !roundTrip)
+		{
+			return false;
+		}
+		if (roundTrip)
+		{
+			int turnaround = displayed.getTurnaroundIndex();
+			if (turnaround >= 0 && displayedRouteProgress() < turnaround - 2)
+			{
+				return false;
+			}
+		}
+		else if (isPathUnreachable())
+		{
+			return false;
+		}
+		return true;
+	}
+
 	/**
 	 * Progress (path index) along the currently displayed route, from the directions overlay's
 	 * tracker — 0 when that route isn't the one being tracked.
@@ -1115,19 +1238,9 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		int currentLocation = WorldPointUtil.fromLocalInstance(client, localPlayer);
-		int reachedDistance = config.reachedDistance();
-		if (pathTilesRemaining(currentLocation, reachedDistance) < reachedDistance)
+		if (hasArrived(currentLocation))
 		{
-			// Round-trip belt-and-braces: while the round-trip route isn't displayed (a
-			// regeneration gap, or still streaming), the measurement above fell back to the
-			// CLASSIC path — whose targets are the outbound bank tiles. Standing at the bank is
-			// the trip's halfway point, not its end; never complete the journey from the fallback.
-			RouteOption displayedRoundTrip = getDisplayedRoute();
-			if (altRoundTrip && (displayedRoundTrip == null || !displayedRoundTrip.isRoundTrip()))
-			{
-				return;
-			}
-			// Reached the destination (along the path). Show the "Arrived!" panel — including when
+			// Reached the destination (inside the arrival zone). Show the "Arrived!" panel — including when
 			// the destination was set while already there (e.g. "nearest bank" at a bank), where
 			// the journey time is ~0 — then clear the target. An unstamped journey (belt-and-braces
 			// against any destination-setting path missing the stamp) reports 0 rather than decades.
@@ -1197,68 +1310,6 @@ public class ShortestPathPlugin extends Plugin
 		Set<Integer> ends = new HashSet<>(targets);
 		restartPathfinding(start, ends);
 		triggerAlternatives(start, ends);
-	}
-
-	/**
-	 * Tiles remaining to the goal measured ALONG the calculated path — the straight-line
-	 * finish check used to clear the target through walls (the goal one tile away across a
-	 * fence read as "reached"). Remaining = walk to the nearest path tile plus the summed
-	 * edge lengths from it to the end; transport jumps count their full span, so a pending
-	 * teleport never reads as nearly-there. Returns {@link Integer#MAX_VALUE} when the player
-	 * is too far off the path (the recalculation logic owns that case) or when the path only
-	 * gets close to an unreachable target rather than reaching it. Accumulation stops at
-	 * {@code limit}, the only threshold the caller compares against.
-	 */
-	private int pathTilesRemaining(int currentLocation, int limit)
-	{
-		// Round-trip routes end where they start, so the arrival scan must anchor on the route's
-		// earned progress: an unanchored nearest-tile scan would either match the start copy
-		// forever (arrival never fires) or the end copy immediately (instant false arrival).
-		RouteOption displayed = getDisplayedRoute();
-		boolean roundTrip = displayed != null && displayed.isRoundTrip();
-		List<PathStep> path = roundTrip ? displayed.getPath() : pathfinder.getPath();
-		if (path == null || path.isEmpty())
-		{
-			return Integer.MAX_VALUE;
-		}
-		// The path must actually reach the destination, not merely get close to a truly
-		// unreachable one. "Reached" here allows the end to be near the target rather than exactly
-		// on it (the same tolerance the plugin uses elsewhere) — object destinations like a bank
-		// booth or altar from the search aren't walkable, so the path ends on the tile beside them.
-		if (!roundTrip && isPathUnreachable())
-		{
-			return Integer.MAX_VALUE;
-		}
-		int progress = roundTrip ? displayedRouteProgress() : 0;
-		int scanFrom = roundTrip ? Math.max(0, progress - 8) : 0;
-		// Until the turnaround (the destination) is reached, the return leg is out of bounds for
-		// the scan: it often retraces the outbound street, so its tail matches the player's tile
-		// from the first step out — and matching it would read as being nearly home.
-		int turnaround = roundTrip ? displayed.getTurnaroundIndex() : -1;
-		int scanTo = (turnaround >= 0 && progress < turnaround - 2)
-			? Math.min(path.size(), turnaround + 1) : path.size();
-		int best = -1;
-		int bestDistance = Integer.MAX_VALUE;
-		for (int i = scanFrom; i < scanTo; i++)
-		{
-			int distance = WorldPointUtil.distanceBetween(path.get(i).getPackedPosition(), currentLocation);
-			if (distance < bestDistance)
-			{
-				bestDistance = distance;
-				best = i;
-			}
-		}
-		if (best < 0 || bestDistance > 20)
-		{
-			return Integer.MAX_VALUE;
-		}
-		int remaining = bestDistance;
-		for (int i = best + 1; i < path.size() && remaining < limit; i++)
-		{
-			remaining += Math.max(1, WorldPointUtil.distanceBetween2D(
-				path.get(i - 1).getPackedPosition(), path.get(i).getPackedPosition()));
-		}
-		return remaining;
 	}
 
 	@Subscribe
