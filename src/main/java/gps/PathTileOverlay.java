@@ -869,6 +869,12 @@ public class PathTileOverlay extends Overlay
 				break;
 			}
 		}
+		// Also pulse when the DISPLAYED route teleports on this edge but the config-derived lookup
+		// above missed it — a charged jewellery leg under a "perm-only" teleport-item setting.
+		if (!teleportEdge)
+		{
+			teleportEdge = plugin.displayedRouteTeleportsAt(pathIndex);
+		}
 		if (teleportEdge && plugin.showTeleportPulse)
 		{
 			drawTeleportPulse(graphics, location);

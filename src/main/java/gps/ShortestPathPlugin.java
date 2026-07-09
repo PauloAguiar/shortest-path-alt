@@ -1563,6 +1563,34 @@ public class ShortestPathPlugin extends Plugin
 	 * Note that this function also performs filtering by the transport target, so callers of this
 	 * function can directly iterate over the returned transports.
 	 */
+	/**
+	 * Whether the DISPLAYED route uses a teleport method to reach the tile after {@code fromIndex}
+	 * (edge {@code fromIndex} → {@code fromIndex + 1}). Drives the teleport pulse straight from the
+	 * shown route's method edges — {@link #transportsForEdge} re-derives transports from the classic
+	 * config, whose teleport-item setting (e.g. "Inventory (perm)") excludes charged jewellery, so a
+	 * charged-item leg on an alternative route never pulsed.
+	 */
+	public boolean displayedRouteTeleportsAt(int fromIndex)
+	{
+		RouteOption route = getDisplayedRoute();
+		if (route == null)
+		{
+			return false;
+		}
+		int arriveIndex = fromIndex + 1;
+		List<Integer> edges = route.getMethodEdgeIndexes();
+		List<TeleportMethod> methods = route.getMethods();
+		for (int m = 0; m < edges.size() && m < methods.size(); m++)
+		{
+			if (edges.get(m) == arriveIndex)
+			{
+				TeleportMethod method = methods.get(m);
+				return method.getType() != null && method.getType().isTeleport();
+			}
+		}
+		return false;
+	}
+
 	public Set<Transport> transportsForEdge(PathStep currentStep, PathStep nextStep)
 	{
 		if (currentStep == null || nextStep == null)
