@@ -36,9 +36,10 @@ public interface ShortestPathConfig extends Config
 
 	@ConfigItem(
 		keyName = "defaultRouteCount",
-		name = "Max routes",
-		description = "The most alternative routes the panel will list.<br>" +
-			"Routes are found cheapest-first up to a cost band; the panel's \"+\" widens that band.",
+		name = "Routes per page",
+		description = "How many alternative routes a search lists at first, and how many more each<br>" +
+			"press of the panel's \"+\" adds (which also widens the cheapest-first cost band).<br>" +
+			"Not a hard maximum — keep pressing \"+\" for more routes.",
 		position = 1,
 		section = sectionSettings
 	)
