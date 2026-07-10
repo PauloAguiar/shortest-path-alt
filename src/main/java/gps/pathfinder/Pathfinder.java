@@ -72,6 +72,12 @@ public class Pathfinder implements Runnable
 	// rendered partial path); the exact best tile is recovered in one post-pass when the search
 	// ends without reaching a target.
 	private static final int UNREACHABLE_TRACK_INTERVAL = 16;
+	// Test-only invariant check: in heap mode the settled orderCost sequence must never decrease
+	// (Dijkstra/consistent-A* property). A decrease means the heuristic overestimated somewhere
+	// (inadmissibility) or an ordering-only term crept into the key — the failure modes behind
+	// returned-but-not-minimal routes. Off in production; the optimality tests switch it on.
+	public static volatile boolean validateSettleOrder = false;
+	private int lastSettledOrderCost = Integer.MIN_VALUE;
 	private int unreachableTrackCounter = 0;
 	/**
 	 * Teleportation transports are updated when this changes.
@@ -376,6 +382,17 @@ public class Pathfinder implements Runnable
 						continue;
 					}
 					visited.set(node, graph);
+				}
+				if (validateSettleOrder && heapMode)
+				{
+					final int settledKey = graph.orderCost(node);
+					if (settledKey < lastSettledOrderCost)
+					{
+						throw new IllegalStateException("Settle order violated: orderCost " + settledKey
+							+ " settled after " + lastSettledOrderCost
+							+ " — inadmissible heuristic or polluted ordering key");
+					}
+					lastSettledOrderCost = settledKey;
 				}
 				// Heap mode counts distinct settled states (enqueues include duplicates); the FIFO
 				// search counts at enqueue, where marking makes every count unique.

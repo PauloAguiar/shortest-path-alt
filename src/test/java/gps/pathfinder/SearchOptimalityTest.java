@@ -63,6 +63,15 @@ public class SearchOptimalityTest
 		when(client.getGameState()).thenReturn(GameState.LOGGED_IN);
 		when(client.getClientThread()).thenReturn(Thread.currentThread());
 		when(client.getBoostedSkillLevel(any(Skill.class))).thenReturn(99);
+		// Every production search in this suite also self-checks its settle order (a decrease
+		// means an inadmissible heuristic or a polluted ordering key).
+		Pathfinder.validateSettleOrder = true;
+	}
+
+	@org.junit.After
+	public void after()
+	{
+		Pathfinder.validateSettleOrder = false;
 	}
 
 	/** An Everything-mode planning copy (possession and unlocks bypassed), refreshed. */
@@ -176,5 +185,98 @@ public class SearchOptimalityTest
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Heuristic consistency sampler: h(a) &le; c(a,b) + h(b) over every edge kind the search can
+	 * take from an occupiable tile — cardinal/diagonal walking in a box around the targets,
+	 * origin-bound transports, and the global-teleport hub (whose h is the floor). Consistency is
+	 * what makes the first settle optimal; a single violated edge is a route-burying bug.
+	 */
+	@Test
+	public void heuristicIsConsistentAroundTheCaptureTargets()
+	{
+		PathfinderConfig cfg = everythingConfig();
+		DistanceField field = DistanceField.build(cfg, CAPTURE_TARGETS);
+		SearchHeuristic heuristic = SearchHeuristic.buildWithField(cfg, field);
+		assertNotNull(heuristic);
+		CollisionMap map = cfg.getMap();
+
+		// Walking edges in a box around the capture targets (the region the heuristic steers).
+		int violations = 0;
+		for (int x = 1555 - 220; x <= 1555 + 220; x++)
+		{
+			for (int y = 3046 - 220; y <= 3046 + 220; y++)
+			{
+				if (map.isBlocked(x, y, 0))
+				{
+					// Non-landing blocked tiles are never occupied by the search; landings are
+					// covered by the transport and hub checks below.
+					continue;
+				}
+				final int a = WorldPointUtil.packWorldPoint(x, y, 0);
+				final int ha = heuristic.of(a);
+				// Cardinals; diagonals are compositions of them with equal edge cost 1, so the
+				// cardinal triangle inequalities imply the diagonal ones within 1 either way —
+				// check them directly anyway via the packed diagonal neighbours.
+				final int[][] steps = {
+					{x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1},
+					{x - 1, y - 1}, {x + 1, y - 1}, {x - 1, y + 1}, {x + 1, y + 1}};
+				final boolean[] open = {
+					map.w(x, y, 0), map.e(x, y, 0), map.s(x, y, 0), map.n(x, y, 0),
+					map.s(x, y, 0) && map.w(x, y - 1, 0) && map.w(x, y, 0) && map.s(x - 1, y, 0),
+					map.s(x, y, 0) && map.e(x, y - 1, 0) && map.e(x, y, 0) && map.s(x + 1, y, 0),
+					map.n(x, y, 0) && map.w(x, y + 1, 0) && map.w(x, y, 0) && map.n(x - 1, y, 0),
+					map.n(x, y, 0) && map.e(x, y + 1, 0) && map.e(x, y, 0) && map.n(x + 1, y, 0)};
+				for (int i = 0; i < steps.length; i++)
+				{
+					if (!open[i])
+					{
+						continue;
+					}
+					final int hb = heuristic.of(WorldPointUtil.packWorldPoint(steps[i][0], steps[i][1], 0));
+					if (ha > 1 + hb)
+					{
+						violations++;
+					}
+				}
+			}
+		}
+		assertEquals("walking-edge consistency violations", 0, violations);
+
+		// Origin-bound transports: h(origin) <= edge cost + h(destination).
+		for (boolean bankVisited : new boolean[]{false, true})
+		{
+			for (int origin : cfg.getTransportsPacked(bankVisited).keys())
+			{
+				for (Transport transport : cfg.getTransportsPacked(bankVisited).get(origin))
+				{
+					if (transport.getOrigin() == WorldPointUtil.UNDEFINED
+						|| transport.getDestination() == WorldPointUtil.UNDEFINED)
+					{
+						continue;
+					}
+					final int edge = Math.max(0, CostUnits.fromTicks(transport.getDuration())
+						+ cfg.getAdditionalTransportCost(transport));
+					final int ha = heuristic.of(transport.getOrigin());
+					final int hb = heuristic.of(transport.getDestination());
+					assertTrue("transport edge " + transport + ": h(origin)=" + ha
+						+ " > " + edge + " + h(dest)=" + hb, ha <= edge + hb);
+				}
+			}
+			// The hub (h = floor) to every usable teleport landing.
+			for (Transport teleport : cfg.getUsableTeleports(bankVisited))
+			{
+				if (teleport.getDestination() == WorldPointUtil.UNDEFINED)
+				{
+					continue;
+				}
+				final int edge = Math.max(0, CostUnits.fromTicks(teleport.getDuration())
+					+ cfg.getAdditionalTransportCost(teleport));
+				final int hb = heuristic.of(teleport.getDestination());
+				assertTrue("hub -> " + teleport + ": floor=" + heuristic.floor()
+					+ " > " + edge + " + h(landing)=" + hb, heuristic.floor() <= edge + hb);
+			}
+		}
 	}
 }

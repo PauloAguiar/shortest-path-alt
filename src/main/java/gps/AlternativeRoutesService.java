@@ -32,6 +32,7 @@ import gps.pathfinder.PathStep;
 import gps.pathfinder.Pathfinder;
 import gps.pathfinder.PathfinderConfig;
 import gps.pathfinder.PathfinderResult;
+import gps.pathfinder.ReferenceDijkstra;
 import gps.pathfinder.SearchHeuristic;
 import gps.pathfinder.TransportAvailability;
 import gps.transport.Transport;
@@ -343,9 +344,11 @@ public class AlternativeRoutesService
 		// Stop at the pure-walk option: once walking there is on the list, anything more expensive than
 		// just walking isn't worth showing. Seeding only ever surfaces teleports that lost to walking on
 		// cost (i.e. routes MORE expensive than walk-only), so skip it entirely when a walk-only route was
-		// already found; only seed to fill slots when walking never came up (e.g. every route teleports).
+		// already found. A FULL list does not skip seeding: a small floor of attempts always runs, and a
+		// cheaper seed evicts the costliest route — the safety net for anything the chain missed must not
+		// be silenced by a low route limit (the exact failure a user capture showed at limit 10).
 		boolean hasWalkOnly = routes.stream().anyMatch(RouteOption::isWalkOnly);
-		if (!hasWalkOnly && routes.size() < limit && !routes.isEmpty())
+		if (!hasWalkOnly && !routes.isEmpty())
 		{
 			seedTeleportRoutes(gen, start, ends, userExclusions, mode, limit,
 				seedCandidates, routes, seenSignatures, catalog, unavailable, roundTrip ? null : listener,
@@ -454,6 +457,24 @@ public class AlternativeRoutesService
 	{
 		long[] summary = lastTimingSummary;
 		return summary == null ? null : summary.clone();
+	}
+
+	/**
+	 * Runs the reference (oracle) search — textbook Dijkstra over the identical edge expansion —
+	 * for one query, on a fresh client-thread refresh with the given exclusions applied. The
+	 * benchmark's optimality audit: the best route a generation found must cost exactly this.
+	 * Untimed and never in the client hot path. Returns null when the refresh fails.
+	 */
+	public ReferenceDijkstra.Result auditOptimality(int start, Set<Integer> targets,
+		Set<TeleportMethod> userExclusions, AlternativeRoutesMode mode)
+	{
+		final Set<Integer> ends = new HashSet<>(targets);
+		if (!refreshOnClientThread(Collections.emptySet(), ends, mode))
+		{
+			return null;
+		}
+		planningConfig.rebuildAvailabilityWithExclusions(new HashSet<>(userExclusions));
+		return ReferenceDijkstra.search(planningConfig, start, ends);
 	}
 
 	// Whether the last generation's cost cap held routes back — a higher cost multiple ("show more")
@@ -568,7 +589,9 @@ public class AlternativeRoutesService
 			allSeedMethods.add(TeleportMethod.fromTransport(transport));
 		}
 
-		final int maxAttempts = (limit - routes.size()) * 3;
+		// A floor of attempts even when the chain filled every slot: the best-ranked seeds are the
+		// safety net against a missed-cheap-route bug, and cost nearly nothing when they lose.
+		final int maxAttempts = Math.max(6, (limit - routes.size()) * 3);
 		final List<Transport> attempts = rankSeedCandidates(seedCandidates, ends, userExclusions, maxAttempts);
 		if (attempts.isEmpty())
 		{
@@ -596,7 +619,7 @@ public class AlternativeRoutesService
 
 		try
 		{
-			for (int i = 0; i < futures.size() && routes.size() < limit && gen == generation.get(); i++)
+			for (int i = 0; i < futures.size() && gen == generation.get(); i++)
 			{
 				SeedResult seedResult;
 				try
@@ -611,6 +634,26 @@ public class AlternativeRoutesService
 				if (seedResult == null || !seenSignatures.add(signature(seedResult.scan.methods)))
 				{
 					continue;
+				}
+				// A full list doesn't end the pass: a strictly cheaper seed evicts the costliest
+				// teleport route — the seeds are the safety net for anything the chain missed.
+				if (routes.size() >= limit)
+				{
+					int evict = -1;
+					int maxCost = seedResult.totalCost;
+					for (int r = 0; r < routes.size(); r++)
+					{
+						if (!routes.get(r).isWalkOnly() && routes.get(r).getTotalCost() > maxCost)
+						{
+							maxCost = routes.get(r).getTotalCost();
+							evict = r;
+						}
+					}
+					if (evict < 0)
+					{
+						continue;
+					}
+					routes.remove(evict);
 				}
 				routes.add(new RouteOption(seedResult.path, seedResult.scan.methods, seedResult.scan.methodEdges,
 					seedResult.scan.methodDurations, seedResult.totalCost, seedResult.scan.rawCost,

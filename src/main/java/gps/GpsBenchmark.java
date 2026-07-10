@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
+import gps.pathfinder.ReferenceDijkstra;
 import gps.transport.Transport;
 
 /**
@@ -156,18 +157,31 @@ public final class GpsBenchmark
 				}
 				Map<String, Object> median = median(runs);
 
+				// Optimality audit: one untimed oracle run (textbook Dijkstra over the identical
+				// edge expansion) per scenario — the best route a generation found must cost
+				// EXACTLY the oracle's minimum, so every benchmark run doubles as a correctness
+				// sweep for the search engine.
+				Integer bestCost = bestRouteCost(median);
+				ReferenceDijkstra.Result oracle = service.auditOptimality(
+					scenario.start, scenario.targets, exclusions, AlternativeRoutesMode.ALL_EVERYTHING);
+				boolean optimal = oracle != null && oracle.reached
+					&& bestCost != null && oracle.cost == bestCost;
 				Map<String, Object> report = new LinkedHashMap<>();
 				report.put("name", scenario.name);
 				report.put("kind", scenario.kind);
 				report.put("start", pointJson(scenario.start));
 				report.put("targetCount", scenario.targets.size());
+				report.put("oracleCost", oracle == null ? -1 : (oracle.reached ? oracle.cost : -1));
+				report.put("bestRouteCost", bestCost == null ? -1 : bestCost);
+				report.put("optimal", optimal);
 				report.put("median", median);
 				report.put("runs", runs);
 				scenarioReports.add(report);
 
-				String line = String.format(Locale.ROOT, "%-40s wall %6sms searchCpu %6sms searches %3s routes %2s",
+				String line = String.format(Locale.ROOT,
+					"%-40s wall %6sms searchCpu %6sms searches %3s routes %2s optimal %s",
 					scenario.name, median.get("serviceWallMs"), median.get("searchCpuMs"),
-					median.get("searches"), median.get("routeCount"));
+					median.get("searches"), median.get("routeCount"), optimal);
 				table.append(line).append('\n');
 				notify.accept("GPS benchmark " + (i + 1) + "/" + scenarios.size() + ": "
 					+ scenario.name + " - median wall " + median.get("serviceWallMs") + "ms");
@@ -291,6 +305,27 @@ public final class GpsBenchmark
 		}
 		run.put("routes", routesJson);
 		return run;
+	}
+
+	/** The cheapest route cost in a run's recorded routes, or null when there are none. */
+	@SuppressWarnings("unchecked")
+	private static Integer bestRouteCost(Map<String, Object> run)
+	{
+		Object routes = run.get("routes");
+		if (!(routes instanceof List))
+		{
+			return null;
+		}
+		Integer best = null;
+		for (Object route : (List<Object>) routes)
+		{
+			Object cost = ((Map<String, Object>) route).get("cost");
+			if (cost instanceof Number && (best == null || ((Number) cost).intValue() < best))
+			{
+				best = ((Number) cost).intValue();
+			}
+		}
+		return best;
 	}
 
 	/** The completed run with the median service wall time (all-failed runs yield a stub). */
