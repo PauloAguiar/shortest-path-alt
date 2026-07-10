@@ -385,7 +385,13 @@ public class RouteDirectionsOverlay extends OverlayPanel
 				fontOther = small;
 				break;
 			case LARGE:
-				// Exactly pixel-doubled: the one enlargement that keeps the pixel fonts sharp.
+				// The in-between step at 1.5x — a touch softer than the exact-multiple sizes.
+				fontCurrent = bold.deriveFont(24f);
+				fontNext = regular.deriveFont(24f);
+				fontOther = small.deriveFont(24f);
+				break;
+			case EXTRA_LARGE:
+				// Exactly pixel-doubled: the enlargement that keeps the pixel fonts sharp.
 				fontCurrent = bold.deriveFont(32f);
 				fontNext = regular.deriveFont(32f);
 				fontOther = small.deriveFont(32f);

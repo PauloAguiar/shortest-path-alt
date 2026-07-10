@@ -1158,9 +1158,9 @@ public interface ShortestPathConfig extends Config
 	@ConfigItem(
 		keyName = "overlayFontSize",
 		name = "Overlay text size",
-		description = "Text size preset for the directions overlay. Only combinations that render<br>" +
-			"crisply: the RuneScape fonts are pixel-styled, so Small and Normal use their native<br>" +
-			"faces and Large pixel-doubles them",
+		description = "Text size preset for the directions overlay. The RuneScape fonts are pixel-styled,<br>" +
+			"so Small/Normal use their native faces and Extra large pixel-doubles them (sharpest);<br>" +
+			"Large is an in-between 1.5x step, slightly softer",
 		position = 78,
 		section = sectionDisplay
 	)
