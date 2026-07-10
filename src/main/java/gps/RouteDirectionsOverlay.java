@@ -91,10 +91,9 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private long nearEndAtMillis = Long.MIN_VALUE / 2;
 	private boolean arrivalShowing;
 	private long arrivalUntilMillis;
-	// Wall-clock start of the current journey (stamped when a route starts being tracked) and
-	// snapshots for the arrival panel — the plugin clears the target (and its source) the moment
-	// the destination is reached, so they must be captured while the route is still alive.
-	private long journeyStartMillis;
+	// Snapshots for the arrival panel — the plugin clears the target (and its source) the moment the
+	// destination is reached, so they must be captured while the route is still alive. The journey
+	// start itself is owned by the plugin (movement-based), read via getJourneyStartMillis.
 	private String arrivalSource;
 	private long arrivalElapsedMillis;
 
@@ -139,7 +138,8 @@ public class RouteDirectionsOverlay extends OverlayPanel
 				arrivalShowing = true;
 				arrivalUntilMillis = plugin.arrivalAutoDismiss
 					? now + plugin.arrivalDismissSeconds * 1000L : Long.MAX_VALUE;
-				arrivalElapsedMillis = Math.max(0, now - journeyStartMillis);
+				long journeyStart = plugin.getJourneyStartMillis();
+				arrivalElapsedMillis = journeyStart == 0 ? 0 : Math.max(0, now - journeyStart);
 			}
 			nearEndAtMillis = Long.MIN_VALUE / 2;
 			if (arrivalShowing && now < arrivalUntilMillis)
@@ -644,7 +644,6 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			reachedIndex = 0;
 			remainingTicksAt = buildRemainingTicks(steps, path.size());
 			liveRemainingTicks = remainingTicksAt.length > 0 ? remainingTicksAt[0] : 0;
-			journeyStartMillis = System.currentTimeMillis();
 		}
 		Player player = client.getLocalPlayer();
 		if (player == null || remainingTicksAt.length != path.size())

@@ -308,9 +308,12 @@ public class ShortestPathPlugin extends Plugin
 	private PathfinderConfig pathfinderConfig;
 	@Getter
 	private boolean startPointSet = false;
-	// Wall-clock time the current target was set, used to report the journey duration on arrival
-	// (~0 when the destination was set while already there, e.g. "nearest bank" at a bank).
-	private long targetSetMillis = 0;
+	// Journey wall-clock, reported on arrival. 0 means "armed": it starts counting from the first
+	// tick the player MOVES, so standing still after setting a destination (or picking a path)
+	// doesn't inflate the time. Re-armed when a new destination is set OR the user selects a
+	// different path; journeyLastLocation drives the first-movement detection.
+	private long journeyStartMillis = 0;
+	private int journeyLastLocation = WorldPointUtil.UNDEFINED;
 	// One-shot world-map pin override for the next setTargets call: the destination a perimeter
 	// expansion is centred on (the searched bank booth), where the pin belongs. UNDEFINED = default
 	// behaviour (pin on a single target, none for multi-target sets).
@@ -1203,11 +1206,10 @@ public class ShortestPathPlugin extends Plugin
 			}
 			else
 			{
-				// A NEW destination from another plugin: this path bypasses setTargets, so stamp the
-				// journey start here too — otherwise the arrival timer measures from whatever manual
-				// destination was last set (hours ago, or the epoch), showing absurd elapsed times.
-				// Reusing the previous target keeps the running journey's stamp.
-				targetSetMillis = System.currentTimeMillis();
+				// A NEW destination from another plugin: this path bypasses setTargets, so arm the
+				// journey timer here too — otherwise the arrival time carries over from whatever manual
+				// destination was last set. Reusing the previous target keeps the running journey.
+				armJourney();
 				// Quest Helper often targets an NPC's or object's own tile, which isn't walkable — a
 				// search targeting only it exhausts the entire map and ends 'closest tile' (captured:
 				// ~880ms per search). Expand to the nearest walkable ring, like manual pins.
@@ -1290,13 +1292,24 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		int currentLocation = WorldPointUtil.fromLocalInstance(client, localPlayer);
+		// Journey timer: start counting from the first tick the player moves after a destination (or a
+		// chosen path) was set — so picking a route and standing still doesn't inflate the arrival time.
+		if (!pathfinder.getTargets().isEmpty())
+		{
+			if (journeyStartMillis == 0 && journeyLastLocation != WorldPointUtil.UNDEFINED
+				&& currentLocation != journeyLastLocation)
+			{
+				journeyStartMillis = System.currentTimeMillis();
+			}
+			journeyLastLocation = currentLocation;
+		}
 		if (hasArrived(currentLocation))
 		{
 			// Reached the destination (inside the arrival zone). Show the "Arrived!" panel — including when
 			// the destination was set while already there (e.g. "nearest bank" at a bank), where
-			// the journey time is ~0 — then clear the target. An unstamped journey (belt-and-braces
-			// against any destination-setting path missing the stamp) reports 0 rather than decades.
-			long elapsed = targetSetMillis == 0 ? 0 : System.currentTimeMillis() - targetSetMillis;
+			// the journey time is ~0 — then clear the target. A never-started journey (arrived without
+			// moving) reports 0 rather than a stale duration.
+			long elapsed = journeyStartMillis == 0 ? 0 : System.currentTimeMillis() - journeyStartMillis;
 			if (routeDirectionsOverlay != null)
 			{
 				routeDirectionsOverlay.markArrived(targetSource, elapsed);
@@ -2229,8 +2242,8 @@ public class ShortestPathPlugin extends Plugin
 			{
 				destinations.addAll(pathfinder.getTargets());
 			}
-			// Stamp the journey start so arrival can report the elapsed time.
-			targetSetMillis = System.currentTimeMillis();
+			// Arm the journey timer: it starts counting from the player's first movement.
+			armJourney();
 			// Alternatives are computed manually via the panel's "Find routes" button.
 			restartPathfinding(start, destinations, append);
 		}
@@ -2258,6 +2271,19 @@ public class ShortestPathPlugin extends Plugin
 	 * were computed for the pathfinder's current destination — the first (best) route of the list
 	 * under the currently selected mode. Null when neither applies (falls back to the classic path).
 	 */
+	/** The journey wall-clock start, or 0 while it hasn't begun (armed, waiting for movement). */
+	public long getJourneyStartMillis()
+	{
+		return journeyStartMillis;
+	}
+
+	/** Re-arms the journey timer so it recounts from the player's next movement. */
+	private void armJourney()
+	{
+		journeyStartMillis = 0;
+		journeyLastLocation = WorldPointUtil.UNDEFINED;
+	}
+
 	public RouteOption getDisplayedRoute()
 	{
 		RouteOption route = selectedRoute;
@@ -2383,8 +2409,15 @@ public class ShortestPathPlugin extends Plugin
 		if (index >= 0 && index < routes.size())
 		{
 			RouteOption route = routes.get(index);
+			RouteOption previous = selectedRoute;
 			// Toggle: clicking the route that's already shown hides it.
 			selectedRoute = (selectedRoute == route) ? null : route;
+			if (selectedRoute != previous)
+			{
+				// Picking a different path starts a new journey — time it from here, not from the
+				// original destination (re-arm; the timer restarts on the next movement).
+				armJourney();
+			}
 			refreshPanel(false);
 		}
 	}
