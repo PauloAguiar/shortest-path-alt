@@ -119,13 +119,6 @@ public class CollisionMap
 
 		// Firstly check if there are any transports or teleports which are applicable from the current tile.
 		Transport[] transports = config.getTransportsPacked(pathBankVisited).getOrDefault(packedPosition, TransportAvailability.EMPTY_TRANSPORTS);
-		// If this tile was itself reached via a delayed-visit teleport (e.g. QUETZAL_WHISTLE), propagate its
-		// differential cost to any competing delayed-visit transports emitted from here. This prevents the
-		// pathfinder from choosing a chain (e.g. whistle → landing site A → fly to B) over a direct teleport
-		// to B, because the chain inherits the teleport's penalty and is therefore always more expensive.
-		int inheritedDifferential = (graph.isTransport(node) && graph.isDelayedVisit(node))
-			? graph.differentialCost(node)
-			: 0;
 		for (Transport transport : transports)
 		{
 			boolean delayedVisit = transport.getType().sharesDestinationsWith() != null;
@@ -136,19 +129,17 @@ public class CollisionMap
 			{
 				continue;
 			}
-			// Inherit the parent teleport's differential as a real cost on chained shared-destination transports,
-			// so that chaining (e.g. fly to landing site A then use station to B) is always more expensive than
-			// a direct teleport to B.
-			int chainPenalty = (delayedVisit && inheritedDifferential > 0) ? inheritedDifferential : 0;
 			// NB: Do not need to check for wilderness level for transports, since transports have specific origin tile.
+			// The whistle differential is REAL cost inside getAdditionalTransportCost, so a chain
+			// (whistle -> landing site A -> fly to B) prices itself above the direct whistle-to-B
+			// teleport with no special inheritance.
 			neighbors.add(graph.createTransport(
 				transport.getDestination(),
 				node,
 				CostUnits.fromTicks(transport.getDuration()),
-				config.getAdditionalTransportCost(transport) + chainPenalty + bankEntryCost,
+				config.getAdditionalTransportCost(transport) + bankEntryCost,
 				pathBankVisited,
-				delayedVisit,
-				delayedVisit ? config.getDifferentialCost(transport) : 0));
+				delayedVisit));
 		}
 
 		// Global teleports are only considered from an abstract node, so each
@@ -250,19 +241,13 @@ public class CollisionMap
 			{
 				continue;
 			}
-			// The differential cost is only used for priority-queue ordering (compareCost), not
-			// propagated as real cost, so applying it unconditionally is safe: a nearby partner
-			// station can still win the dequeue race, and a far-away whistle still resolves as the
-			// cheapest path because no competitor has a lower real cost to the same destination.
-			int differentialCost = delayedVisit ? config.getDifferentialCost(transport) : 0;
 			neighbors.add(graph.createTransport(
 				transport.getDestination(),
 				node,
 				CostUnits.fromTicks(transport.getDuration()),
 				config.getAdditionalTransportCost(transport),
 				bankVisited,
-				delayedVisit,
-				differentialCost));
+				delayedVisit));
 		}
 		return neighbors;
 	}

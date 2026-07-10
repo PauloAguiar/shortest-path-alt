@@ -4,6 +4,7 @@ import static net.runelite.api.Constants.REGION_SIZE;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -34,7 +35,10 @@ import gps.transport.Transport;
  * the generation. Unflooded tiles (reverse-unreachable from the targets) report
  * {@link #UNREACHED}; the heuristic maps them to its floor, which the consistency argument covers
  * because a forward transport edge into the flooded region implies its reversed edge existed in
- * the flood (so its origin would have been flooded).
+ * the flood (so its origin would have been flooded) — EXCEPT teleport/transport landings on
+ * blocked tiles, which the walking flood cannot step onto; {@link #patchBlockedLandings} values
+ * those from their step-off neighbours after the flood (leaving them at the floor overestimated
+ * the remaining cost, burying genuinely cheap routes through such landings).
  */
 public final class DistanceField
 {
@@ -220,7 +224,77 @@ public final class DistanceField
 				}
 			}
 		}
+		field.patchBlockedLandings(config, reverseTransports.keySet());
 		return field;
+	}
+
+	/**
+	 * Values the landings the walking flood cannot reach: a teleport/transport destination on a
+	 * BLOCKED tile (a quetzal platform, a jetty) is forward-occupiable — the player lands there and
+	 * steps off — but the reverse flood never steps ONTO a blocked tile, so such landings stayed
+	 * {@link #UNREACHED} and the heuristic sent them to its floor. That OVERESTIMATES the remaining
+	 * cost from the landing (breaking admissibility: the search then buries routes through it), and
+	 * inflates the floor itself, which skips unreached landings. Each such landing takes
+	 * {@code min(field(step-off neighbour)) + 1}, mirroring the forward blocked-tile step-off rules
+	 * exactly — a real forward edge, so the value stays a valid lower bound and h stays consistent.
+	 * No propagation is needed: blocked tiles have no walk edges into other blocked tiles, so a
+	 * patched value can never improve any other tile.
+	 */
+	private void patchBlockedLandings(PathfinderConfig config, Set<Integer> transportDestinations)
+	{
+		final Set<Integer> landings = new HashSet<>(transportDestinations);
+		for (boolean bankVisited : new boolean[]{false, true})
+		{
+			for (Transport teleport : config.getUsableTeleports(bankVisited))
+			{
+				if (teleport.getDestination() != WorldPointUtil.UNDEFINED)
+				{
+					landings.add(teleport.getDestination());
+				}
+			}
+		}
+		final int[] dx = {-1, 1, 0, 0, -1, 1, -1, 1};
+		final int[] dy = {0, 0, -1, 1, -1, -1, 1, 1};
+		for (int landing : landings)
+		{
+			final int x = WorldPointUtil.unpackWorldX(landing);
+			final int y = WorldPointUtil.unpackWorldY(landing);
+			final int plane = WorldPointUtil.unpackWorldPlane(landing);
+			if (distance(landing) != UNREACHED || !map.isBlocked(x, y, plane))
+			{
+				continue;
+			}
+			// Forward step-off adjacency from a blocked tile (CollisionMap.getTileNeighbors'
+			// isBlocked branch): any unblocked cardinal; diagonals need both flanking cardinals too.
+			final boolean westBlocked = map.isBlocked(x - 1, y, plane);
+			final boolean eastBlocked = map.isBlocked(x + 1, y, plane);
+			final boolean southBlocked = map.isBlocked(x, y - 1, plane);
+			final boolean northBlocked = map.isBlocked(x, y + 1, plane);
+			final boolean[] traversable = {
+				!westBlocked, !eastBlocked, !southBlocked, !northBlocked,
+				!map.isBlocked(x - 1, y - 1, plane) && !westBlocked && !southBlocked,
+				!map.isBlocked(x + 1, y - 1, plane) && !eastBlocked && !southBlocked,
+				!map.isBlocked(x - 1, y + 1, plane) && !westBlocked && !northBlocked,
+				!map.isBlocked(x + 1, y + 1, plane) && !eastBlocked && !northBlocked,
+			};
+			int best = UNREACHED;
+			for (int i = 0; i < 8; i++)
+			{
+				if (!traversable[i])
+				{
+					continue;
+				}
+				final int neighbour = distance(WorldPointUtil.packWorldPoint(x + dx[i], y + dy[i], plane));
+				if (neighbour != UNREACHED && neighbour + 1 < best)
+				{
+					best = neighbour + 1;
+				}
+			}
+			if (best != UNREACHED)
+			{
+				relax(x, y, plane, best);
+			}
+		}
 	}
 
 	/**

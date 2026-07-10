@@ -15,10 +15,11 @@ import gps.WorldPointUtil;
  * references (issue #491). Here every node is instead an {@code int} index into parallel primitive
  * arrays, so a whole search holds only a handful of arrays regardless of how many nodes it visits.
  * <p>
- * The fields packed per node are exactly those of the old {@code Node}/{@code TransportNode}:
- * packed world position, the index of the previous node ({@link #NO_NODE} for the start),
- * accumulated cost, the transport differential cost (queue-ordering only), a set of boolean flags,
- * and the {@link AbstractNodeKind} ordinal for abstract nodes.
+ * The fields packed per node are: packed world position, the index of the previous node
+ * ({@link #NO_NODE} for the start), accumulated cost, a set of boolean flags, and the
+ * {@link AbstractNodeKind} ordinal for abstract nodes. The priority-queue ordering key is
+ * EXACTLY the accumulated cost plus (in A* mode) a consistent heuristic — never anything else:
+ * any ordering-only term breaks the first-settle-is-optimal invariant the searches rely on.
  * <p>
  * <strong>Threading.</strong> The search runs on a single worker thread, but the render thread
  * reads the partial path while the search is still running (progressive rendering via
@@ -42,7 +43,7 @@ public class NodeGraph
 	private static final AbstractNodeKind[] ABSTRACT_KINDS = AbstractNodeKind.values();
 
 	// The node arrays are NOT volatile: making them volatile forces every accessor (packedPosition,
-	// cost, isTile, compareCost, the append() writes, ...) to re-read the array reference on each
+	// cost, isTile, orderCost, the append() writes, ...) to re-read the array reference on each
 	// call and blocks the JIT from caching the base in a register or eliminating bounds checks. The
 	// hot loop touches these hundreds of times per node, so volatile reads roughly halved field
 	// throughput (~1.6x slower searches). Safe publication to the render thread is provided instead
@@ -54,10 +55,9 @@ public class NodeGraph
 	private int[] packedPosition;
 	private int[] previous;
 	private int[] cost;
-	private int[] differentialCost;
-	// The priority-queue ordering key, precomputed at append time: compareCost plus — when a
-	// heuristic is attached (A* mode) — the node's heuristic value. With no heuristic it equals
-	// compareCost exactly, so Dijkstra-mode ordering is bit-for-bit unchanged.
+	// The priority-queue ordering key, precomputed at append time: the accumulated cost plus —
+	// when a heuristic is attached (A* mode) — the node's heuristic value. With no heuristic it
+	// equals the cost exactly, so Dijkstra-mode ordering is pure g.
 	private int[] orderCost;
 	private byte[] flags;
 	private byte[] abstractKind;
@@ -76,7 +76,6 @@ public class NodeGraph
 		packedPosition = new int[capacity];
 		previous = new int[capacity];
 		cost = new int[capacity];
-		differentialCost = new int[capacity];
 		orderCost = new int[capacity];
 		flags = new byte[capacity];
 		abstractKind = new byte[capacity];
@@ -101,21 +100,19 @@ public class NodeGraph
 		packedPosition = Arrays.copyOf(packedPosition, newCapacity);
 		previous = Arrays.copyOf(previous, newCapacity);
 		cost = Arrays.copyOf(cost, newCapacity);
-		differentialCost = Arrays.copyOf(differentialCost, newCapacity);
 		orderCost = Arrays.copyOf(orderCost, newCapacity);
 		flags = Arrays.copyOf(flags, newCapacity);
 		abstractKind = Arrays.copyOf(abstractKind, newCapacity);
 	}
 
-	private int append(int packed, int prev, int nodeCost, int diffCost, byte flagBits, byte kind)
+	private int append(int packed, int prev, int nodeCost, byte flagBits, byte kind)
 	{
 		ensureCapacity();
 		final int id = size;
 		packedPosition[id] = packed;
 		previous[id] = prev;
 		cost[id] = nodeCost;
-		differentialCost[id] = diffCost;
-		orderCost[id] = nodeCost + diffCost + (heuristic == null ? 0 : heuristic.of(packed));
+		orderCost[id] = nodeCost + (heuristic == null ? 0 : heuristic.of(packed));
 		abstractKind[id] = kind;
 		flags[id] = flagBits;
 		size = id + 1;
@@ -132,7 +129,7 @@ public class NodeGraph
 	 */
 	public int createStart(int packedPosition)
 	{
-		return append(packedPosition, NO_NODE, 0, 0, (byte) 0, (byte) 0);
+		return append(packedPosition, NO_NODE, 0, (byte) 0, (byte) 0);
 	}
 
 	/**
@@ -150,7 +147,7 @@ public class NodeGraph
 			: 0;
 		final byte flagBits = bankVisited ? FLAG_BANK_VISITED : 0;
 		return append(packedPosition, previous, costOf(previous) + Math.max(0, travelTime + extraCost),
-			0, flagBits, (byte) 0);
+			flagBits, (byte) 0);
 	}
 
 	/**
@@ -160,7 +157,7 @@ public class NodeGraph
 	 * weight can make a transport free but never cheaper than free (Dijkstra needs non-negative edges).
 	 */
 	public int createTransport(int packedPosition, int previous, int travelTime, int additionalCost,
-		boolean bankVisited, boolean delayedVisit, int differentialCost)
+		boolean bankVisited, boolean delayedVisit)
 	{
 		byte flagBits = FLAG_TRANSPORT;
 		if (bankVisited)
@@ -172,7 +169,7 @@ public class NodeGraph
 			flagBits |= FLAG_DELAYED_VISIT;
 		}
 		return append(packedPosition, previous, costOf(previous) + Math.max(0, travelTime + additionalCost),
-			differentialCost, flagBits, (byte) 0);
+			flagBits, (byte) 0);
 	}
 
 	/**
@@ -188,7 +185,7 @@ public class NodeGraph
 		{
 			flagBits |= FLAG_BANK_VISITED;
 		}
-		return append(WorldPointUtil.UNDEFINED, previous, costOf(previous) + Math.max(0, extraCost), 0, flagBits,
+		return append(WorldPointUtil.UNDEFINED, previous, costOf(previous) + Math.max(0, extraCost), flagBits,
 			(byte) abstractKind.ordinal());
 	}
 
@@ -207,22 +204,9 @@ public class NodeGraph
 		return cost[id];
 	}
 
-	public int differentialCost(int id)
-	{
-		return differentialCost[id];
-	}
-
 	/**
-	 * The cost used for priority-queue ordering, includes the transport differential.
-	 */
-	public int compareCost(int id)
-	{
-		return cost[id] + differentialCost[id];
-	}
-
-	/**
-	 * The precomputed priority-queue key: {@link #compareCost} plus the A* heuristic value when
-	 * one is attached (equal to compareCost otherwise).
+	 * The precomputed priority-queue key: the accumulated cost plus the A* heuristic value when
+	 * one is attached (equal to {@link #cost} otherwise).
 	 */
 	public int orderCost(int id)
 	{
@@ -344,7 +328,6 @@ public class NodeGraph
 		packedPosition = null;
 		previous = null;
 		cost = null;
-		differentialCost = null;
 		orderCost = null;
 		flags = null;
 		abstractKind = null;

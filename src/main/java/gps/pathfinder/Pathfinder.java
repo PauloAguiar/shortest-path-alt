@@ -27,13 +27,17 @@ public class Pathfinder implements Runnable
 	// They were found by checking the max queue size
 	private final IntDeque boundary = new IntDeque(4096);
 	private final IntMinHeap pending;
-	// A* mode (heuristic attached): every node goes through the f-ordered pending heap — the FIFO
-	// boundary's uniform-cost-layer assumption doesn't hold once the ordering key includes a
-	// position-dependent heuristic — and visited-marking moves from enqueue to dequeue (under f
-	// ordering the first ENQUEUE of a tile isn't necessarily via its cheapest parent; the first
-	// DEQUEUE is, because the heuristic is consistent). Costs are provably identical to the
-	// uninformed search; only exploration order and explored-set size change.
+	// A* mode (heuristic attached): the ordering key is g + a consistent heuristic instead of g.
 	private final boolean astar;
+	// Heap mode: every node goes through the ordered pending heap and visited-marking moves from
+	// enqueue to dequeue (the first DEQUEUE of a state is via its cheapest parent; the first
+	// ENQUEUE isn't necessarily). Engaged whenever the ordering can be non-uniform: a heuristic is
+	// attached (A*), or ANY transport/teleport is usable — a popped transport feeds tiles back
+	// into the FIFO at an arbitrary cost behind entries with larger costs, after which FIFO order
+	// is no longer cost order and enqueue-marking claims tiles via non-cheapest parents (returning
+	// non-minimal routes). The FIFO fast-path remains only for genuinely uniform-cost searches,
+	// where its layer assumption actually holds.
+	private final boolean heapMode;
 	private final VisitedTiles visited;
 	@Getter
 	private volatile boolean done = false;
@@ -100,8 +104,9 @@ public class Pathfinder implements Runnable
 		this.completionCallback = completionCallback;
 		this.costCap = costCap;
 		this.astar = heuristic != null;
+		this.heapMode = astar || anyTransportsUsable(config);
 		this.graph = new NodeGraph(1 << 14, heuristic);
-		this.pending = new IntMinHeap(graph, astar ? 4096 : 256);
+		this.pending = new IntMinHeap(graph, heapMode ? 4096 : 256);
 		visited = new VisitedTiles(map);
 		targetInWilderness = WildernessChecker.isInWilderness(targets);
 		targetInBlockedRegion = anyInBlockedRegion(config.getLeagueModeState(), targets);
@@ -118,6 +123,15 @@ public class Pathfinder implements Runnable
 	public boolean isAstar()
 	{
 		return astar;
+	}
+
+	/** Whether any transport or teleport is usable — the trigger for full heap ordering. */
+	private static boolean anyTransportsUsable(PathfinderConfig config)
+	{
+		return config.getTransportsPacked(false).size() > 0
+			|| config.getTransportsPacked(true).size() > 0
+			|| config.getUsableTeleports(false).length > 0
+			|| config.getUsableTeleports(true).length > 0;
 	}
 
 	private static boolean anyInBlockedRegion(LeagueModeState league, Set<Integer> packed)
@@ -241,11 +255,11 @@ public class Pathfinder implements Runnable
 			}
 
 			final boolean neighborIsTransport = graph.isTransport(neighbor);
-			// A* mode: nothing is marked at enqueue (the pop dedups instead — see the run loop) and
-			// every node is ordered by f through the pending heap. Stats are counted at settle
+			// Heap mode: nothing is marked at enqueue (the pop dedups instead — see the run loop)
+			// and every node is ordered through the pending heap. Stats are counted at settle
 			// (pop) rather than here: enqueues include duplicates, so counting them would make the
-			// explored-size numbers incomparable with the uninformed search.
-			if (astar)
+			// explored-size numbers incomparable with the FIFO search.
+			if (heapMode)
 			{
 				pending.add(neighbor);
 				continue;
@@ -347,14 +361,15 @@ public class Pathfinder implements Runnable
 
 			int node;
 			if (pendingHead != NodeGraph.NO_NODE
-				&& (boundaryHead == NodeGraph.NO_NODE || graph.compareCost(pendingHead) < graph.cost(boundaryHead)))
+				&& (boundaryHead == NodeGraph.NO_NODE || graph.cost(pendingHead) < graph.cost(boundaryHead)))
 			{
 				node = pending.poll();
 
 				// For delayed-visit nodes, check if the destination was already reached by a
-				// cheaper path while this node was queued. In A* mode EVERY node dedups here:
-				// nothing is marked at enqueue, and consistency makes the first dequeue optimal.
-				if (astar || graph.isDelayedVisit(node))
+				// cheaper path while this node was queued. In heap mode EVERY node dedups here:
+				// nothing is marked at enqueue, and cost ordering (plus a consistent heuristic in
+				// A* mode) makes the first dequeue optimal.
+				if (heapMode || graph.isDelayedVisit(node))
 				{
 					if (visited.get(node, graph))
 					{
@@ -362,9 +377,9 @@ public class Pathfinder implements Runnable
 					}
 					visited.set(node, graph);
 				}
-				// A* counts distinct settled states (enqueues include duplicates); the uninformed
+				// Heap mode counts distinct settled states (enqueues include duplicates); the FIFO
 				// search counts at enqueue, where marking makes every count unique.
-				if (astar)
+				if (heapMode)
 				{
 					if (graph.isTransport(node))
 					{

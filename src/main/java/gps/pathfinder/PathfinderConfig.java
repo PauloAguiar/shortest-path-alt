@@ -665,7 +665,14 @@ public class PathfinderConfig
 	}
 
 	/**
-	 * Returns the user-configured additional cost for a given transport
+	 * Returns the user-configured additional cost for a given transport, including — for types
+	 * that share destinations with a partner type (the quetzal whistle) — the type's differential
+	 * modifier as a REAL cost. It used to be a priority-queue-ordering-only term, but any term in
+	 * the ordering key that is not part of the true cost breaks the search's first-settle-is-optimal
+	 * invariant (a cheaper arrival at a shared destination could lose the settle race to a costlier
+	 * competitor and be discarded). As real cost it expresses the same intent — the whistle must
+	 * save more than the modifier to justify a charge — and the config text always promised it
+	 * ("modifier added to the route's cost").
 	 */
 	public int getAdditionalTransportCost(Transport transport)
 	{
@@ -673,25 +680,14 @@ public class PathfinderConfig
 		{
 			return costConsumableTeleportationItems;
 		}
+		int differential = transport.getType().differentialCostFunction() != null
+			? transport.getType().differentialCostFunction().apply(config)
+			: 0;
 		if (transport.isConsumable() && TransportType.QUETZAL_WHISTLE.equals(transport.getType()))
 		{
-			return transportTypeConfig.getCost(transport.getType()) + costConsumableTeleportationItems;
+			return transportTypeConfig.getCost(transport.getType()) + costConsumableTeleportationItems + differential;
 		}
-		return transportTypeConfig.getCost(transport.getType());
-	}
-
-	/**
-	 * Returns the differential cost for a transport type that shares destinations with another type.
-	 * This cost is only applied when the transport is in delayed-visit competition with its partner,
-	 * not globally against all other transport types.
-	 */
-	public int getDifferentialCost(Transport transport)
-	{
-		if (transport.getType().differentialCostFunction() != null)
-		{
-			return transport.getType().differentialCostFunction().apply(config);
-		}
-		return 0;
+		return transportTypeConfig.getCost(transport.getType()) + differential;
 	}
 
 	static Map<String, Set<Integer>> filterDestinations(Map<String, Set<Integer>> allDestinations)

@@ -40,7 +40,7 @@ public class CostModelTest
 	{
 		NodeGraph graph = new NodeGraph(16);
 		int start = graph.createStart(A);
-		int viaTransport = graph.createTransport(C, start, CostUnits.fromTicks(5), 7, false, false, 0);
+		int viaTransport = graph.createTransport(C, start, CostUnits.fromTicks(5), 7, false, false);
 		assertEquals("5 ticks of travel (10 units) + weight 7", 17, graph.cost(viaTransport));
 	}
 
@@ -52,7 +52,7 @@ public class CostModelTest
 		int walked = graph.createTile(B, start, false, 0); // cost 1
 		// Travel 3 ticks (6 units) with a -20 favor weight: the edge is free, not -14 — the route
 		// must never get cheaper by using a favored method (no negative edges).
-		int viaTransport = graph.createTransport(C, walked, CostUnits.fromTicks(3), -20, false, false, 0);
+		int viaTransport = graph.createTransport(C, walked, CostUnits.fromTicks(3), -20, false, false);
 		assertEquals("The favored transport is free but never pays back", 1, graph.cost(viaTransport));
 	}
 

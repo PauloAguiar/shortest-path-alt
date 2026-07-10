@@ -924,12 +924,14 @@ public class PathfinderTest
 	}
 
 	/**
-	 * Tests the cost boundary where the whistle differential tips the balance. Costs are in
+	 * Tests the cost boundary where the whistle modifier tips the balance. Costs are in
 	 * time-normalized units (1 unit = 1 run-tile, a game tick = 2 units, see CostUnits).
-	 * From 1 tile away: platform compareCost = 1 walk + 6-tick flight (12) = 13.
-	 * Whistle base cost = 4 ticks (8 units), compareCost = 8 + differential.
-	 * With differential=6: whistle compareCost=14 > platform=13, platform wins (path=3).
-	 * With differential=4: whistle compareCost=12 < platform=13, whistle wins (path=2).
+	 * The modifier is REAL cost on the whistle edge (an ordering-only term would break the
+	 * search's first-settle-is-optimal invariant).
+	 * From 1 tile away: platform cost = 1 walk + 6-tick flight (12) = 13.
+	 * Whistle base cost = 4 ticks (8 units), total = 8 + modifier.
+	 * With modifier=6: whistle 14 > platform 13, platform wins (path=3).
+	 * With modifier=4: whistle 12 < platform 13, whistle wins (path=2).
 	 */
 	@Test
 	public void testQuetzalWhistleCostBoundary()
@@ -940,14 +942,14 @@ public class PathfinderTest
 		int nearAldarinPlatform = WorldPointUtil.packWorldPoint(1390, 2901, 0); // 1 tile away
 		int hunterGuild = WorldPointUtil.packWorldPoint(1585, 3053, 0);
 
-		// Differential=6: whistle compareCost=14 > platform=13, platform should win
+		// Modifier=6: whistle cost 14 > platform 13, platform should win
 		when(config.costQuetzalWhistle()).thenReturn(6);
 		setupConfig(QuestState.FINISHED, 99, TeleportationItem.INVENTORY);
 
 		int pathLength = calculatePathLength(nearAldarinPlatform, hunterGuild);
 		assertEquals("Platform should win when whistle differential makes it more expensive", 3, pathLength);
 
-		// Differential=4: whistle compareCost=12 < platform=13, whistle should win
+		// Modifier=4: whistle cost 12 < platform 13, whistle should win
 		when(config.costQuetzalWhistle()).thenReturn(4);
 		setupConfig(QuestState.FINISHED, 99, TeleportationItem.INVENTORY);
 
@@ -976,7 +978,7 @@ public class PathfinderTest
 		int hunterGuild = WorldPointUtil.packWorldPoint(1585, 3053, 0);
 
 		int pathLength = calculatePathLength(faladorCenter, hunterGuild);
-		// Whistle teleport (compareCost=4) is cheapest: path = start -> dest = 2
+		// Whistle teleport (4 ticks) is cheapest: path = start -> dest = 2
 		assertEquals("Whistle should be used when far from any platform", 2, pathLength);
 	}
 
@@ -987,7 +989,7 @@ public class PathfinderTest
 	 * make a bank-detour route appear cheaper than a direct teleportation tab.
 	 * <p>
 	 * Verified via the Aldarin platform cost boundary, in time-normalized units (2 per tick):
-	 * from 1 tile away the platform compareCost is 13 (1 walk + 6-tick flight = 12). With
+	 * from 1 tile away the platform cost is 13 (1 walk + 6-tick flight = 12). With
 	 * costConsumableTeleportationItems=6 the whistle's actual cost becomes 8+6=14, strictly
 	 * past the platform, so the platform wins (path length 3). (A penalty of 5 would TIE at
 	 * 13, leaving the winner to heap-order luck.) Before the fix the whistle paid no
@@ -1584,6 +1586,7 @@ public class PathfinderTest
 		setupConfig(questState, skillLevel, useTeleportationItems);
 
 		int counter = 0;
+		int cheaperRoutes = 0;
 		PrimitiveIntHashMap<Transport[]> activeTransports = pathfinderConfig.getTransports();
 		for (int origin : activeTransports.keys())
 		{
@@ -1592,13 +1595,33 @@ public class PathfinderTest
 				if (transportType.equals(transport.getType()))
 				{
 					counter++;
-					assertEquals(transport.toString(), expectedLength, calculateTransportLength(transport));
+					Pathfinder pathfinder = runPathfinder(transport.getOrigin(), transport.getDestination());
+					int length = pathfinder.getPath().size();
+					if (length == expectedLength)
+					{
+						continue;
+					}
+					// The search is cost-optimal: when walking (or another transport) is at least
+					// as cheap as this transport's edge, taking it instead IS the correct route —
+					// the transport's presence is still verified by this very enumeration. (The
+					// old FIFO search claimed the destination at the transport's discovery even
+					// when a cheaper route existed, so it always returned the 2-step path; e.g.
+					// the 77-tick Shantay Pass carpet loses to a 131-tile walk on cost.)
+					int edgeCost = CostUnits.fromTicks(transport.getDuration())
+						+ pathfinderConfig.getAdditionalTransportCost(transport);
+					assertTrue(transport + ": path length " + length + " != " + expectedLength
+							+ " and the route's cost " + pathfinder.getResult().getTotalCost()
+							+ " does not beat the transport's edge cost " + edgeCost,
+						pathfinder.getResult().isReached()
+							&& pathfinder.getResult().getTotalCost() <= edgeCost);
+					cheaperRoutes++;
 				}
 			}
 		}
 
 		assertTrue("No tests were performed", counter > 0);
-		System.out.printf("Successfully completed %d " + transportType + " transport length tests%n", counter);
+		System.out.printf("Successfully completed %d " + transportType
+			+ " transport length tests (%d beaten by a cheaper route)%n", counter, cheaperRoutes);
 	}
 
 	/**

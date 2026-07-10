@@ -40,7 +40,8 @@ public class NodeGraphTest
 		assertEquals(WorldPointUtil.distanceBetween(a, b), graph.cost(tile));
 		assertEquals(start, graph.previous(tile));
 		assertTrue(graph.isTile(tile));
-		assertEquals(graph.cost(tile), graph.compareCost(tile));
+		// With no heuristic the queue-ordering key is EXACTLY the accumulated cost.
+		assertEquals(graph.cost(tile), graph.orderCost(tile));
 	}
 
 	@Test
@@ -112,29 +113,28 @@ public class NodeGraphTest
 
 		int travelTime = 6;
 		int additionalCost = 50;
-		int differentialCost = 4;
-		int transport = graph.createTransport(destination, prev, travelTime, additionalCost, false, true, differentialCost);
+		int transport = graph.createTransport(destination, prev, travelTime, additionalCost, false, true);
 
 		// No walking-distance term for transports, unlike a walked tile.
 		assertEquals(graph.cost(prev) + travelTime + additionalCost, graph.cost(transport));
-		assertEquals(graph.cost(transport) + differentialCost, graph.compareCost(transport));
+		// The queue-ordering key is the cost and nothing else (no heuristic attached here): an
+		// ordering-only term would break the first-settle-is-optimal invariant.
+		assertEquals(graph.cost(transport), graph.orderCost(transport));
 		assertTrue(graph.isTransport(transport));
 		assertTrue(graph.isDelayedVisit(transport));
 		assertTrue(graph.isTile(transport)); // transports are concrete tile destinations
-		assertEquals(differentialCost, graph.differentialCost(transport));
 	}
 
 	@Test
-	public void nonDelayedTransportHasNoDelayedFlagAndZeroDifferential()
+	public void nonDelayedTransportHasNoDelayedFlag()
 	{
 		NodeGraph graph = new NodeGraph(16);
 		int start = graph.createStart(WorldPointUtil.packWorldPoint(3200, 3200, 0));
-		int transport = graph.createTransport(WorldPointUtil.packWorldPoint(2800, 3400, 0), start, 6, 0, true, false, 0);
+		int transport = graph.createTransport(WorldPointUtil.packWorldPoint(2800, 3400, 0), start, 6, 0, true, false);
 
 		assertTrue(graph.isTransport(transport));
 		assertFalse(graph.isDelayedVisit(transport));
-		assertEquals(0, graph.differentialCost(transport));
-		assertEquals(graph.cost(transport), graph.compareCost(transport));
+		assertEquals(graph.cost(transport), graph.orderCost(transport));
 		assertTrue(graph.bankVisited(transport));
 	}
 
@@ -148,7 +148,7 @@ public class NodeGraphTest
 		int start = graph.createStart(a);
 		int tile = graph.createTile(b, start, false, 0);
 		int abstractNode = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, tile, false, 0);
-		int teleportDest = graph.createTransport(c, abstractNode, 6, 0, false, false, 0);
+		int teleportDest = graph.createTransport(c, abstractNode, 6, 0, false, false);
 
 		var steps = graph.getPathSteps(teleportDest);
 		assertEquals(3, steps.size()); // start, tile, teleportDest (abstract is skipped)

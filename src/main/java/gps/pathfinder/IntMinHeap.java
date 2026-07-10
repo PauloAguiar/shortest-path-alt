@@ -3,13 +3,14 @@ package gps.pathfinder;
 import java.util.Arrays;
 
 /**
- * A binary min-heap of primitive {@code int} node ids ordered by {@link NodeGraph#orderCost} (compareCost, plus the heuristic in A* mode).
+ * A binary min-heap of primitive {@code int} node ids ordered by {@link NodeGraph#orderCost} (the
+ * accumulated cost, plus the heuristic in A* mode).
  * <p>
  * Replaces the {@code PriorityQueue<TransportNode>} pending queue in {@link Pathfinder} so transport
  * candidates are stored as int ids rather than boxed node objects. The ordering key is fixed when a
- * node is created (its differential cost never changes), so no decrease-key support is needed; the
- * pathfinder discards stale cheaper duplicates with its dequeue-time visited re-check. Single-threaded
- * (worker only), matching the queue it replaces.
+ * node is created, so no decrease-key support is needed; the pathfinder discards stale costlier
+ * duplicates with its dequeue-time visited re-check. Single-threaded (worker only), matching the
+ * queue it replaces.
  */
 class IntMinHeap
 {
