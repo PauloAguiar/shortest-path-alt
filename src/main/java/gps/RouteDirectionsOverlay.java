@@ -187,7 +187,10 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		// distance bands — see ShortestPathPlugin's off-route handling).
 		if (plugin.isOffRouteWarning())
 		{
-			lines.add(new Line("Off route — recomputing if you drift further", FONT_NEXT, OFF_ROUTE, null, null));
+			// With auto-recalculate off the route is deliberately kept, so don't promise a recompute.
+			lines.add(new Line(plugin.isAutoRecalculateEnabled()
+				? "Off route — recomputing if you drift further"
+				: "Off route", FONT_NEXT, OFF_ROUTE, null, null));
 		}
 
 		// Window: collapse all but the most recent completed step into one summary line, then show

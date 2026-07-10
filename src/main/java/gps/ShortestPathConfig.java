@@ -363,11 +363,24 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "autoRecalculate",
+		name = "Auto-recalculate route",
+		description = "Automatically recompute the route when you stray beyond the recalculate distance.<br>" +
+			"When off, GPS keeps the original route and only shows the off-route warning",
+		position = 25,
+		section = sectionSettings
+	)
+	default boolean autoRecalculate()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "cancelInstead",
 		name = "Cancel instead of recalculating",
 		description = "Whether the path should be cancelled rather than recalculated " +
 			"when the recalculate distance limit is exceeded",
-		position = 25,
+		position = 26,
 		section = sectionSettings
 	)
 	default boolean cancelInstead()
@@ -383,7 +396,7 @@ public interface ShortestPathConfig extends Config
 		keyName = "recalculateDistance",
 		name = "Recalculate distance",
 		description = "Distance from the path the player should be for it to be recalculated (-1 for never)",
-		position = 26,
+		position = 27,
 		section = sectionSettings
 	)
 	default int recalculateDistance()
@@ -401,7 +414,7 @@ public interface ShortestPathConfig extends Config
 		description = "Distance from the path at which GPS warns you're drifting off route.<br>" +
 			"Below it you're on route; between it and the recalculate distance the overlay shows a<br>" +
 			"red warning; beyond the recalculate distance the route is recomputed.",
-		position = 26,
+		position = 28,
 		section = sectionSettings
 	)
 	default int offRouteWarnDistance()
@@ -418,7 +431,7 @@ public interface ShortestPathConfig extends Config
 		name = "Finish distance",
 		description = "Distance from the destination at which the journey counts as complete (-1 for never, 0 for the exact tile).<br>" +
 			"Measured in walking steps around the destination, so a tile across a wall doesn't count",
-		position = 27,
+		position = 29,
 		section = sectionSettings
 	)
 	default int reachedDistance()
@@ -434,7 +447,7 @@ public interface ShortestPathConfig extends Config
 		name = "Unreachable target distance",
 		description = "Distance from the target at which a finished path is considered not to reach the target." +
 			"<br>Useful for determining if a path is potentially invalid.",
-		position = 28,
+		position = 30,
 		section = sectionSettings
 	)
 	default int unreachableTargetDistance()
@@ -446,7 +459,7 @@ public interface ShortestPathConfig extends Config
 		keyName = "showTileCounter",
 		name = "Show tile counter",
 		description = "Whether to display the number of tiles travelled, number of tiles remaining or disable counting",
-		position = 29,
+		position = 31,
 		section = sectionSettings
 	)
 	default TileCounter showTileCounter()
@@ -458,7 +471,7 @@ public interface ShortestPathConfig extends Config
 		keyName = "tileCounterStep",
 		name = "Tile counter step",
 		description = "The number of tiles between the displayed tile counter numbers",
-		position = 30,
+		position = 32,
 		section = sectionSettings
 	)
 	default int tileCounterStep()
@@ -478,7 +491,7 @@ public interface ShortestPathConfig extends Config
 		name = "Calculation cutoff",
 		description = "The cutoff threshold in number of ticks (0.6 seconds) of no progress being<br>" +
 			"made towards the path target before the calculation will be stopped",
-		position = 31,
+		position = 33,
 		section = sectionSettings
 	)
 	default int calculationCutoff()
@@ -490,7 +503,7 @@ public interface ShortestPathConfig extends Config
 		keyName = "showTransportInfo",
 		name = "Show transport info",
 		description = "Whether to display transport destination hint info, e.g. which chat option and text to click",
-		position = 32,
+		position = 34,
 		section = sectionSettings
 	)
 	default boolean showTransportInfo()
@@ -502,7 +515,7 @@ public interface ShortestPathConfig extends Config
 		keyName = "showBankPickupInfo",
 		name = "Show transport hint at pickup",
 		description = "When standing at a bank on the path, also show the transport hint for the next step requiring an item pickup",
-		position = 33,
+		position = 35,
 		section = sectionSettings
 	)
 	default boolean showBankPickupInfo()
@@ -516,7 +529,7 @@ public interface ShortestPathConfig extends Config
 		name = "Enable POH teleports",
 		description = "Master toggle for all Player-Owned House (POH) teleports.<br>" +
 			"When disabled, all POH transports are excluded regardless of individual settings below.",
-		position = 35,
+		position = 36,
 		section = sectionSettings
 	)
 	default boolean usePoh()
@@ -530,7 +543,7 @@ public interface ShortestPathConfig extends Config
 		name = "POH fairy ring",
 		description = "Whether to include the POH fairy ring in the path.<br>" +
 			"Enable this if you have built a fairy ring in your house (85 Construction or boosted)",
-		position = 36,
+		position = 37,
 		section = sectionSettings
 	)
 	default boolean usePohFairyRing()
@@ -544,7 +557,7 @@ public interface ShortestPathConfig extends Config
 		name = "POH spirit tree",
 		description = "Whether to include the POH spirit tree in the path.<br>" +
 			"Enable this if you have built a spirit tree in your house (75 Construction, 83 Farming or boosted)",
-		position = 37,
+		position = 38,
 		section = sectionSettings
 	)
 	default boolean usePohSpiritTree()
@@ -557,7 +570,7 @@ public interface ShortestPathConfig extends Config
 		keyName = "useTeleportationPortalsPoh",
 		name = "POH portal nexus",
 		description = "Whether to include POH teleportation portals/nexus in the path",
-		position = 38,
+		position = 39,
 		section = sectionSettings
 	)
 	default boolean useTeleportationPortalsPoh()
@@ -571,7 +584,7 @@ public interface ShortestPathConfig extends Config
 		name = "POH jewellery box tier",
 		description = "The tier of jewellery box built in your POH<br>" +
 			"(Basic: 1-9, Fancy: A-J, Ornate: K-R). Set to None to disable jewellery box.",
-		position = 39,
+		position = 40,
 		section = sectionSettings
 	)
 	default JewelleryBoxTier pohJewelleryBoxTier()
@@ -585,7 +598,7 @@ public interface ShortestPathConfig extends Config
 		name = "POH mounted items",
 		description = "Whether to include POH mounted items in the path<br>" +
 			"(e.g. mounted glory, Xeric's talisman, digsite pendant, mythical cape)",
-		position = 40,
+		position = 41,
 		section = sectionSettings
 	)
 	default boolean usePohMountedItems()
@@ -599,7 +612,7 @@ public interface ShortestPathConfig extends Config
 		name = "POH wilderness obelisk",
 		description = "Whether to include the POH wilderness obelisk in the path.<br>" +
 			"Enable this if you have built an obelisk in your house (80 Construction or boosted)",
-		position = 41,
+		position = 42,
 		section = sectionSettings
 	)
 	default boolean usePohObelisk()
@@ -612,7 +625,7 @@ public interface ShortestPathConfig extends Config
 		description = "A cost modifier (in run-tiles) added when a route uses each travel method.<br>" +
 			"0 = judged purely on real travel time. Positive avoids the method unless it saves more<br>" +
 			"than that many tiles of walking; negative favours it.",
-		position = 42,
+		position = 43,
 		closedByDefault = true
 	)
 	String sectionThresholds = "sectionThresholds";

@@ -577,6 +577,12 @@ public class ShortestPathPlugin extends Plugin
 		return config.recalculateDistance();
 	}
 
+	/** Whether drifting past the recalculate distance recomputes (or cancels) the route. */
+	public boolean isAutoRecalculateEnabled()
+	{
+		return config.autoRecalculate() && config.recalculateDistance() >= 0;
+	}
+
 	/** The off-route warning distance (inner band), clamped below the recalculate distance. */
 	public int getOffRouteWarnDistance()
 	{
@@ -1263,7 +1269,8 @@ public class ShortestPathPlugin extends Plugin
 		// Off-route handling, in three bands of distance from the path: on route (nothing), a
 		// warning band (the overlay shows a red "drifting off route" message), and — on a move that
 		// reaches the recalculate distance — a full recompute. Recalc fires only on movement so a
-		// stationary far position (e.g. just teleported off-path) doesn't loop.
+		// stationary far position (e.g. just teleported off-path) doesn't loop. With
+		// auto-recalculate off, GPS keeps the original route and only ever warns.
 		int recalc = config.recalculateDistance();
 		if (!startPointSet && recalc >= 0)
 		{
@@ -1275,7 +1282,7 @@ public class ShortestPathPlugin extends Plugin
 			{
 				offRouteWarning = false;
 			}
-			else if (moved && d >= recalc)
+			else if (moved && d >= recalc && config.autoRecalculate())
 			{
 				offRouteWarning = false;
 				if (config.cancelInstead())
