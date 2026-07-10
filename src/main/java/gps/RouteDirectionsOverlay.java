@@ -45,11 +45,13 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private static final Color UPCOMING = new Color(0xB4, 0xB4, 0xB4);
 	private static final Color OFF_ROUTE = new Color(0xFF, 0x4C, 0x4C);
 
-	// Magnifying-glass effect via the fonts' NATIVE sizes only: the RuneScape fonts are bitmap-style
-	// and deform when scaled with deriveFont. Bold (16) > regular (16, lighter) > small.
-	private static final Font FONT_CURRENT = FontManager.getRunescapeBoldFont();
-	private static final Font FONT_NEXT = FontManager.getRunescapeFont();
-	private static final Font FONT_OTHER = FontManager.getRunescapeSmallFont();
+	// Magnifying-glass hierarchy: bold (16) > regular (16, lighter) > small. Scaled by the
+	// overlay-text-size percent — at 100% the fonts stay at their NATIVE sizes, where the
+	// bitmap-styled RuneScape fonts look best; other sizes derive and get chunkier.
+	private int fontScalePercent = 100;
+	private Font fontCurrent = FontManager.getRunescapeBoldFont();
+	private Font fontNext = FontManager.getRunescapeFont();
+	private Font fontOther = FontManager.getRunescapeSmallFont();
 
 	private final Client client;
 	private final ShortestPathPlugin plugin;
@@ -125,6 +127,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			: ComponentConstants.STANDARD_BACKGROUND_COLOR);
 		accent = plugin.colourOverlayAccent;
 		accentEnding = lighten(accent, 0.35f);
+		refreshFonts();
 		long now = System.currentTimeMillis();
 		RouteOption route = plugin.getDisplayedRoute();
 		if (route == null)
@@ -181,7 +184,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		arrivalSource = source;
 		if (source != null)
 		{
-			lines.add(new Line("Destination set by " + source, FONT_OTHER, UPCOMING, null, null));
+			lines.add(new Line("Destination set by " + source, fontOther, UPCOMING, null, null));
 		}
 		// Drifting off the drawn path: warn before the route is recomputed (the middle of the three
 		// distance bands — see ShortestPathPlugin's off-route handling).
@@ -190,7 +193,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			// With auto-recalculate off the route is deliberately kept, so don't promise a recompute.
 			lines.add(new Line(plugin.isAutoRecalculateEnabled()
 				? "Off route — recomputing if you drift further"
-				: "Off route", FONT_NEXT, OFF_ROUTE, null, null));
+				: "Off route", fontNext, OFF_ROUTE, null, null));
 		}
 
 		// Window: collapse all but the most recent completed step into one summary line, then show
@@ -199,7 +202,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		if (windowStart > 0)
 		{
 			lines.add(new Line("✓ " + windowStart + (windowStart == 1 ? " step done" : " steps done"),
-				FONT_OTHER, DONE, null, null));
+				fontOther, DONE, null, null));
 		}
 		int shown = 0;
 		int i = windowStart;
@@ -219,29 +222,29 @@ public class RouteDirectionsOverlay extends OverlayPanel
 				// marks completion on its own.
 				text = "✓ " + text;
 				colour = DONE;
-				font = FONT_OTHER;
+				font = fontOther;
 			}
 			else if (i == current)
 			{
 				colour = nearEnd(step) ? accentEnding : accent;
-				font = FONT_CURRENT;
+				font = fontCurrent;
 			}
 			else if (i == current + 1)
 			{
 				colour = NEXT;
-				font = FONT_NEXT;
+				font = fontNext;
 			}
 			else
 			{
 				colour = UPCOMING;
-				font = FONT_OTHER;
+				font = fontOther;
 			}
 			lines.add(new Line(text, font, colour,
 				formatTime((int) Math.ceil(step.getTicks() * RouteDirections.SECONDS_PER_TICK)), colour));
 		}
 		if (i < steps.size())
 		{
-			lines.add(new Line("… " + (steps.size() - i) + " more", FONT_OTHER, DONE, null, null));
+			lines.add(new Line("… " + (steps.size() - i) + " more", fontOther, DONE, null, null));
 		}
 
 		Dimension dimension = renderPanel(graphics, lines);
@@ -274,7 +277,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		panelComponent.getChildren().add(
 			LineComponent.builder()
 				.left(" ")
-				.leftFont(FONT_CURRENT)
+				.leftFont(fontCurrent)
 				.build());
 		for (Line line : lines)
 		{
@@ -286,19 +289,15 @@ public class RouteDirectionsOverlay extends OverlayPanel
 					LineComponent.builder().left(" ").leftFont(line.font).build());
 				continue;
 			}
-			// Own row component instead of LineComponent for one reason: the outline text effect
-			// (LineComponent only shadows), which keeps the text readable when the transparent
-			// background removes the panel behind it.
-			OutlinedLineComponent.OutlinedLineComponentBuilder builder = OutlinedLineComponent.builder()
+			LineComponent.LineComponentBuilder builder = LineComponent.builder()
 				.left(ellipsize(graphics, line.font, line.left, panelWidth - rightWidth(graphics, line) - PANEL_PADDING))
 				.leftColor(line.colour)
-				.leftFont(line.font)
-				.outlined(plugin.transparentDirectionsBackground);
+				.leftFont(line.font);
 			if (line.right != null)
 			{
 				builder.right(line.right)
 					.rightColor(line.rightColour)
-					.rightFont(line.font == FONT_CURRENT ? FONT_NEXT : FONT_OTHER);
+					.rightFont(line.font == fontCurrent ? fontNext : fontOther);
 			}
 			panelComponent.getChildren().add(builder.build());
 		}
@@ -338,25 +337,11 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		}
 	}
 
-	/**
-	 * Draws laid-out text with the panel's text effect: a black OUTLINE (all four sides) in
-	 * transparent mode — where there is no panel behind the glyphs to carry them — or the stock
-	 * one-pixel drop shadow otherwise.
-	 */
-	private void drawLayout(Graphics2D graphics, TextLayout layout, float x, float baseline, Color colour)
+	/** Draws laid-out text with the stock one-pixel drop shadow (spacing-neutral in every mode). */
+	private static void drawLayout(Graphics2D graphics, TextLayout layout, float x, float baseline, Color colour)
 	{
 		graphics.setColor(Color.BLACK);
-		if (plugin.transparentDirectionsBackground)
-		{
-			layout.draw(graphics, x, baseline + 1);
-			layout.draw(graphics, x, baseline - 1);
-			layout.draw(graphics, x + 1, baseline);
-			layout.draw(graphics, x - 1, baseline);
-		}
-		else
-		{
-			layout.draw(graphics, x + 1, baseline + 1);
-		}
+		layout.draw(graphics, x + 1, baseline + 1);
 		graphics.setColor(colour);
 		layout.draw(graphics, x, baseline);
 	}
@@ -371,6 +356,31 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		final int alpha = Math.max(0, Math.min(255, Math.round(255 * opacityPercent / 100f)));
 		final Color standard = ComponentConstants.STANDARD_BACKGROUND_COLOR;
 		return new Color(standard.getRed(), standard.getGreen(), standard.getBlue(), alpha);
+	}
+
+	/** Rebuilds the three fonts when the text-size percent changes (100% = native sizes). */
+	private void refreshFonts()
+	{
+		final int percent = Math.max(50, Math.min(200, plugin.overlayTextSize));
+		if (percent == fontScalePercent)
+		{
+			return;
+		}
+		fontScalePercent = percent;
+		final Font bold = FontManager.getRunescapeBoldFont();
+		final Font regular = FontManager.getRunescapeFont();
+		final Font small = FontManager.getRunescapeSmallFont();
+		if (percent == 100)
+		{
+			fontCurrent = bold;
+			fontNext = regular;
+			fontOther = small;
+			return;
+		}
+		final float factor = percent / 100f;
+		fontCurrent = bold.deriveFont(bold.getSize2D() * factor);
+		fontNext = regular.deriveFont(regular.getSize2D() * factor);
+		fontOther = small.deriveFont(small.getSize2D() * factor);
 	}
 
 	/** Blends a colour toward white — the derived "about to end" shade of the accent. */
@@ -401,19 +411,9 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		graphics.setColor(new Color(0x10, 0x10, 0x10));
 		graphics.fillOval(px + 3, py + 3, 3, 3);
 
-		graphics.setFont(FONT_CURRENT);
+		graphics.setFont(fontCurrent);
 		graphics.setColor(Color.BLACK);
-		if (plugin.transparentDirectionsBackground)
-		{
-			graphics.drawString("GPS", px + 13, py + 12);
-			graphics.drawString("GPS", px + 13, py + 10);
-			graphics.drawString("GPS", px + 14, py + 11);
-			graphics.drawString("GPS", px + 12, py + 11);
-		}
-		else
-		{
-			graphics.drawString("GPS", px + 14, py + 12);
-		}
+		graphics.drawString("GPS", px + 14, py + 12);
 		graphics.setColor(Color.WHITE);
 		graphics.drawString("GPS", px + 13, py + 11);
 
@@ -430,7 +430,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	{
 		// TextLayout gives the glyphs' tight pixel bounds — the RuneScape fonts' metrics (ascent,
 		// leading) don't match their visual size, which kept mis-centring the text in the pill.
-		TextLayout layout = new TextLayout(etaText, FONT_OTHER, graphics.getFontRenderContext());
+		TextLayout layout = new TextLayout(etaText, fontOther, graphics.getFontRenderContext());
 		Rectangle2D bounds = layout.getBounds();
 		int width = (int) Math.ceil(bounds.getWidth()) + 12;
 		int height = (int) Math.ceil(bounds.getHeight()) + 8;
@@ -484,9 +484,9 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		}
 	}
 
-	private static int rightWidth(Graphics2D graphics, Line line)
+	private int rightWidth(Graphics2D graphics, Line line)
 	{
-		return line.right == null ? 0 : graphics.getFontMetrics(FONT_OTHER).stringWidth(line.right) + 6;
+		return line.right == null ? 0 : graphics.getFontMetrics(fontOther).stringWidth(line.right) + 6;
 	}
 
 	/**
@@ -569,11 +569,11 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		List<Line> lines = new ArrayList<>();
 		if (arrivalSource != null)
 		{
-			lines.add(new Line("Destination set by " + arrivalSource, FONT_OTHER, UPCOMING, null, null));
+			lines.add(new Line("Destination set by " + arrivalSource, fontOther, UPCOMING, null, null));
 		}
-		lines.add(new Line("Arrived!", FONT_CURRENT, ARRIVED, null, null, true));
-		lines.add(new Line("in " + formatTime((int) (arrivalElapsedMillis / 1000)), FONT_NEXT, NEXT, null, null, true));
-		lines.add(new Line("(click to dismiss)", FONT_OTHER, DONE, null, null, true));
+		lines.add(new Line("Arrived!", fontCurrent, ARRIVED, null, null, true));
+		lines.add(new Line("in " + formatTime((int) (arrivalElapsedMillis / 1000)), fontNext, NEXT, null, null, true));
+		lines.add(new Line("(click to dismiss)", fontOther, DONE, null, null, true));
 		return renderPanel(graphics, lines);
 	}
 

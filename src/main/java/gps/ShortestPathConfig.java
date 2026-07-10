@@ -1154,12 +1154,27 @@ public interface ShortestPathConfig extends Config
 		return 0;
 	}
 
+	@Range(min = 50, max = 200)
+	@Units(Units.PERCENT)
+	@ConfigItem(
+		keyName = "overlayTextSize",
+		name = "Overlay text size",
+		description = "Scales the GPS directions overlay's text (100% = the standard RuneScape fonts).<br>" +
+			"The fonts are bitmap-styled, so sizes far from 100% look chunkier",
+		position = 78,
+		section = sectionDisplay
+	)
+	default int overlayTextSize()
+	{
+		return 100;
+	}
+
 	@ConfigItem(
 		keyName = "arrivalAutoDismiss",
 		name = "Auto-dismiss arrival",
 		description = "Automatically hide the \"Arrived!\" panel after a delay.<br>" +
 			"When off it stays until clicked",
-		position = 78,
+		position = 79,
 		section = sectionDisplay
 	)
 	default boolean arrivalAutoDismiss()
@@ -1173,7 +1188,7 @@ public interface ShortestPathConfig extends Config
 		keyName = "arrivalDismissSeconds",
 		name = "Arrival dismiss delay",
 		description = "How long the \"Arrived!\" panel lingers before auto-dismissing (when enabled)",
-		position = 79,
+		position = 80,
 		section = sectionDisplay
 	)
 	default int arrivalDismissSeconds()
