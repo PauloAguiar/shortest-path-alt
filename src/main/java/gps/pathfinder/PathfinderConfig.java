@@ -1174,10 +1174,16 @@ public class PathfinderConfig
 			return false;
 		}
 
-		// Seasonal (Leagues) transports appear in the method catalog like any other type and are
-		// excluded by default (the plugin seeds them into the user exclusions), so the player enables
-		// them individually — no structural gate here.
-		if (TransportType.SPIRIT_TREE.equals(type) || TransportType.SEASONAL_TRANSPORTS.equals(type))
+		// Seasonal (Leagues) transports are hidden entirely unless the master toggle is on: gating
+		// here (a structural rule that applies in EVERY mode, including the catalog pass and the
+		// "All" family) keeps them out of routes, the method catalog and captures alike. They only
+		// function in a seasonal world, so off-by-default is right for the common case.
+		if (TransportType.SEASONAL_TRANSPORTS.equals(type))
+		{
+			return transportTypeConfig.isEnabled(TransportType.SEASONAL_TRANSPORTS)
+				&& checkPlantedSpiritTrees(transport);
+		}
+		if (TransportType.SPIRIT_TREE.equals(type))
 		{
 			return checkPlantedSpiritTrees(transport);
 		}

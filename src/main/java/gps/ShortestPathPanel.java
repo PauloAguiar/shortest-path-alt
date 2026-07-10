@@ -347,7 +347,7 @@ public class ShortestPathPanel extends PluginPanel
 		debugItem.addActionListener(e -> plugin.captureDebugSnapshot());
 		actionsMenu.add(debugItem);
 		JMenuItem resetItem = new JMenuItem("Reset excluded methods", RouteIcons.CLEAR);
-		resetItem.setToolTipText("Return the method exclusions to their defaults (seasonal methods stay off)");
+		resetItem.setToolTipText("Re-include every method you've disabled");
 		resetItem.addActionListener(e -> plugin.clearExclusions());
 		actionsMenu.add(resetItem);
 		IconActionLabel[] menuButton = new IconActionLabel[1];
@@ -1120,9 +1120,9 @@ public class ShortestPathPanel extends PluginPanel
 		titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 		titleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 		// The headline count is the methods a search can ACTUALLY use: usable right now (not
-		// missing an item/level/quest/unlock) AND not excluded — so it responds to the toggles,
-		// including the seasonal set that starts excluded. Broken down into permanent (unlimited
-		// use) and charged (consumes a charge or the item itself — tabs, charged jewellery).
+		// missing an item/level/quest/unlock) AND not excluded — so it responds to the toggles.
+		// Broken down into permanent (unlimited use) and charged (consumes a charge or the item
+		// itself — tabs, charged jewellery).
 		int enabled = 0;
 		int usable = 0;
 		int included = 0;

@@ -232,11 +232,6 @@ public class ShortestPathPlugin extends Plugin
 	private AlternativeRoutesService altRoutesService;
 	private static final String CONFIG_KEY_EXCLUSIONS = "alternativeRoutesExclusions";
 	private static final String CONFIG_KEY_MODE = "alternativeRoutesMode";
-	// One-shot marker: seasonal (Leagues) methods are excluded by default, seeded into the user
-	// exclusions the first time the catalog appears. After that the player controls them like any
-	// other method (so re-enabled ones aren't re-disabled).
-	private static final String CONFIG_KEY_SEASONAL_DEFAULTED = "seasonalMethodsDefaultExcluded";
-	private volatile boolean seasonalDefaultsApplied = false;
 	// The search box's recent selections (most recent first), persisted across sessions.
 	private static final String CONFIG_KEY_SEARCH_HISTORY = "searchHistory";
 	private volatile List<Destinations.Entry> searchHistory = new ArrayList<>();
@@ -501,8 +496,6 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		loadExclusions();
-		seasonalDefaultsApplied = Boolean.parseBoolean(
-			configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_SEASONAL_DEFAULTED));
 		searchHistory = SearchHistory.deserialize(
 			configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_SEARCH_HISTORY));
 		loadRoutesMode();
@@ -2382,37 +2375,6 @@ public class ShortestPathPlugin extends Plugin
 		return tiles == null ? Set.of() : tiles;
 	}
 
-	/**
-	 * The first time the catalog is delivered, seed every seasonal (Leagues) method into the user
-	 * exclusions so they're disabled by default — the player then enables them individually like any
-	 * other method. A one-shot config marker guards it, so a method the player later re-enables is
-	 * never re-disabled. Runs on the alt-routes worker thread; the set and configManager are both
-	 * thread-safe, and the panel picks up the change via the {@code getUserExclusions()} it's about
-	 * to be handed in the same update.
-	 */
-	private void applySeasonalDefaultExclusions(List<TeleportMethod> catalog)
-	{
-		if (seasonalDefaultsApplied || catalog == null || catalog.isEmpty())
-		{
-			return;
-		}
-		seasonalDefaultsApplied = true;
-		boolean changed = false;
-		for (TeleportMethod method : catalog)
-		{
-			if (method.getType() == gps.transport.TransportType.SEASONAL_TRANSPORTS
-				&& userExclusions.add(method))
-			{
-				changed = true;
-			}
-		}
-		if (changed)
-		{
-			saveExclusions();
-		}
-		configManager.setConfiguration(CONFIG_GROUP, CONFIG_KEY_SEASONAL_DEFAULTED, true);
-	}
-
 	public void selectRoute(int index)
 	{
 		List<RouteOption> routes = alternativeRoutes;
@@ -2510,16 +2472,9 @@ public class ShortestPathPlugin extends Plugin
 	{
 		if (!userExclusions.isEmpty())
 		{
+			// Seasonal (Leagues) methods are gated by their own "Enable seasonal transports" toggle,
+			// not the exclusion set, so clearing exclusions no longer needs to re-seed them.
 			userExclusions.clear();
-			// Resetting returns to the DEFAULT state, and the default has seasonal (Leagues) methods
-			// disabled — re-seed them so a reset doesn't quietly re-enable a whole league's teleports.
-			for (TeleportMethod method : teleportCatalog)
-			{
-				if (method.getType() == gps.transport.TransportType.SEASONAL_TRANSPORTS)
-				{
-					userExclusions.add(method);
-				}
-			}
 			saveExclusions();
 			// No recalculation here: exclusions apply on the next "Refresh routes to target" (or any
 			// other recompute); this just refreshes the panel so the catalog icons and counts update.
@@ -2998,7 +2953,6 @@ public class ShortestPathPlugin extends Plugin
 		alternativeRoutes = routes;
 		teleportCatalog = catalog;
 		unavailableMethods = unavailable;
-		applySeasonalDefaultExclusions(catalog);
 		if (done)
 		{
 			// "More" is available while the last generation left routes unshown (cost cap or count
@@ -3062,12 +3016,27 @@ public class ShortestPathPlugin extends Plugin
 			TeleportMethod[] saved = gson.fromJson(json, TeleportMethod[].class);
 			if (saved != null)
 			{
+				boolean droppedSeasonal = false;
 				for (TeleportMethod method : saved)
 				{
-					if (method != null && method.getType() != null)
+					if (method == null || method.getType() == null)
 					{
-						userExclusions.add(method);
+						continue;
 					}
+					// Migration: seasonal methods used to be seeded into the exclusion set as the
+					// "disabled by default" mechanism. They're now gated by the "Enable seasonal
+					// transports" toggle instead, so drop any that a prior version persisted here —
+					// otherwise they'd linger in the set (and in debug captures) forever.
+					if (method.getType() == gps.transport.TransportType.SEASONAL_TRANSPORTS)
+					{
+						droppedSeasonal = true;
+						continue;
+					}
+					userExclusions.add(method);
+				}
+				if (droppedSeasonal)
+				{
+					saveExclusions();
 				}
 			}
 		}

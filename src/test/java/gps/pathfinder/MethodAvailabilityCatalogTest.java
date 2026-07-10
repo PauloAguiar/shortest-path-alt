@@ -184,16 +184,21 @@ public class MethodAvailabilityCatalogTest
 	}
 
 	@Test
-	public void seasonalTransportsAppearInCatalog()
+	public void seasonalTransportsHiddenUnlessEnabled()
 	{
-		// Seasonal (Leagues) methods are listed in the catalog like any other type — no structural
-		// gate. The plugin disables them by default via the user exclusions (a per-method control),
-		// not by hiding them here.
-		PathfinderConfig planning = new TestPathfinderConfig(client, config).copyForPlanning();
-		planning.refresh();
+		// Seasonal (Leagues) methods are gated by the "Enable seasonal transports" toggle
+		// (useSeasonalTransports). Off by default (the mock returns false), they must be absent
+		// from the catalog entirely — not merely flagged; on, they appear like any other type.
+		PathfinderConfig off = new TestPathfinderConfig(client, config).copyForPlanning();
+		off.refresh();
+		assertFalse("Catalog should not be empty", off.getMethodCatalog().isEmpty());
+		assertFalse("Seasonal methods must be hidden while the toggle is off",
+			off.getMethodCatalog().stream().anyMatch(m -> m.getType() == TransportType.SEASONAL_TRANSPORTS));
 
-		assertFalse("Catalog should not be empty", planning.getMethodCatalog().isEmpty());
-		assertTrue("Seasonal (Leagues) methods must appear in the catalog (per-method control)",
-			planning.getMethodCatalog().stream().anyMatch(m -> m.getType() == TransportType.SEASONAL_TRANSPORTS));
+		when(config.useSeasonalTransports()).thenReturn(true);
+		PathfinderConfig on = new TestPathfinderConfig(client, config).copyForPlanning();
+		on.refresh();
+		assertTrue("Seasonal methods must appear when the toggle is on",
+			on.getMethodCatalog().stream().anyMatch(m -> m.getType() == TransportType.SEASONAL_TRANSPORTS));
 	}
 }
