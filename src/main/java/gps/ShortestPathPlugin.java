@@ -131,7 +131,7 @@ public class ShortestPathPlugin extends Plugin
 	private static final String FIND_CLOSEST = "Find closest";
 	private static final String FLASH_ICONS = "Flash icons";
 	private static final String START = ColorUtil.wrapWithColorTag("Start", JagexColors.MENU_TARGET);
-	private static final String TARGET = ColorUtil.wrapWithColorTag("Target", JagexColors.MENU_TARGET);
+	private static final String TARGET = ColorUtil.wrapWithColorTag("GPS Target", JagexColors.MENU_TARGET);
 	private static final BufferedImage MARKER_IMAGE = ImageUtil.loadImageResource(ShortestPathPlugin.class, "/marker.png");
 	private static final Pattern TRANSPORT_OPTIONS_REGEX = Pattern.compile("^(avoidWilderness|includeBankPath|currencyThreshold|use\\w+|cost\\w+)$");
 	private static final Map<String, Object> configOverride = new HashMap<>(50);
@@ -1413,11 +1413,6 @@ public class ShortestPathPlugin extends Plugin
 			addMenuEntry(event, SET, TARGET, 1);
 			if (pathfinder != null)
 			{
-				if (!pathfinder.getTargets().isEmpty())
-				{
-					addMenuEntry(event, SET, TARGET + ColorUtil.wrapWithColorTag(" " +
-						(pathfinder.getTargets().size() + 1), JagexColors.MENU_TARGET), 1);
-				}
 				for (int target : pathfinder.getTargets())
 				{
 					if (target != WorldPointUtil.UNDEFINED)
@@ -1453,11 +1448,6 @@ public class ShortestPathPlugin extends Plugin
 				addMenuEntry(event, SET, TARGET, 0);
 				if (pathfinder != null)
 				{
-					if (!pathfinder.getTargets().isEmpty())
-					{
-						addMenuEntry(event, SET, TARGET + ColorUtil.wrapWithColorTag(" " +
-							(pathfinder.getTargets().size() + 1), JagexColors.MENU_TARGET), 0);
-					}
 					for (int target : pathfinder.getTargets())
 					{
 						if (target != WorldPointUtil.UNDEFINED)
@@ -2082,12 +2072,6 @@ public class ShortestPathPlugin extends Plugin
 		{
 			targetSource = "map pin";
 			setTarget(getSelectedWorldPoint());
-		}
-		else if (entry.getOption().equals(SET) && pathfinder != null && entry.getTarget().equals(TARGET +
-			ColorUtil.wrapWithColorTag(" " + (pathfinder.getTargets().size() + 1), JagexColors.MENU_TARGET)))
-		{
-			targetSource = "map pin";
-			setTarget(getSelectedWorldPoint(), true);
 		}
 		else if (entry.getOption().equals(SET) && entry.getTarget().equals(START))
 		{
