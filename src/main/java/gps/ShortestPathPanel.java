@@ -128,6 +128,12 @@ public class ShortestPathPanel extends PluginPanel
 	// The name-search index (places + dungeons + minigames), built once the transport data is
 	// available: it's session-static, so caching avoids rescanning transports on every keystroke.
 	private List<Destinations.Entry> destinationIndex;
+	// The currently-shown search result rows and their entries (parallel), plus the keyboard-
+	// selected index into them (-1 = none). Up/Down move it, Enter picks it; mouse hover keeps it
+	// in sync so both input methods share one highlight.
+	private final List<JPanel> resultRows = new ArrayList<>();
+	private final List<Destinations.Entry> resultEntries = new ArrayList<>();
+	private int selectedResult = -1;
 	private JButton inventoryModeButton;
 	private JButton bankModeButton;
 	private JButton allModeButton;
@@ -1690,6 +1696,43 @@ public class ShortestPathPanel extends PluginPanel
 					renderDestinationResults();
 				}
 			});
+			// Up/Down move the highlighted result, Enter picks it, Escape closes the popup — so a
+			// destination can be chosen without leaving the keyboard.
+			inner.addKeyListener(new java.awt.event.KeyAdapter()
+			{
+				@Override
+				public void keyPressed(java.awt.event.KeyEvent e)
+				{
+					if (!destinationPopup.isVisible())
+					{
+						return;
+					}
+					switch (e.getKeyCode())
+					{
+						case java.awt.event.KeyEvent.VK_DOWN:
+							moveSelection(1);
+							e.consume();
+							break;
+						case java.awt.event.KeyEvent.VK_UP:
+							moveSelection(-1);
+							e.consume();
+							break;
+						case java.awt.event.KeyEvent.VK_ENTER:
+							if (selectedResult >= 0 && selectedResult < resultEntries.size())
+							{
+								selectEntry(resultEntries.get(selectedResult));
+								e.consume();
+							}
+							break;
+						case java.awt.event.KeyEvent.VK_ESCAPE:
+							destinationPopup.setVisible(false);
+							e.consume();
+							break;
+						default:
+							break;
+					}
+				}
+			});
 		}
 		wrap.add(destinationSearch);
 
@@ -1862,6 +1905,9 @@ public class ShortestPathPanel extends PluginPanel
 	private void renderDestinationResults()
 	{
 		destinationResults.removeAll();
+		resultRows.clear();
+		resultEntries.clear();
+		selectedResult = -1;
 		String query = destinationSearch.getText().trim();
 		final int player = plugin.getPlayerLocation();
 		if (query.isEmpty())
@@ -1881,8 +1927,9 @@ public class ShortestPathPanel extends PluginPanel
 			destinationResults.add(header);
 			for (Destinations.Entry entry : history)
 			{
-				destinationResults.add(destinationRow(entry, player));
+				addResultRow(entry, player);
 			}
+			preselectFirstResult();
 			showDestinationPopup();
 			return;
 		}
@@ -1915,7 +1962,7 @@ public class ShortestPathPanel extends PluginPanel
 		int shown = 0;
 		for (Destinations.Entry entry : matches)
 		{
-			destinationResults.add(destinationRow(entry, player));
+			addResultRow(entry, player);
 			if (++shown >= MAX_DESTINATION_RESULTS)
 			{
 				break;
@@ -1929,7 +1976,56 @@ public class ShortestPathPanel extends PluginPanel
 			none.setBorder(new EmptyBorder(2, 4, 2, 4));
 			destinationResults.add(none);
 		}
+		preselectFirstResult();
 		showDestinationPopup();
+	}
+
+	/** Builds a result row, adds it to the popup and tracks it for keyboard navigation. */
+	private void addResultRow(Destinations.Entry entry, int player)
+	{
+		JPanel row = destinationRow(entry, player);
+		resultEntries.add(entry);
+		resultRows.add(row);
+		destinationResults.add(row);
+	}
+
+	/** Preselects the top result so Enter works immediately; -1 when there are none. */
+	private void preselectFirstResult()
+	{
+		selectedResult = resultRows.isEmpty() ? -1 : 0;
+		applySelectionHighlight();
+	}
+
+	/** Highlights the selected row (shared by keyboard and mouse) and resets the rest. */
+	private void applySelectionHighlight()
+	{
+		for (int i = 0; i < resultRows.size(); i++)
+		{
+			resultRows.get(i).setBackground(i == selectedResult
+				? ColorScheme.DARK_GRAY_HOVER_COLOR : ColorScheme.DARKER_GRAY_COLOR);
+		}
+	}
+
+	/** Moves the keyboard selection by {@code delta}, wrapping around the result list. */
+	private void moveSelection(int delta)
+	{
+		if (resultRows.isEmpty())
+		{
+			return;
+		}
+		selectedResult = ((selectedResult + delta) % resultRows.size() + resultRows.size()) % resultRows.size();
+		applySelectionHighlight();
+	}
+
+	/** Commits a destination selection (from a click or Enter): route to it, remember it, close. */
+	private void selectEntry(Destinations.Entry entry)
+	{
+		plugin.setDestination(entry.packedPosition, "search");
+		plugin.recordSearchSelection(entry);
+		// Clearing the text re-renders the popup with the recent list; a selection should end the
+		// interaction instead.
+		destinationSearch.setText("");
+		destinationPopup.setVisible(false);
 	}
 
 	/**
@@ -1983,24 +2079,15 @@ public class ShortestPathPanel extends PluginPanel
 			@Override
 			public void mouseClicked(MouseEvent e)
 			{
-				plugin.setDestination(entry.packedPosition, "search");
-				plugin.recordSearchSelection(entry);
-				// Clearing the text re-renders the popup with the recent list; a selection should
-				// end the interaction instead.
-				destinationSearch.setText("");
-				destinationPopup.setVisible(false);
+				selectEntry(entry);
 			}
 
 			@Override
 			public void mouseEntered(MouseEvent e)
 			{
-				row.setBackground(ColorScheme.DARK_GRAY_HOVER_COLOR);
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e)
-			{
-				row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+				// Move the shared selection to the hovered row so keyboard and mouse agree.
+				selectedResult = resultRows.indexOf(row);
+				applySelectionHighlight();
 			}
 		});
 		return row;
