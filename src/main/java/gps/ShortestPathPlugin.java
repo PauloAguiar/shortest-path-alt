@@ -158,9 +158,9 @@ public class ShortestPathPlugin extends Plugin
 	Color colourOverlayAccent;
 	boolean showTeleportPulse;
 	boolean showDirections;
-	boolean transparentDirectionsBackground;
-	int overlayBackgroundOpacity;
-	int overlayTextSize;
+	boolean overrideOverlayTransparency;
+	int overlayTransparency;
+	int overlayTextSizeOffset;
 	boolean arrivalAutoDismiss;
 	int arrivalDismissSeconds;
 	int tileCounterStep;
@@ -1979,9 +1979,9 @@ public class ShortestPathPlugin extends Plugin
 		showTileCounter = override("showTileCounter", config.showTileCounter());
 		showTeleportPulse = override("showTeleportPulse", config.showTeleportPulse());
 		showDirections = override("showDirections", config.showDirections());
-		transparentDirectionsBackground = override("transparentDirectionsBackground", config.transparentDirectionsBackground());
-		overlayBackgroundOpacity = override("overlayBackgroundOpacity", config.overlayBackgroundOpacity());
-		overlayTextSize = override("overlayTextSize", config.overlayTextSize());
+		overrideOverlayTransparency = override("overrideOverlayTransparency", config.overrideOverlayTransparency());
+		overlayTransparency = override("overlayTransparency", config.overlayTransparency());
+		overlayTextSizeOffset = override("overlayTextSizeOffset", config.overlayTextSizeOffset());
 		arrivalAutoDismiss = override("arrivalAutoDismiss", config.arrivalAutoDismiss());
 		arrivalDismissSeconds = override("arrivalDismissSeconds", config.arrivalDismissSeconds());
 	}

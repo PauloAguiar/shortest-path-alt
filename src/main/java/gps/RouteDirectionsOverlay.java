@@ -45,10 +45,10 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private static final Color UPCOMING = new Color(0xB4, 0xB4, 0xB4);
 	private static final Color OFF_ROUTE = new Color(0xFF, 0x4C, 0x4C);
 
-	// Magnifying-glass hierarchy: bold (16) > regular (16, lighter) > small. Scaled by the
-	// overlay-text-size percent — at 100% the fonts stay at their NATIVE sizes, where the
-	// bitmap-styled RuneScape fonts look best; other sizes derive and get chunkier.
-	private int fontScalePercent = 100;
+	// Magnifying-glass hierarchy: bold (16) > regular (16, lighter) > small. Adjusted by the
+	// overlay-text-size offset (in points) — at 0 the fonts stay at their NATIVE sizes, where
+	// the bitmap-styled RuneScape fonts look best.
+	private int fontSizeOffset = 0;
 	private Font fontCurrent = FontManager.getRunescapeBoldFont();
 	private Font fontNext = FontManager.getRunescapeFont();
 	private Font fontOther = FontManager.getRunescapeSmallFont();
@@ -116,14 +116,14 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		{
 			return null;
 		}
-		// Transparent background on request, independent of RuneLite's overlay colour: the base
-		// OverlayPanel only substitutes the user's preferred colour when the panel still has the
-		// STANDARD background, so setting our own (and restoring STANDARD when the option is off)
-		// overrides or yields cleanly. The opacity slider picks how see-through: the standard
-		// colour's tone with alpha scaled from 0% (invisible) to 100% (solid). Every text row
-		// already draws with a shadow, so the panel stays readable on bare game background.
-		panelComponent.setBackgroundColor(plugin.transparentDirectionsBackground
-			? overriddenBackground(plugin.overlayBackgroundOpacity)
+		// Override RuneLite's overlay transparency on request: the base OverlayPanel only
+		// substitutes the user's preferred colour when the panel still has the STANDARD
+		// background, so setting our own (and restoring STANDARD when the override is off)
+		// overrides or yields cleanly. The transparency spinner picks how see-through: the
+		// standard colour's tone with 100% = fully invisible, 0% = solid. Every text row draws
+		// with a shadow, so the panel stays readable on bare game background.
+		panelComponent.setBackgroundColor(plugin.overrideOverlayTransparency
+			? overriddenBackground(plugin.overlayTransparency)
 			: ComponentConstants.STANDARD_BACKGROUND_COLOR);
 		accent = plugin.colourOverlayAccent;
 		accentEnding = lighten(accent, 0.35f);
@@ -347,40 +347,39 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	}
 
 	/**
-	 * The overridden overlay background: the standard background's tone with the slider's opacity
-	 * (0% = invisible, 100% = solid), so the override still matches RuneLite's palette when
-	 * partially visible. Never null — a null would re-enable the base panel's colour handling.
+	 * The overridden overlay background: the standard background's tone at the configured
+	 * TRANSPARENCY (100% = invisible, 0% = solid), so a partially visible override still matches
+	 * RuneLite's palette. Never null — a null would re-enable the base panel's colour handling.
 	 */
-	private static Color overriddenBackground(int opacityPercent)
+	private static Color overriddenBackground(int transparencyPercent)
 	{
-		final int alpha = Math.max(0, Math.min(255, Math.round(255 * opacityPercent / 100f)));
+		final int alpha = Math.max(0, Math.min(255, Math.round(255 * (100 - transparencyPercent) / 100f)));
 		final Color standard = ComponentConstants.STANDARD_BACKGROUND_COLOR;
 		return new Color(standard.getRed(), standard.getGreen(), standard.getBlue(), alpha);
 	}
 
-	/** Rebuilds the three fonts when the text-size percent changes (100% = native sizes). */
+	/** Rebuilds the three fonts when the text-size offset changes (0 = native sizes). */
 	private void refreshFonts()
 	{
-		final int percent = Math.max(50, Math.min(200, plugin.overlayTextSize));
-		if (percent == fontScalePercent)
+		final int offset = Math.max(-2, Math.min(2, plugin.overlayTextSizeOffset));
+		if (offset == fontSizeOffset)
 		{
 			return;
 		}
-		fontScalePercent = percent;
+		fontSizeOffset = offset;
 		final Font bold = FontManager.getRunescapeBoldFont();
 		final Font regular = FontManager.getRunescapeFont();
 		final Font small = FontManager.getRunescapeSmallFont();
-		if (percent == 100)
+		if (offset == 0)
 		{
 			fontCurrent = bold;
 			fontNext = regular;
 			fontOther = small;
 			return;
 		}
-		final float factor = percent / 100f;
-		fontCurrent = bold.deriveFont(bold.getSize2D() * factor);
-		fontNext = regular.deriveFont(regular.getSize2D() * factor);
-		fontOther = small.deriveFont(small.getSize2D() * factor);
+		fontCurrent = bold.deriveFont(bold.getSize2D() + offset);
+		fontNext = regular.deriveFont(regular.getSize2D() + offset);
+		fontOther = small.deriveFont(small.getSize2D() + offset);
 	}
 
 	/** Blends a colour toward white — the derived "about to end" shade of the accent. */

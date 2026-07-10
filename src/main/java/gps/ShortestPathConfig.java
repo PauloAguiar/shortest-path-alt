@@ -1127,14 +1127,14 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "transparentDirectionsBackground",
-		name = "Transparent overlay background",
-		description = "Make the GPS directions overlay's background fully transparent,<br>" +
-			"overriding RuneLite's own overlay background colour setting",
+		keyName = "overrideOverlayTransparency",
+		name = "Override RuneLite transparency",
+		description = "Use GPS's own background transparency for the directions overlay<br>" +
+			"(set below) instead of RuneLite's overlay background colour",
 		position = 76,
 		section = sectionDisplay
 	)
-	default boolean transparentDirectionsBackground()
+	default boolean overrideOverlayTransparency()
 	{
 		return false;
 	}
@@ -1142,31 +1142,30 @@ public interface ShortestPathConfig extends Config
 	@Range(min = 0, max = 100)
 	@Units(Units.PERCENT)
 	@ConfigItem(
-		keyName = "overlayBackgroundOpacity",
-		name = "Overlay background opacity",
-		description = "How opaque the overridden overlay background is (when \"Transparent overlay background\"<br>" +
-			"is on): 0% = fully transparent, 100% = solid. RuneLite's default look is roughly 60%",
+		keyName = "overlayTransparency",
+		name = "Overlay transparency",
+		description = "How transparent the overlay background is when the override is on:<br>" +
+			"100% = fully invisible, 0% = solid. RuneLite's default look is roughly 40%",
 		position = 77,
 		section = sectionDisplay
 	)
-	default int overlayBackgroundOpacity()
+	default int overlayTransparency()
 	{
-		return 0;
+		return 100;
 	}
 
-	@Range(min = 50, max = 200)
-	@Units(Units.PERCENT)
+	@Range(min = -2, max = 2)
 	@ConfigItem(
-		keyName = "overlayTextSize",
+		keyName = "overlayTextSizeOffset",
 		name = "Overlay text size",
-		description = "Scales the GPS directions overlay's text (100% = the standard RuneScape fonts).<br>" +
-			"The fonts are bitmap-styled, so sizes far from 100% look chunkier",
+		description = "Adjusts the directions overlay's font size, in points relative to the standard<br>" +
+			"RuneScape fonts (0 = native size, where the bitmap-styled fonts look best)",
 		position = 78,
 		section = sectionDisplay
 	)
-	default int overlayTextSize()
+	default int overlayTextSizeOffset()
 	{
-		return 100;
+		return 0;
 	}
 
 	@ConfigItem(
