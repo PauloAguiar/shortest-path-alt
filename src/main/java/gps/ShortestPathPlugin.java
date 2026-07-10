@@ -1292,12 +1292,16 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		int currentLocation = WorldPointUtil.fromLocalInstance(client, localPlayer);
-		// Journey timer: start counting from the first tick the player moves after a destination (or a
-		// chosen path) was set — so picking a route and standing still doesn't inflate the arrival time.
+		// Journey timer: start counting from the player's first ACTION after a destination (or a chosen
+		// path) was set — moving, OR performing an animation (casting/using a teleport). The animation
+		// catch matters for long teleport channels (e.g. Lumbridge Home): the player stays put for the
+		// whole cast, so a move-only trigger would only start the clock after landing, losing that time.
 		if (!pathfinder.getTargets().isEmpty())
 		{
-			if (journeyStartMillis == 0 && journeyLastLocation != WorldPointUtil.UNDEFINED
-				&& currentLocation != journeyLastLocation)
+			boolean moved = journeyLastLocation != WorldPointUtil.UNDEFINED
+				&& currentLocation != journeyLastLocation;
+			boolean acting = localPlayer.getAnimation() != -1;
+			if (journeyStartMillis == 0 && (moved || acting))
 			{
 				journeyStartMillis = System.currentTimeMillis();
 			}
