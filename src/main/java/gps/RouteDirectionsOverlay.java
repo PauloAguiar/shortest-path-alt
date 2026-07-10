@@ -36,9 +36,11 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private static final int PANEL_PADDING = 18;
 
 	private static final Color DONE = new Color(0x80, 0x80, 0x80);
-	// Map-app navigation blue for the active step; the lighter shade signals "about to end".
-	private static final Color CURRENT = new Color(0x4C, 0x8B, 0xF5);
-	private static final Color ENDING = new Color(0x8A, 0xB4, 0xF8);
+	// The overlay's accent tone (map-app navigation blue by default, user-configurable): the
+	// active step, header pin, divider rule and ETA badge. The lighter "about to end" shade and
+	// the badge's border are derived from it each frame.
+	private Color accent = new Color(0x4C, 0x8B, 0xF5);
+	private Color accentEnding = lighten(accent, 0.35f);
 	private static final Color NEXT = Color.WHITE;
 	private static final Color UPCOMING = new Color(0xB4, 0xB4, 0xB4);
 	private static final Color OFF_ROUTE = new Color(0xFF, 0x4C, 0x4C);
@@ -122,6 +124,8 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		// panel stays readable on bare game background.
 		panelComponent.setBackgroundColor(plugin.transparentDirectionsBackground
 			? TRANSPARENT_BACKGROUND : ComponentConstants.STANDARD_BACKGROUND_COLOR);
+		accent = plugin.colourOverlayAccent;
+		accentEnding = lighten(accent, 0.35f);
 		long now = System.currentTimeMillis();
 		RouteOption route = plugin.getDisplayedRoute();
 		if (route == null)
@@ -217,7 +221,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			}
 			else if (i == current)
 			{
-				colour = nearEnd(step) ? ENDING : CURRENT;
+				colour = nearEnd(step) ? accentEnding : accent;
 				font = FONT_CURRENT;
 			}
 			else if (i == current + 1)
@@ -331,6 +335,15 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		}
 	}
 
+	/** Blends a colour toward white — the derived "about to end" shade of the accent. */
+	private static Color lighten(Color colour, float factor)
+	{
+		return new Color(
+			colour.getRed() + Math.round((255 - colour.getRed()) * factor),
+			colour.getGreen() + Math.round((255 - colour.getGreen()) * factor),
+			colour.getBlue() + Math.round((255 - colour.getBlue()) * factor));
+	}
+
 	/**
 	 * Decorated header drawn over the reserved top row: a small location-pin glyph, bold "GPS", and
 	 * a navigation-blue rule under the header separating it from the steps.
@@ -340,7 +353,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		// Location pin: round head with a tail, hollow centre.
 		final int px = 8;
 		final int py = 4;
-		graphics.setColor(CURRENT);
+		graphics.setColor(accent);
 		graphics.fillOval(px, py, 9, 9);
 		Polygon tail = new Polygon(
 			new int[]{px + 1, px + 8, px + 4},
@@ -357,7 +370,7 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		graphics.drawString("GPS", px + 13, py + 11);
 
 		// Accent rule under the header row.
-		graphics.setColor(new Color(CURRENT.getRed(), CURRENT.getGreen(), CURRENT.getBlue(), 170));
+		graphics.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 170));
 		graphics.drawLine(4, py + 15, panelSize.width - 4, py + 15);
 	}
 
@@ -379,9 +392,9 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		int x = panelSize.width - width - 2;
 		int y = 2;
 
-		graphics.setColor(CURRENT);
+		graphics.setColor(accent);
 		graphics.fillRoundRect(x, y, width, height, 8, 8);
-		graphics.setColor(new Color(0x2A, 0x5C, 0xC4));
+		graphics.setColor(accent.darker());
 		graphics.drawRoundRect(x, y, width, height, 8, 8);
 		// Centre the tight glyph box inside the pill on both axes.
 		float textX = (float) (x + (width - bounds.getWidth()) / 2 - bounds.getX());

@@ -155,6 +155,7 @@ public class ShortestPathPlugin extends Plugin
 	Color colourText;
 	Color colourTransports;
 	Color colourTeleportPulse;
+	Color colourOverlayAccent;
 	boolean showTeleportPulse;
 	boolean showDirections;
 	boolean transparentDirectionsBackground;
@@ -1960,6 +1961,7 @@ public class ShortestPathPlugin extends Plugin
 		colourText = override("colourText", config.colourText());
 		colourTransports = override("colourTransports", config.colourTransports());
 		colourTeleportPulse = override("colourTeleportPulse", config.colourTeleportPulse());
+		colourOverlayAccent = override("colourOverlayAccent", config.colourOverlayAccent());
 
 		tileCounterStep = override("tileCounterStep", config.tileCounterStep());
 		unreachableTargetDistance = override("unreachableTargetDistanceThreshold", config.unreachableTargetDistance());

@@ -1265,6 +1265,19 @@ public interface ShortestPathConfig extends Config
 		return new Color(0, 255, 255);
 	}
 
+	@ConfigItem(
+		keyName = "colourOverlayAccent",
+		name = "Overlay accent",
+		description = "Accent colour of the GPS directions overlay: the active step, header pin,<br>" +
+			"divider rule and ETA badge (the lighter \"about to end\" shade is derived from it)",
+		position = 80,
+		section = sectionColours
+	)
+	default Color colourOverlayAccent()
+	{
+		return new Color(0x4C, 0x8B, 0xF5);
+	}
+
 	@ConfigSection(
 		name = "Hotkeys",
 		description = "Options for keyboard shortcuts",
