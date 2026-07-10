@@ -262,14 +262,19 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private Dimension renderPanel(Graphics2D graphics, List<Line> lines)
 	{
 		// Fit the panel to the content: widest left text + its time column, clamped to sane bounds.
-		int contentWidth = MIN_WIDTH;
+		// The bounds scale with the text-size preset (2x for Large) — at doubled glyph widths a
+		// fixed cap would ellipsize twice as much of every step.
+		final float widthScale = fontCurrent.getSize2D() / 16f;
+		final int minWidth = Math.round(MIN_WIDTH * widthScale);
+		final int maxWidth = Math.round(MAX_WIDTH * widthScale);
+		int contentWidth = minWidth;
 		for (Line line : lines)
 		{
 			int width = graphics.getFontMetrics(line.font).stringWidth(line.left)
 				+ rightWidth(graphics, line) + PANEL_PADDING;
 			contentWidth = Math.max(contentWidth, width);
 		}
-		int panelWidth = Math.min(contentWidth, MAX_WIDTH);
+		int panelWidth = Math.min(contentWidth, maxWidth);
 		panelComponent.setPreferredSize(new Dimension(panelWidth, 0));
 
 		// Spacer reserving the header row; the decorated title (pin glyph + bold text + accent rule)
