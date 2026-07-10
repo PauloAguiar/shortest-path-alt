@@ -15,6 +15,7 @@ import net.runelite.api.Player;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.components.ComponentConstants;
 import net.runelite.client.ui.overlay.components.LineComponent;
 
 /**
@@ -41,6 +42,9 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private static final Color NEXT = Color.WHITE;
 	private static final Color UPCOMING = new Color(0xB4, 0xB4, 0xB4);
 	private static final Color OFF_ROUTE = new Color(0xFF, 0x4C, 0x4C);
+	// Alpha-zero background for the transparent-overlay option (null would not override the base
+	// panel's colour handling; an invisible fill does).
+	private static final Color TRANSPARENT_BACKGROUND = new Color(0, 0, 0, 0);
 
 	// Magnifying-glass effect via the fonts' NATIVE sizes only: the RuneScape fonts are bitmap-style
 	// and deform when scaled with deriveFont. Bold (16) > regular (16, lighter) > small.
@@ -111,6 +115,13 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		{
 			return null;
 		}
+		// Fully transparent background on request, independent of RuneLite's overlay colour: the
+		// base OverlayPanel only substitutes the user's preferred colour when the panel still has
+		// the STANDARD background, so setting our own (and restoring STANDARD when the option is
+		// off) overrides or yields cleanly. Every text row already draws with a shadow, so the
+		// panel stays readable on bare game background.
+		panelComponent.setBackgroundColor(plugin.transparentDirectionsBackground
+			? TRANSPARENT_BACKGROUND : ComponentConstants.STANDARD_BACKGROUND_COLOR);
 		long now = System.currentTimeMillis();
 		RouteOption route = plugin.getDisplayedRoute();
 		if (route == null)

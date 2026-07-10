@@ -1114,11 +1114,24 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "transparentDirectionsBackground",
+		name = "Transparent overlay background",
+		description = "Make the GPS directions overlay's background fully transparent,<br>" +
+			"overriding RuneLite's own overlay background colour setting",
+		position = 76,
+		section = sectionDisplay
+	)
+	default boolean transparentDirectionsBackground()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 		keyName = "arrivalAutoDismiss",
 		name = "Auto-dismiss arrival",
 		description = "Automatically hide the \"Arrived!\" panel after a delay.<br>" +
 			"When off it stays until clicked",
-		position = 76,
+		position = 77,
 		section = sectionDisplay
 	)
 	default boolean arrivalAutoDismiss()
@@ -1132,7 +1145,7 @@ public interface ShortestPathConfig extends Config
 		keyName = "arrivalDismissSeconds",
 		name = "Arrival dismiss delay",
 		description = "How long the \"Arrived!\" panel lingers before auto-dismissing (when enabled)",
-		position = 77,
+		position = 78,
 		section = sectionDisplay
 	)
 	default int arrivalDismissSeconds()
