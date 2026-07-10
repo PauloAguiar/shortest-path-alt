@@ -283,10 +283,14 @@ public class RouteDirectionsOverlay extends OverlayPanel
 					LineComponent.builder().left(" ").leftFont(line.font).build());
 				continue;
 			}
-			LineComponent.LineComponentBuilder builder = LineComponent.builder()
+			// Own row component instead of LineComponent for one reason: the outline text effect
+			// (LineComponent only shadows), which keeps the text readable when the transparent
+			// background removes the panel behind it.
+			OutlinedLineComponent.OutlinedLineComponentBuilder builder = OutlinedLineComponent.builder()
 				.left(ellipsize(graphics, line.font, line.left, panelWidth - rightWidth(graphics, line) - PANEL_PADDING))
 				.leftColor(line.colour)
-				.leftFont(line.font);
+				.leftFont(line.font)
+				.outlined(plugin.transparentDirectionsBackground);
 			if (line.right != null)
 			{
 				builder.right(line.right)
@@ -326,12 +330,32 @@ public class RouteDirectionsOverlay extends OverlayPanel
 			float x = (float) ((panelSize.width - bounds.getWidth()) / 2 - bounds.getX());
 			// Place the glyph box's bottom on the anchor, then move the anchor up past it.
 			float baseline = (float) (bottom - bounds.getHeight() - bounds.getY());
-			graphics.setColor(Color.BLACK);
-			layout.draw(graphics, x + 1, baseline + 1);
-			graphics.setColor(line.colour);
-			layout.draw(graphics, x, baseline);
+			drawLayout(graphics, layout, x, baseline, line.colour);
 			bottom -= bounds.getHeight() + 5;
 		}
+	}
+
+	/**
+	 * Draws laid-out text with the panel's text effect: a black OUTLINE (all four sides) in
+	 * transparent mode — where there is no panel behind the glyphs to carry them — or the stock
+	 * one-pixel drop shadow otherwise.
+	 */
+	private void drawLayout(Graphics2D graphics, TextLayout layout, float x, float baseline, Color colour)
+	{
+		graphics.setColor(Color.BLACK);
+		if (plugin.transparentDirectionsBackground)
+		{
+			layout.draw(graphics, x, baseline + 1);
+			layout.draw(graphics, x, baseline - 1);
+			layout.draw(graphics, x + 1, baseline);
+			layout.draw(graphics, x - 1, baseline);
+		}
+		else
+		{
+			layout.draw(graphics, x + 1, baseline + 1);
+		}
+		graphics.setColor(colour);
+		layout.draw(graphics, x, baseline);
 	}
 
 	/**
@@ -376,7 +400,17 @@ public class RouteDirectionsOverlay extends OverlayPanel
 
 		graphics.setFont(FONT_CURRENT);
 		graphics.setColor(Color.BLACK);
-		graphics.drawString("GPS", px + 14, py + 12);
+		if (plugin.transparentDirectionsBackground)
+		{
+			graphics.drawString("GPS", px + 13, py + 12);
+			graphics.drawString("GPS", px + 13, py + 10);
+			graphics.drawString("GPS", px + 14, py + 11);
+			graphics.drawString("GPS", px + 12, py + 11);
+		}
+		else
+		{
+			graphics.drawString("GPS", px + 14, py + 12);
+		}
 		graphics.setColor(Color.WHITE);
 		graphics.drawString("GPS", px + 13, py + 11);
 
