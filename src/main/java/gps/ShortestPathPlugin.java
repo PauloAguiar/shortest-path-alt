@@ -266,6 +266,12 @@ public class ShortestPathPlugin extends Plugin
 	// Catalog methods the player can't use in the current mode, mapped to why (for the panel markers).
 	private volatile Map<TeleportMethod, MethodAvailability> unavailableMethods = Map.of();
 	private volatile RouteOption selectedRoute;
+	// The route the overlays draw, committed ONLY when a generation settles (its "done" update) —
+	// never mid-stream. While alternatives are still generating and re-ranking, the overlays hold
+	// this instead of flipping through the streaming top result (which flashed a route then instantly
+	// replaced it right after a search). Null for a fresh destination, so the overlay stays clear
+	// until the routes settle rather than showing a soon-to-change front-runner.
+	private volatile RouteOption committedDisplayRoute;
 	// Start/targets the alternatives were last generated from, reused by exclusion/mode/show-more edits
 	// so they re-run against the same destination. Volatile: read/written from client thread + Swing EDT.
 	private volatile int lastAltStart = WorldPointUtil.UNDEFINED;
@@ -2259,6 +2265,14 @@ public class ShortestPathPlugin extends Plugin
 		{
 			return route;
 		}
+		// While a generation is still streaming/re-ranking, hold the last committed route (null for a
+		// fresh destination) rather than flip the overlay through the changing top result — that flash
+		// of one route immediately replaced by another is the "glitchy" search behaviour. The final
+		// top route is committed once the generation settles (see onAlternativeRoutesUpdate).
+		if (altGenerationInFlight)
+		{
+			return committedDisplayRoute;
+		}
 		List<RouteOption> routes = alternativeRoutes;
 		if (routes.isEmpty())
 		{
@@ -2904,6 +2918,13 @@ public class ShortestPathPlugin extends Plugin
 			return;
 		}
 		Set<Integer> ends = (targets == null) ? new HashSet<>() : new HashSet<>(targets);
+		// A new destination clears the committed route so the overlay stays blank until the fresh
+		// routes settle; regenerating the SAME destination (off-route recalc, method toggle, "more")
+		// keeps it, so the overlay holds the current route steadily rather than blinking blank.
+		if (!ends.equals(lastAltTargets))
+		{
+			committedDisplayRoute = null;
+		}
 		lastAltStart = start;
 		lastAltTargets = Set.copyOf(ends);
 		lastAltLimit = routeLimit;
@@ -2941,6 +2962,9 @@ public class ShortestPathPlugin extends Plugin
 			// budget), until the route-count budget reaches the service's runaway backstop.
 			moreRoutesLikely = !routes.isEmpty() && altRoutesService.wasMoreLikely()
 				&& routeLimit < AlternativeRoutesService.MAX_ROUTES_CAP;
+			// Settle the overlay's route to the final top result BEFORE clearing the in-flight flag,
+			// so the overlay adopts the settled route in one step instead of the streaming front-runner.
+			committedDisplayRoute = routes.isEmpty() ? null : routes.get(0);
 			// Generation finished; if it produced nothing the classic path may draw again as fallback.
 			altGenerationInFlight = false;
 		}
