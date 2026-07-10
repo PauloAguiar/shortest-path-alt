@@ -21,6 +21,9 @@ import gps.transport.TransportType;
 public final class Destinations
 {
 	private static final String RESOURCE_PATH = "/destinations.tsv";
+	// Hand-curated additions (agility courses, skilling spots) kept OUT of the machine-dumped
+	// resource above, so regenerating the dump never erases them.
+	private static final String CURATED_PATH = "/destinations-curated.tsv";
 
 	/** One searchable destination: a category, a display name, and a packed world tile. */
 	public static final class Entry
@@ -93,7 +96,8 @@ public final class Destinations
 		for (Entry entry : all(transports))
 		{
 			if ("place".equals(entry.category) || "landmark".equals(entry.category)
-				|| "dungeon".equals(entry.category) || "minigame".equals(entry.category))
+				|| "dungeon".equals(entry.category) || "minigame".equals(entry.category)
+				|| "training".equals(entry.category))
 			{
 				out.add(entry);
 			}
@@ -271,18 +275,25 @@ public final class Destinations
 
 	private static List<Entry> load()
 	{
-		try (InputStream in = ShortestPathPlugin.class.getResourceAsStream(RESOURCE_PATH))
+		List<Entry> entries = loadResource(RESOURCE_PATH);
+		entries.addAll(loadResource(CURATED_PATH));
+		return entries;
+	}
+
+	private static List<Entry> loadResource(String path)
+	{
+		try (InputStream in = ShortestPathPlugin.class.getResourceAsStream(path))
 		{
 			if (in == null)
 			{
-				log.warn("Destinations resource not found at {}; search disabled", RESOURCE_PATH);
+				log.warn("Destinations resource not found at {}", path);
 				return new ArrayList<>();
 			}
 			return parse(new String(Util.readAllBytes(in), StandardCharsets.UTF_8));
 		}
 		catch (IOException e)
 		{
-			log.error("Failed to load destinations from {}", RESOURCE_PATH, e);
+			log.error("Failed to load destinations from {}", path, e);
 			return new ArrayList<>();
 		}
 	}

@@ -135,6 +135,8 @@ final class RouteIcons
 	private static final ImageIcon DEST_DUNGEON = new ImageIcon(dungeon());
 	private static final ImageIcon DEST_MINIGAME = new ImageIcon(minigame());
 	private static final ImageIcon DEST_LANDMARK = new ImageIcon(landmark());
+	// Training spots (agility courses, skilling areas): a course flag.
+	private static final ImageIcon DEST_TRAINING = new ImageIcon(flag());
 	private static final ImageIcon DEST_PIN = new ImageIcon(pin(GPS_BLUE));
 
 	// Route-card marker: the GPS pin the route number sits beside.
@@ -164,6 +166,7 @@ final class RouteIcons
 			case "dungeon": return DEST_DUNGEON;
 			case "minigame": return DEST_MINIGAME;
 			case "landmark": return DEST_LANDMARK;
+			case "training": return DEST_TRAINING;
 			default: return DEST_PIN;
 		}
 	}
@@ -493,6 +496,24 @@ final class RouteIcons
 		drawer.draw(g);
 		g.dispose();
 		return image;
+	}
+
+	private static BufferedImage flag()
+	{
+		return render(g ->
+		{
+			// Pole with a small base, and a gold pennant pointing right — a course-start marker.
+			g.setColor(new Color(0xB4, 0xB4, 0xB4));
+			g.draw(new Line2D.Double(5, 2.5, 5, 13.5));
+			g.draw(new Line2D.Double(3.5, 13.5, 6.5, 13.5));
+			g.setColor(GOLD);
+			Path2D pennant = new Path2D.Double();
+			pennant.moveTo(5.8, 3.0);
+			pennant.lineTo(12.5, 5.2);
+			pennant.lineTo(5.8, 7.4);
+			pennant.closePath();
+			g.fill(pennant);
+		});
 	}
 
 	private static BufferedImage hamburger(Color colour)
