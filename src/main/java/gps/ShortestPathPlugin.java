@@ -237,6 +237,9 @@ public class ShortestPathPlugin extends Plugin
 	// other method (so re-enabled ones aren't re-disabled).
 	private static final String CONFIG_KEY_SEASONAL_DEFAULTED = "seasonalMethodsDefaultExcluded";
 	private volatile boolean seasonalDefaultsApplied = false;
+	// The search box's recent selections (most recent first), persisted across sessions.
+	private static final String CONFIG_KEY_SEARCH_HISTORY = "searchHistory";
+	private volatile List<Destinations.Entry> searchHistory = new ArrayList<>();
 	private final Set<TeleportMethod> userExclusions = ConcurrentHashMap.newKeySet();
 	// The exclusions the current route list was generated with; diverging from userExclusions means
 	// the list is stale until the user refreshes (method toggles no longer auto-recalculate).
@@ -454,6 +457,8 @@ public class ShortestPathPlugin extends Plugin
 		loadExclusions();
 		seasonalDefaultsApplied = Boolean.parseBoolean(
 			configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_SEASONAL_DEFAULTED));
+		searchHistory = SearchHistory.deserialize(
+			configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_SEARCH_HISTORY));
 		loadRoutesMode();
 		routeLimit = defaultRouteLimit();
 		altPanel = new ShortestPathPanel(this);
@@ -2397,6 +2402,20 @@ public class ShortestPathPlugin extends Plugin
 			// other recompute); this just refreshes the panel so the catalog icons and counts update.
 			refreshPanel(altGenerationInFlight);
 		}
+	}
+
+	/** The search box's recent selections, most recent first. */
+	public List<Destinations.Entry> getSearchHistory()
+	{
+		return searchHistory;
+	}
+
+	/** Records a search selection at the front of the persisted history (deduplicated, capped). */
+	public void recordSearchSelection(Destinations.Entry entry)
+	{
+		List<Destinations.Entry> updated = SearchHistory.push(searchHistory, entry);
+		searchHistory = updated;
+		configManager.setConfiguration(CONFIG_GROUP, CONFIG_KEY_SEARCH_HISTORY, SearchHistory.serialize(updated));
 	}
 
 	public void clearExclusions()

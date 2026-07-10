@@ -1585,6 +1585,27 @@ public class ShortestPathPanel extends PluginPanel
 		return label;
 	}
 
+	/** The first JTextField inside a composite component (IconTextField hides its own). */
+	private static javax.swing.JTextField innerTextField(Container root)
+	{
+		for (Component component : root.getComponents())
+		{
+			if (component instanceof javax.swing.JTextField)
+			{
+				return (javax.swing.JTextField) component;
+			}
+			if (component instanceof Container)
+			{
+				javax.swing.JTextField inner = innerTextField((Container) component);
+				if (inner != null)
+				{
+					return inner;
+				}
+			}
+		}
+		return null;
+	}
+
 	private static JLabel control(JLabel label)
 	{
 		label.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
@@ -1635,6 +1656,20 @@ public class ShortestPathPanel extends PluginPanel
 				renderDestinationResults();
 			}
 		});
+		// Clicking into the empty box offers the recent searches; IconTextField doesn't expose its
+		// inner text field, so find it in the component tree to hear focus.
+		javax.swing.JTextField inner = innerTextField(destinationSearch);
+		if (inner != null)
+		{
+			inner.addFocusListener(new java.awt.event.FocusAdapter()
+			{
+				@Override
+				public void focusGained(java.awt.event.FocusEvent e)
+				{
+					renderDestinationResults();
+				}
+			});
+		}
 		wrap.add(destinationSearch);
 
 		destinationResults.setLayout(new BoxLayout(destinationResults, BoxLayout.Y_AXIS));
@@ -1806,29 +1841,54 @@ public class ShortestPathPanel extends PluginPanel
 	private void renderDestinationResults()
 	{
 		destinationResults.removeAll();
-		String query = destinationSearch.getText().trim().toLowerCase(java.util.Locale.ROOT);
+		String query = destinationSearch.getText().trim();
+		final int player = plugin.getPlayerLocation();
 		if (query.isEmpty())
 		{
-			destinationPopup.setVisible(false);
+			// An empty box offers the recent selections instead of hiding — reopening a frequent
+			// destination without retyping it.
+			List<Destinations.Entry> history = plugin.getSearchHistory();
+			if (history.isEmpty())
+			{
+				destinationPopup.setVisible(false);
+				return;
+			}
+			JLabel header = new JLabel("Recent searches");
+			header.setForeground(Color.GRAY);
+			header.setFont(FontManager.getRunescapeSmallFont());
+			header.setBorder(new EmptyBorder(2, 4, 2, 4));
+			destinationResults.add(header);
+			for (Destinations.Entry entry : history)
+			{
+				destinationResults.add(destinationRow(entry, player));
+			}
+			showDestinationPopup();
 			return;
 		}
 
-		final int player = plugin.getPlayerLocation();
+		// Fuzzy match, best first: the score tiers (exact > prefix > word prefixes > substring >
+		// subsequence) rank the list; proximity to the player breaks ties within a tier.
 		List<Destinations.Entry> matches = new ArrayList<>();
+		Map<Destinations.Entry, Integer> scores = new java.util.HashMap<>();
 		for (Destinations.Entry entry : destinationIndex())
 		{
-			if (entry.name.toLowerCase(java.util.Locale.ROOT).contains(query))
+			int score = SearchMatcher.score(entry.name, query);
+			if (score > 0)
 			{
 				matches.add(entry);
+				scores.put(entry, score);
 			}
 		}
+		Comparator<Destinations.Entry> byScore =
+			Comparator.comparingInt(e -> -scores.getOrDefault(e, 0));
 		if (player != WorldPointUtil.UNDEFINED)
 		{
-			matches.sort(Comparator.comparingInt(e -> WorldPointUtil.distanceBetween(player, e.packedPosition)));
+			matches.sort(byScore.thenComparingInt(
+				e -> WorldPointUtil.distanceBetween(player, e.packedPosition)));
 		}
 		else
 		{
-			matches.sort(Comparator.comparing(e -> e.name));
+			matches.sort(byScore.thenComparing(e -> e.name));
 		}
 
 		int shown = 0;
@@ -1848,9 +1908,15 @@ public class ShortestPathPanel extends PluginPanel
 			none.setBorder(new EmptyBorder(2, 4, 2, 4));
 			destinationResults.add(none);
 		}
+		showDestinationPopup();
+	}
 
-		// Float the results over the panel, matching the search field's width. Re-showing on every
-		// keystroke would flicker and can steal the caret, so a visible popup is resized in place.
+	/**
+	 * Floats the results over the panel, matching the search field's width. Re-showing on every
+	 * keystroke would flicker and can steal the caret, so a visible popup is resized in place.
+	 */
+	private void showDestinationPopup()
+	{
 		int width = Math.max(destinationSearch.getWidth(), 180);
 		destinationPopup.setPreferredSize(new Dimension(width,
 			destinationResults.getPreferredSize().height + 2));
@@ -1897,7 +1963,11 @@ public class ShortestPathPanel extends PluginPanel
 			public void mouseClicked(MouseEvent e)
 			{
 				plugin.setDestination(entry.packedPosition, "search");
+				plugin.recordSearchSelection(entry);
+				// Clearing the text re-renders the popup with the recent list; a selection should
+				// end the interaction instead.
 				destinationSearch.setText("");
+				destinationPopup.setVisible(false);
 			}
 
 			@Override
