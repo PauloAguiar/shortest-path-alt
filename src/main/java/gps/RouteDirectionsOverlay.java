@@ -45,10 +45,10 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	private static final Color UPCOMING = new Color(0xB4, 0xB4, 0xB4);
 	private static final Color OFF_ROUTE = new Color(0xFF, 0x4C, 0x4C);
 
-	// Magnifying-glass hierarchy: bold (16) > regular (16, lighter) > small. Adjusted by the
-	// overlay-text-size offset (in points) — at 0 the fonts stay at their NATIVE sizes, where
-	// the bitmap-styled RuneScape fonts look best.
-	private int fontSizeOffset = 0;
+	// Magnifying-glass hierarchy: bold > regular > small, mapped from the text-size preset onto
+	// combinations that render crisply (see OverlayFontSize — the pixel-art fonts only look right
+	// at their native size 16 or exactly pixel-doubled).
+	private OverlayFontSize fontSize = OverlayFontSize.NORMAL;
 	private Font fontCurrent = FontManager.getRunescapeBoldFont();
 	private Font fontNext = FontManager.getRunescapeFont();
 	private Font fontOther = FontManager.getRunescapeSmallFont();
@@ -358,28 +358,39 @@ public class RouteDirectionsOverlay extends OverlayPanel
 		return new Color(standard.getRed(), standard.getGreen(), standard.getBlue(), alpha);
 	}
 
-	/** Rebuilds the three fonts when the text-size offset changes (0 = native sizes). */
+	/** Rebuilds the three fonts when the text-size preset changes. */
 	private void refreshFonts()
 	{
-		final int offset = Math.max(-2, Math.min(2, plugin.overlayTextSizeOffset));
-		if (offset == fontSizeOffset)
+		final OverlayFontSize preset = plugin.overlayFontSize == null
+			? OverlayFontSize.NORMAL : plugin.overlayFontSize;
+		if (preset == fontSize)
 		{
 			return;
 		}
-		fontSizeOffset = offset;
+		fontSize = preset;
 		final Font bold = FontManager.getRunescapeBoldFont();
 		final Font regular = FontManager.getRunescapeFont();
 		final Font small = FontManager.getRunescapeSmallFont();
-		if (offset == 0)
+		switch (preset)
 		{
-			fontCurrent = bold;
-			fontNext = regular;
-			fontOther = small;
-			return;
+			case SMALL:
+				// The hierarchy shifted one tier down, every face at its native size.
+				fontCurrent = regular;
+				fontNext = small;
+				fontOther = small;
+				break;
+			case LARGE:
+				// Exactly pixel-doubled: the one enlargement that keeps the pixel fonts sharp.
+				fontCurrent = bold.deriveFont(32f);
+				fontNext = regular.deriveFont(32f);
+				fontOther = small.deriveFont(32f);
+				break;
+			default:
+				fontCurrent = bold;
+				fontNext = regular;
+				fontOther = small;
+				break;
 		}
-		fontCurrent = bold.deriveFont(bold.getSize2D() + offset);
-		fontNext = regular.deriveFont(regular.getSize2D() + offset);
-		fontOther = small.deriveFont(small.getSize2D() + offset);
 	}
 
 	/** Blends a colour toward white — the derived "about to end" shade of the accent. */
@@ -397,28 +408,30 @@ public class RouteDirectionsOverlay extends OverlayPanel
 	 */
 	private void drawTitle(Graphics2D graphics, Dimension panelSize)
 	{
+		// All header geometry scales with the header font (1x at the native 16, 2x for Large).
+		final float s = fontCurrent.getSize2D() / 16f;
 		// Location pin: round head with a tail, hollow centre.
 		final int px = 8;
 		final int py = 4;
 		graphics.setColor(accent);
-		graphics.fillOval(px, py, 9, 9);
+		graphics.fillOval(px, py, Math.round(9 * s), Math.round(9 * s));
 		Polygon tail = new Polygon(
-			new int[]{px + 1, px + 8, px + 4},
-			new int[]{py + 7, py + 7, py + 13},
+			new int[]{px + Math.round(1 * s), px + Math.round(8 * s), px + Math.round(4 * s)},
+			new int[]{py + Math.round(7 * s), py + Math.round(7 * s), py + Math.round(13 * s)},
 			3);
 		graphics.fillPolygon(tail);
 		graphics.setColor(new Color(0x10, 0x10, 0x10));
-		graphics.fillOval(px + 3, py + 3, 3, 3);
+		graphics.fillOval(px + Math.round(3 * s), py + Math.round(3 * s), Math.round(3 * s), Math.round(3 * s));
 
 		graphics.setFont(fontCurrent);
 		graphics.setColor(Color.BLACK);
-		graphics.drawString("GPS", px + 14, py + 12);
+		graphics.drawString("GPS", px + Math.round(14 * s), py + Math.round(12 * s));
 		graphics.setColor(Color.WHITE);
-		graphics.drawString("GPS", px + 13, py + 11);
+		graphics.drawString("GPS", px + Math.round(13 * s), py + Math.round(11 * s));
 
 		// Accent rule under the header row.
 		graphics.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 170));
-		graphics.drawLine(4, py + 15, panelSize.width - 4, py + 15);
+		graphics.drawLine(4, py + Math.round(15 * s), panelSize.width - 4, py + Math.round(15 * s));
 	}
 
 	/**

@@ -160,7 +160,7 @@ public class ShortestPathPlugin extends Plugin
 	boolean showDirections;
 	boolean overrideOverlayTransparency;
 	int overlayTransparency;
-	int overlayTextSizeOffset;
+	OverlayFontSize overlayFontSize = OverlayFontSize.NORMAL;
 	boolean arrivalAutoDismiss;
 	int arrivalDismissSeconds;
 	int tileCounterStep;
@@ -1981,7 +1981,8 @@ public class ShortestPathPlugin extends Plugin
 		showDirections = override("showDirections", config.showDirections());
 		overrideOverlayTransparency = override("overrideOverlayTransparency", config.overrideOverlayTransparency());
 		overlayTransparency = override("overlayTransparency", config.overlayTransparency());
-		overlayTextSizeOffset = override("overlayTextSizeOffset", config.overlayTextSizeOffset());
+		// Display-only preference; not part of the capture-replay override set.
+		overlayFontSize = config.overlayFontSize();
 		arrivalAutoDismiss = override("arrivalAutoDismiss", config.arrivalAutoDismiss());
 		arrivalDismissSeconds = override("arrivalDismissSeconds", config.arrivalDismissSeconds());
 	}

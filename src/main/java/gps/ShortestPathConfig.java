@@ -1155,18 +1155,18 @@ public interface ShortestPathConfig extends Config
 		return 100;
 	}
 
-	@Range(min = -2, max = 2)
 	@ConfigItem(
-		keyName = "overlayTextSizeOffset",
+		keyName = "overlayFontSize",
 		name = "Overlay text size",
-		description = "Adjusts the directions overlay's font size, in points relative to the standard<br>" +
-			"RuneScape fonts (0 = native size, where the bitmap-styled fonts look best)",
+		description = "Text size preset for the directions overlay. Only combinations that render<br>" +
+			"crisply: the RuneScape fonts are pixel-styled, so Small and Normal use their native<br>" +
+			"faces and Large pixel-doubles them",
 		position = 78,
 		section = sectionDisplay
 	)
-	default int overlayTextSizeOffset()
+	default OverlayFontSize overlayFontSize()
 	{
-		return 0;
+		return OverlayFontSize.NORMAL;
 	}
 
 	@ConfigItem(
