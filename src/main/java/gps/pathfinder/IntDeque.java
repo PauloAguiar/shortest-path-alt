@@ -19,11 +19,6 @@ class IntDeque
 		elements = new int[Math.max(1, initialCapacity)];
 	}
 
-	int size()
-	{
-		return size;
-	}
-
 	boolean isEmpty()
 	{
 		return size == 0;

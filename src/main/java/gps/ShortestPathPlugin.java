@@ -1680,11 +1680,6 @@ public class ShortestPathPlugin extends Plugin
 		);
 	}
 
-	public CollisionMap getMap()
-	{
-		return pathfinderConfig.getMap();
-	}
-
 	/**
 	 * WARNING: This is a legacy wrapper for coarse display-oriented callers only.
 	 * <p>
