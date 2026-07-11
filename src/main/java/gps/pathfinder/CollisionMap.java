@@ -131,11 +131,9 @@ public class CollisionMap
 		Transport[] transports = config.getTransportsPacked(pathBankVisited).getOrDefault(packedPosition, TransportAvailability.EMPTY_TRANSPORTS);
 		for (Transport transport : transports)
 		{
-			boolean delayedVisit = transport.getType().sharesDestinationsWith() != null;
-			// Do not consider a transport if we have already visited its target tile.
-			// For transports that share destinations with a teleport, skip this check
-			// so both can compete in the priority queue (delayed visit).
-			if (!delayedVisit && visited.get(transport.getDestination(), pathBankVisited))
+			// A transport to an already-SETTLED destination is pointless (settled = final under
+			// cost-ordered settling); same-destination competitors race in the queue otherwise.
+			if (visited.get(transport.getDestination(), pathBankVisited))
 			{
 				continue;
 			}
@@ -155,8 +153,7 @@ public class CollisionMap
 				node,
 				transportTravelTime,
 				transportAdditionalCost,
-				pathBankVisited,
-				delayedVisit));
+				pathBankVisited));
 		}
 
 		// Global teleports are only considered from an abstract node, so each
@@ -256,8 +253,7 @@ public class CollisionMap
 		int maxWildernessLevel = graph.abstractKind(node).maxWildernessLevel();
 		for (Transport transport : config.getUsableTeleports(bankVisited))
 		{
-			boolean delayedVisit = transport.getType().sharesDestinationsWith() != null;
-			if (!delayedVisit && visited.get(transport.getDestination(), bankVisited))
+			if (visited.get(transport.getDestination(), bankVisited))
 			{
 				continue;
 			}
@@ -274,8 +270,7 @@ public class CollisionMap
 				node,
 				CostUnits.fromTicks(transport.getDuration()),
 				config.getAdditionalTransportCost(transport),
-				bankVisited,
-				delayedVisit));
+				bankVisited));
 		}
 		return neighbors;
 	}

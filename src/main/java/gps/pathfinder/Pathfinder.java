@@ -290,12 +290,7 @@ public class Pathfinder implements Runnable
 				}
 				continue;
 			}
-			// For delayed-visit nodes (shared destinations), don't mark as visited on enqueue.
-			// They will be checked and marked when dequeued from pending.
-			if (!(neighborIsTransport && graph.isDelayedVisit(neighbor)))
-			{
-				visited.set(neighbor, graph);
-			}
+			visited.set(neighbor, graph);
 			if (neighborIsTransport)
 			{
 				pending.add(neighbor);
@@ -403,11 +398,9 @@ public class Pathfinder implements Runnable
 			}
 			if (ordered)
 			{
-				// For delayed-visit nodes, check if the destination was already reached by a
-				// cheaper path while this node was queued. In heap mode EVERY node dedups here:
-				// nothing is marked at enqueue, and cost ordering (plus a consistent heuristic in
-				// A* mode) makes the first dequeue optimal.
-				if (heapMode || graph.isDelayedVisit(node))
+				// In heap mode EVERY node dedups here: nothing is marked at enqueue, and cost
+				// ordering (plus a consistent heuristic in A* mode) makes the first dequeue optimal.
+				if (heapMode)
 				{
 					if (visited.get(node, graph))
 					{

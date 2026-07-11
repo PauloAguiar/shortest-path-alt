@@ -36,7 +36,6 @@ public class NodeGraph
 
 	private static final byte FLAG_BANK_VISITED = 1;       // bit0
 	private static final byte FLAG_ABSTRACT = 1 << 1;      // bit1
-	private static final byte FLAG_DELAYED_VISIT = 1 << 2; // bit2
 	private static final byte FLAG_TRANSPORT = 1 << 3;     // bit3
 
 	// Enum.values() copies on every call, so cache it for the abstractKind lookup.
@@ -157,16 +156,12 @@ public class NodeGraph
 	 * weight can make a transport free but never cheaper than free (Dijkstra needs non-negative edges).
 	 */
 	public int createTransport(int packedPosition, int previous, int travelTime, int additionalCost,
-		boolean bankVisited, boolean delayedVisit)
+		boolean bankVisited)
 	{
 		byte flagBits = FLAG_TRANSPORT;
 		if (bankVisited)
 		{
 			flagBits |= FLAG_BANK_VISITED;
-		}
-		if (delayedVisit)
-		{
-			flagBits |= FLAG_DELAYED_VISIT;
 		}
 		return append(packedPosition, previous, costOf(previous) + Math.max(0, travelTime + additionalCost),
 			flagBits, (byte) 0);
@@ -233,10 +228,6 @@ public class NodeGraph
 		return (flags[id] & FLAG_TRANSPORT) != 0;
 	}
 
-	public boolean isDelayedVisit(int id)
-	{
-		return (flags[id] & FLAG_DELAYED_VISIT) != 0;
-	}
 
 	public AbstractNodeKind abstractKind(int id)
 	{

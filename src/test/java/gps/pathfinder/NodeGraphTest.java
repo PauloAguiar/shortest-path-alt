@@ -113,7 +113,7 @@ public class NodeGraphTest
 
 		int travelTime = 6;
 		int additionalCost = 50;
-		int transport = graph.createTransport(destination, prev, travelTime, additionalCost, false, true);
+		int transport = graph.createTransport(destination, prev, travelTime, additionalCost, false);
 
 		// No walking-distance term for transports, unlike a walked tile.
 		assertEquals(graph.cost(prev) + travelTime + additionalCost, graph.cost(transport));
@@ -121,19 +121,17 @@ public class NodeGraphTest
 		// ordering-only term would break the first-settle-is-optimal invariant.
 		assertEquals(graph.cost(transport), graph.orderCost(transport));
 		assertTrue(graph.isTransport(transport));
-		assertTrue(graph.isDelayedVisit(transport));
 		assertTrue(graph.isTile(transport)); // transports are concrete tile destinations
 	}
 
 	@Test
-	public void nonDelayedTransportHasNoDelayedFlag()
+	public void bankVisitedTransportKeepsTheFlagAndPureCostKey()
 	{
 		NodeGraph graph = new NodeGraph(16);
 		int start = graph.createStart(WorldPointUtil.packWorldPoint(3200, 3200, 0));
-		int transport = graph.createTransport(WorldPointUtil.packWorldPoint(2800, 3400, 0), start, 6, 0, true, false);
+		int transport = graph.createTransport(WorldPointUtil.packWorldPoint(2800, 3400, 0), start, 6, 0, true);
 
 		assertTrue(graph.isTransport(transport));
-		assertFalse(graph.isDelayedVisit(transport));
 		assertEquals(graph.cost(transport), graph.orderCost(transport));
 		assertTrue(graph.bankVisited(transport));
 	}
@@ -148,7 +146,7 @@ public class NodeGraphTest
 		int start = graph.createStart(a);
 		int tile = graph.createTile(b, start, false, 0);
 		int abstractNode = graph.createAbstract(AbstractNodeKind.GLOBAL_TELEPORTS_NORMAL, tile, false, 0);
-		int teleportDest = graph.createTransport(c, abstractNode, 6, 0, false, false);
+		int teleportDest = graph.createTransport(c, abstractNode, 6, 0, false);
 
 		var steps = graph.getPathSteps(teleportDest);
 		assertEquals(3, steps.size()); // start, tile, teleportDest (abstract is skipped)
