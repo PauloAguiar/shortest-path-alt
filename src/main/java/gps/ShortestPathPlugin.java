@@ -130,7 +130,6 @@ public class ShortestPathPlugin extends Plugin
 	private static final String SET = "Set";
 	private static final String FIND_CLOSEST = "Find closest";
 	private static final String FLASH_ICONS = "Flash icons";
-	private static final String START = ColorUtil.wrapWithColorTag("Start", JagexColors.MENU_TARGET);
 	private static final String TARGET = ColorUtil.wrapWithColorTag("GPS Target", JagexColors.MENU_TARGET);
 	private static final BufferedImage MARKER_IMAGE = ImageUtil.loadImageResource(ShortestPathPlugin.class, "/marker.png");
 	private static final Pattern TRANSPORT_OPTIONS_REGEX = Pattern.compile("^(avoidWilderness|includeBankPath|currencyThreshold|use\\w+|cost\\w+)$");
@@ -310,7 +309,6 @@ public class ShortestPathPlugin extends Plugin
 	@Getter
 	private PathfinderConfig pathfinderConfig;
 	@Getter
-	private boolean startPointSet = false;
 	// Journey wall-clock, reported on arrival. 0 means "armed": it starts counting from the first
 	// tick the player MOVES, so standing still after setting a destination (or picking a path)
 	// doesn't inflate the time. Re-armed when a new destination is set OR the user selects a
@@ -1333,7 +1331,7 @@ public class ShortestPathPlugin extends Plugin
 		// stationary far position (e.g. just teleported off-path) doesn't loop. With
 		// auto-recalculate off, GPS keeps the original route and only ever warns.
 		int recalc = config.recalculateDistance();
-		if (!startPointSet && recalc >= 0)
+		if (recalc >= 0)
 		{
 			int step = WorldPointUtil.distanceBetween(lastLocation, currentLocation);
 			boolean moved = lastLocation != currentLocation;
@@ -1406,14 +1404,6 @@ public class ShortestPathPlugin extends Plugin
 			addMenuEntry(event, SET, TARGET, 1);
 			if (pathfinder != null)
 			{
-				for (int target : pathfinder.getTargets())
-				{
-					if (target != WorldPointUtil.UNDEFINED)
-					{
-						addMenuEntry(event, SET, START, 1);
-						break;
-					}
-				}
 				int selectedTile = getSelectedWorldPoint();
 				List<PathStep> path;
 				if ((path = pathfinder.getPath()) != null)
@@ -1445,7 +1435,6 @@ public class ShortestPathPlugin extends Plugin
 					{
 						if (target != WorldPointUtil.UNDEFINED)
 						{
-							addMenuEntry(event, SET, START, 0);
 							addMenuEntry(event, CLEAR, PATH, 0);
 						}
 					}
@@ -2066,10 +2055,6 @@ public class ShortestPathPlugin extends Plugin
 			targetSource = "map pin";
 			setTarget(getSelectedWorldPoint());
 		}
-		else if (entry.getOption().equals(SET) && entry.getTarget().equals(START))
-		{
-			setStart(getSelectedWorldPoint());
-		}
 		else if (entry.getOption().equals(CLEAR) && entry.getTarget().equals(PATH))
 		{
 			targetSource = null;
@@ -2206,7 +2191,6 @@ public class ShortestPathPlugin extends Plugin
 
 			worldMapPointManager.removeIf(x -> x == marker);
 			marker = null;
-			startPointSet = false;
 			selectedRoute = null;
 			routeLimit = defaultRouteLimit();
 			// Keep the teleport-methods catalog visible with no target selected.
@@ -2215,7 +2199,7 @@ public class ShortestPathPlugin extends Plugin
 		else
 		{
 			Player localPlayer = client.getLocalPlayer();
-			if (!startPointSet && localPlayer == null)
+			if (localPlayer == null)
 			{
 				return;
 			}
@@ -2236,10 +2220,6 @@ public class ShortestPathPlugin extends Plugin
 
 			int start = WorldPointUtil.fromLocalInstance(client, localPlayer);
 			lastLocation = start;
-			if (startPointSet && pathfinder != null)
-			{
-				start = pathfinder.getStart();
-			}
 			Set<Integer> destinations = new HashSet<>(targets);
 			if (pathfinder != null && append)
 			{
@@ -2250,16 +2230,6 @@ public class ShortestPathPlugin extends Plugin
 			// Alternatives are computed manually via the panel's "Find routes" button.
 			restartPathfinding(start, destinations, append);
 		}
-	}
-
-	private void setStart(int start)
-	{
-		if (pathfinder == null)
-		{
-			return;
-		}
-		startPointSet = true;
-		restartPathfinding(start, pathfinder.getTargets());
 	}
 
 	// --- Alternative-routes feature (driven by ShortestPathPanel) ---
