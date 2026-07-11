@@ -2133,6 +2133,7 @@ public class ShortestPathPanel extends PluginPanel
 			case "Magic carpets": return new Color(0xB0, 0x3A, 0x5B);   // wine
 			case "Mushtrees": return new Color(0xE0, 0x60, 0x60);       // light red
 			case "Minecarts": return new Color(0x60, 0x7D, 0x8B);       // slate
+			case "Mountain guides": return new Color(0x8D, 0x6E, 0x63); // mountain brown
 			case "Quetzals": return new Color(0x4A, 0xC6, 0xE0);        // cyan
 			case "Obelisks": return new Color(0x9A, 0xA5, 0xB1);        // steel
 			case "Boats & ships": return new Color(0x5C, 0x6B, 0xC0);   // indigo — NOT the item teal
