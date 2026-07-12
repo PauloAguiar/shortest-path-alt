@@ -1,11 +1,14 @@
 package gps.pathfinder;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Skill;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,8 +17,10 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.MockitoJUnitRunner;
+import gps.PrimitiveIntHashMap;
 import gps.ShortestPathConfig;
 import gps.WorldPointUtil;
+import gps.transport.Transport;
 
 /**
  * Invariants of the target-rooted distance field: targets are zero, values lower-bound real
@@ -100,6 +105,58 @@ public class DistanceFieldTest
 		DistanceField field = DistanceField.build(walkOnlyConfig(), Set.of(VARROCK));
 		assertEquals("The island must be reverse-unreachable",
 			DistanceField.UNREACHED, field.distance(ENTRANA));
+	}
+
+	/**
+	 * The reverse index must fold every (destination, origin) pair to a single min-cost entry — a
+	 * transport not gated on banking is present in both bank-state availability maps, and distinct
+	 * methods can share an origin and landing, so the raw data holds duplicate/redundant edges the
+	 * index is expected to collapse. Verified by independently reducing the raw availability the same
+	 * way and asserting the index matches exactly.
+	 */
+	@Test
+	public void reverseIndexKeepsOneMinCostEntryPerOrigin()
+	{
+		PathfinderConfig cfg = new TestPathfinderConfig(client, config).copyForPlanning();
+		cfg.refresh();
+
+		Map<Integer, Map<Integer, Integer>> expected = new HashMap<>();
+		for (boolean bankVisited : new boolean[]{false, true})
+		{
+			PrimitiveIntHashMap<Transport[]> transports = cfg.getTransportsPacked(bankVisited);
+			for (int origin : transports.keys())
+			{
+				Transport[] set = transports.get(origin);
+				if (set == null)
+				{
+					continue;
+				}
+				for (Transport t : set)
+				{
+					if (t.getDestination() == WorldPointUtil.UNDEFINED
+						|| t.getOrigin() == WorldPointUtil.UNDEFINED)
+					{
+						continue;
+					}
+					int cost = Math.max(0, CostUnits.fromTicks(t.getDuration())
+						+ cfg.getAdditionalTransportCost(t));
+					expected.computeIfAbsent(t.getDestination(), k -> new HashMap<>())
+						.merge(t.getOrigin(), cost, Math::min);
+				}
+			}
+		}
+
+		Map<Integer, Map<Integer, Integer>> index = DistanceField.buildReverseTransportIndex(cfg);
+		assertFalse("The transport data must produce some reverse edges for this test to mean anything",
+			index.isEmpty());
+		assertEquals("Every landing (and only those) must be indexed", expected.keySet(), index.keySet());
+		for (Map.Entry<Integer, Map<Integer, Integer>> landing : index.entrySet())
+		{
+			// A Map<origin, cost> can't hold a duplicate origin, and each value must be the minimum
+			// cost across both bank states — exactly the reduction computed above.
+			assertEquals("One min-cost entry per origin at landing " + landing.getKey(),
+				expected.get(landing.getKey()), landing.getValue());
+		}
 	}
 
 	@Test

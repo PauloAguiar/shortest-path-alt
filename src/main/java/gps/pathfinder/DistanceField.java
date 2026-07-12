@@ -2,10 +2,8 @@ package gps.pathfinder;
 
 import static net.runelite.api.Constants.REGION_SIZE;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
@@ -165,7 +163,7 @@ public final class DistanceField
 	{
 		final CollisionMap map = config.getMap();
 		final DistanceField field = new DistanceField(map);
-		final Map<Integer, List<long[]>> reverseTransports = buildReverseTransportIndex(config);
+		final Map<Integer, Map<Integer, Integer>> reverseTransports = buildReverseTransportIndex(config);
 		final VisitedTiles settled = new VisitedTiles(map);
 		final IntDeque fifo = new IntDeque(4096);
 		// Transport relaxations only (a few tens of thousands at most): boxed entries are fine.
@@ -206,13 +204,13 @@ public final class DistanceField
 
 			field.expandWalking(packed, x, y, plane, distance, fifo, settled, config);
 
-			final List<long[]> intoHere = reverseTransports.get(packed);
+			final Map<Integer, Integer> intoHere = reverseTransports.get(packed);
 			if (intoHere != null)
 			{
-				for (long[] edge : intoHere)
+				for (Map.Entry<Integer, Integer> edge : intoHere.entrySet())
 				{
-					final int origin = (int) edge[0];
-					final int cost = (int) edge[1];
+					final int origin = edge.getKey();
+					final int cost = edge.getValue();
 					final int candidate = distance + cost;
 					final int ox = WorldPointUtil.unpackWorldX(origin);
 					final int oy = WorldPointUtil.unpackWorldY(origin);
@@ -366,12 +364,23 @@ public final class DistanceField
 	}
 
 	/**
-	 * Destination-keyed index of every origin-bound transport in the config's base availability
-	 * (both bank states — a superset only shortens the field). Entry = {origin, effectiveCost}.
+	 * Destination-keyed index of every origin-bound transport in the config's base availability:
+	 * {@code destination -> (origin -> cheapest cost to make that hop)}. Built over both bank states
+	 * because a superset only shortens the field.
+	 * <p>
+	 * The inner map is keyed by origin and keeps the MINIMUM cost on purpose. The same origin lands
+	 * on the same destination more than once here — a transport not gated on banking appears in both
+	 * the no-bank and bank-visited availability, and two distinct methods can share an origin and
+	 * landing — so a flat list would hold duplicate and redundant edges. The flood only ever relaxes
+	 * an origin to the cheapest way it can reach the destination ({@code relax} keeps the minimum), so
+	 * a pricier or duplicate edge could never improve the field. Folding them to one min-cost entry
+	 * per origin as we build keeps the index minimal (and the flood's relax attempts non-redundant)
+	 * without changing a single field value.
 	 */
-	private static Map<Integer, List<long[]>> buildReverseTransportIndex(PathfinderConfig config)
+	// Package-private for DistanceFieldTest's index-shape assertion.
+	static Map<Integer, Map<Integer, Integer>> buildReverseTransportIndex(PathfinderConfig config)
 	{
-		final Map<Integer, List<long[]>> index = new HashMap<>();
+		final Map<Integer, Map<Integer, Integer>> index = new HashMap<>();
 		for (boolean bankVisited : new boolean[]{false, true})
 		{
 			final PrimitiveIntHashMap<Transport[]> transports = config.getTransportsPacked(bankVisited);
@@ -392,8 +401,8 @@ public final class DistanceField
 					}
 					final int cost = Math.max(0, CostUnits.fromTicks(transport.getDuration())
 						+ config.getAdditionalTransportCost(transport));
-					index.computeIfAbsent(destination, k -> new ArrayList<>())
-						.add(new long[]{transport.getOrigin(), cost});
+					index.computeIfAbsent(destination, k -> new HashMap<>())
+						.merge(transport.getOrigin(), cost, Math::min);
 				}
 			}
 		}
