@@ -50,6 +50,10 @@ public class DistanceFieldBenchmark
 	@Param({"single", "multi"})
 	public String scenario;
 
+	// 0 = full-map flood; 3 = the production default cost multiple (floor-bounded flood).
+	@Param({"0", "3"})
+	public int costMultiple;
+
 	private PathfinderConfig config;
 	private Set<Integer> targets;
 
@@ -82,6 +86,6 @@ public class DistanceFieldBenchmark
 	@Benchmark
 	public DistanceField build()
 	{
-		return DistanceField.build(config, targets);
+		return DistanceField.build(config, targets, costMultiple);
 	}
 }

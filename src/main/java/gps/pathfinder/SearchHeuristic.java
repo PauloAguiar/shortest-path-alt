@@ -41,16 +41,22 @@ public final class SearchHeuristic
 
 	private final DistanceField field;
 	private final int floor;
+	// The field's flood horizon: a strict lower bound on any unflooded tile's distance. For a
+	// full-map flood this is MAX_VALUE and unflooded tiles clamp to the floor exactly as before;
+	// for a bounded flood, min(horizon, floor) stays admissible because the tile's true remaining
+	// provably exceeds the horizon.
+	private final int horizon;
 
-	private SearchHeuristic(DistanceField field, int floor)
+	private SearchHeuristic(DistanceField field, int floor, int horizon)
 	{
 		this.field = field;
 		this.floor = floor;
+		this.horizon = horizon;
 	}
 
 	/**
 	 * The heuristic value for a node position; {@link WorldPointUtil#UNDEFINED} (abstract
-	 * global-teleport hub nodes) and unflooded tiles get the floor.
+	 * global-teleport hub nodes) gets the floor, unflooded tiles min(horizon, floor).
 	 */
 	public int of(int packedPosition)
 	{
@@ -59,6 +65,10 @@ public final class SearchHeuristic
 			return floor;
 		}
 		final int distance = field.distance(packedPosition);
+		if (distance == DistanceField.UNREACHED)
+		{
+			return Math.min(horizon, floor);
+		}
 		return distance >= floor ? floor : distance;
 	}
 
@@ -78,6 +88,7 @@ public final class SearchHeuristic
 		{
 			return null;
 		}
+		final int horizon = field.horizon();
 		int floor = UNBOUNDED_FLOOR;
 		// Both bank states: a path may flip into the banked state mid-search, so the floor must
 		// cover every teleport either state can use (a superset only lowers the floor = safe).
@@ -90,16 +101,24 @@ public final class SearchHeuristic
 				{
 					continue;
 				}
-				final int landingDistance = field.distance(destination);
+				int landingDistance = field.distance(destination);
 				if (landingDistance == DistanceField.UNREACHED)
 				{
-					continue;
+					if (horizon == Integer.MAX_VALUE)
+					{
+						// Full flood: unflooded = genuinely reverse-unreachable, contributes nothing.
+						continue;
+					}
+					// Bounded flood: the landing lies beyond the horizon, which lower-bounds its
+					// distance. Skipping it instead would OVERESTIMATE the floor (inadmissible) when
+					// the truly-cheapest teleport happens to land just past the horizon.
+					landingDistance = horizon;
 				}
 				final int effectiveCost = Math.max(0,
 					CostUnits.fromTicks(teleport.getDuration()) + config.getAdditionalTransportCost(teleport));
-				floor = Math.min(floor, effectiveCost + landingDistance);
+				floor = (int) Math.min(floor, (long) effectiveCost + landingDistance);
 			}
 		}
-		return new SearchHeuristic(field, floor);
+		return new SearchHeuristic(field, floor, horizon);
 	}
 }

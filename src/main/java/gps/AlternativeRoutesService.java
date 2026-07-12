@@ -221,7 +221,7 @@ public class AlternativeRoutesService
 		// generation shares (chain, walk, seeds). Compact target sets only; a map-wide nearest-X
 		// set would flood everything for searches that are already cheap.
 		long fieldStart = System.nanoTime();
-		final DistanceField field = DistanceField.buildIfCompact(planningConfig, ends);
+		final DistanceField field = DistanceField.buildIfCompact(planningConfig, ends, costMultiple);
 		timer.fieldNanos = System.nanoTime() - fieldStart;
 
 		// Walk-only search, run concurrently on the seed pool (its own config copy — the chain
@@ -896,7 +896,9 @@ public class AlternativeRoutesService
 	{
 		final Set<Integer> home = Set.of(start);
 		long fieldStart = System.nanoTime();
-		final DistanceField returnField = DistanceField.buildIfCompact(planningConfig, home);
+		// Return legs run uncapped, so keep the full flood here (a bounded one would stay correct
+		// but could slow the uncapped searches); round-trip mode is the rare path.
+		final DistanceField returnField = DistanceField.buildIfCompact(planningConfig, home, 0);
 		timer.fieldNanos += System.nanoTime() - fieldStart;
 
 		// Return searches run with the base availability (user exclusions only): the chain left

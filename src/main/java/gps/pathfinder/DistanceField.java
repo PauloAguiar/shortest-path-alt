@@ -45,6 +45,12 @@ public final class DistanceField
 	// Distances are stored as shorts; anything longer than this is indistinguishable from
 	// unreached for heuristic purposes (searches never run that far).
 	private static final int MAX_DISTANCE = Short.MAX_VALUE - 1;
+	// Extra flood distance past the bare floor * multiple horizon: covers the small gap between the
+	// floor (a lower bound built from field values) and the best route's true cost, plus the +-1s of
+	// blocked-landing patching. A pure speed knob — correctness never depends on the horizon (an
+	// unflooded tile's true remaining provably exceeds the horizon, so reporting the horizon as its
+	// heuristic is always admissible); overshooting just floods a little more.
+	private static final int HORIZON_SLACK = 64;
 	// The eight neighbour offsets (four cardinals, then four diagonals), shared by expandWalking and
 	// patchBlockedLandings. Static so the per-tile flood never re-allocates them.
 	private static final int[] DX = {-1, 1, 0, 0, -1, 1, -1, 1};
@@ -58,6 +64,17 @@ public final class DistanceField
 	// DistanceField instance, so one buffer avoids a boolean[8] allocation on every settled tile —
 	// which, across a whole-map flood, was the dominant allocation in build().
 	private final boolean[] traversable = new boolean[8];
+	// Every tile whose true field distance is <= this value is guaranteed flooded (the flood settles
+	// in cost order and only stops past it), so an unflooded tile's remaining cost provably exceeds
+	// it — the admissible fallback SearchHeuristic uses for unflooded tiles. MAX_VALUE = full flood
+	// (unflooded means genuinely reverse-unreachable, e.g. an island).
+	private int floodHorizon = Integer.MAX_VALUE;
+
+	/** The bounded flood's horizon: a strict lower bound on any unflooded tile's distance. */
+	int horizon()
+	{
+		return floodHorizon;
+	}
 
 	private DistanceField(CollisionMap map)
 	{
@@ -139,8 +156,12 @@ public final class DistanceField
 	 * Builds the field for the given targets over the config's current (base) availability, or
 	 * null when the targets span more than {@link SearchHeuristic#MAX_TARGET_SPAN} — a map-wide
 	 * "nearest X" set floods everything for searches that are already cheap.
+	 * <p>
+	 * {@code costMultiple > 0} bounds the flood (see {@link #build(PathfinderConfig, Set, int)}):
+	 * pass the generation's cost multiple so the flood stops once nothing beyond it can matter to
+	 * any search of the generation. 0 floods the full map.
 	 */
-	public static DistanceField buildIfCompact(PathfinderConfig config, Set<Integer> targets)
+	public static DistanceField buildIfCompact(PathfinderConfig config, Set<Integer> targets, int costMultiple)
 	{
 		if (targets == null || targets.isEmpty())
 		{
@@ -163,11 +184,33 @@ public final class DistanceField
 		{
 			return null;
 		}
-		return build(config, targets);
+		return build(config, targets, costMultiple);
 	}
 
-	/** Builds the field unconditionally (tests use this directly). */
+	/** Builds the full-map field (tests use this directly). */
 	public static DistanceField build(PathfinderConfig config, Set<Integer> targets)
+	{
+		return build(config, targets, 0);
+	}
+
+	/**
+	 * Builds the field, optionally bounding the flood by the heuristic's own clamp: {@code h(n) =
+	 * min(field(n), floor)}, so any value above the floor collapses to the floor, and every search is
+	 * capped at {@code best * costMultiple} (≈ floor * costMultiple) — flooding past that band
+	 * computes distances no consumer can distinguish from "far" (measured at 95%+ of the flood for
+	 * teleport-rich configs). The floor is discovered DURING the flood: it is the cheapest
+	 * {@code cast + field(landing)} over the base origin-free teleports, and since tiles settle in
+	 * cost order, landings near the targets surface early; once the popped distance exceeds
+	 * {@code floorSoFar * (costMultiple + 1) + HORIZON_SLACK} the flood stops itself.
+	 * <p>
+	 * Correctness does not depend on the horizon: the flood settles in cost order, so an unflooded
+	 * tile's field distance — and therefore its true remaining cost, which the field lower-bounds —
+	 * provably exceeds the recorded {@link #horizon()}. {@link SearchHeuristic} reports
+	 * {@code min(horizon, floor)} for unflooded tiles, which is admissible and consistent
+	 * unconditionally; an undersized horizon can only weaken the heuristic (slower searches), never
+	 * change a result.
+	 */
+	static DistanceField build(PathfinderConfig config, Set<Integer> targets, int costMultiple)
 	{
 		final CollisionMap map = config.getMap();
 		final DistanceField field = new DistanceField(map);
@@ -177,6 +220,12 @@ public final class DistanceField
 		// Transport relaxations only (a few tens of thousands at most): boxed entries are fine.
 		// Entry = (distance << 32) | (packed & 0xFFFFFFFF); natural ordering sorts by distance.
 		final PriorityQueue<Long> heap = new PriorityQueue<>();
+		// Bounded mode: cheapest cast cost per origin-free teleport landing, for in-flood floor
+		// discovery. Null = unbounded (full flood).
+		final PrimitiveIntHashMap<Integer> landingCasts =
+			costMultiple > 0 ? buildTeleportLandingIndex(config) : null;
+		int cheapestFloor = Integer.MAX_VALUE;
+		long horizonTarget = Long.MAX_VALUE;
 
 		for (int target : targets)
 		{
@@ -209,6 +258,23 @@ public final class DistanceField
 				continue;
 			}
 			final int distance = field.distance(packed);
+
+			if (landingCasts != null)
+			{
+				// Everything below the popped distance is settled (cost-ordered), so once it passes
+				// the horizon nothing else can matter: unflooded tiles provably lie beyond it.
+				if (distance > horizonTarget)
+				{
+					field.floodHorizon = (int) Math.min(Integer.MAX_VALUE - 1L, horizonTarget);
+					break;
+				}
+				final Integer cast = landingCasts.get(packed);
+				if (cast != null && cast + distance < cheapestFloor)
+				{
+					cheapestFloor = cast + distance;
+					horizonTarget = (long) cheapestFloor * costMultiple + cheapestFloor + HORIZON_SLACK;
+				}
+			}
 
 			field.expandWalking(packed, x, y, plane, distance, fifo, settled, config);
 
@@ -384,6 +450,37 @@ public final class DistanceField
 	 * per origin as we build keeps the index minimal (and the flood's relax attempts non-redundant)
 	 * without changing a single field value.
 	 */
+	/**
+	 * Cheapest effective cast cost per origin-free teleport landing, over the config's base
+	 * availability (both bank states) — the same teleport set {@link SearchHeuristic#buildWithField}
+	 * scans, so the floor the bounded flood discovers matches the one the heuristic will use.
+	 * Landings on blocked tiles never settle in the walk flood, so their casts simply never
+	 * contribute — the floor stays a little high and the horizon a little wide, which is safe.
+	 */
+	private static PrimitiveIntHashMap<Integer> buildTeleportLandingIndex(PathfinderConfig config)
+	{
+		final PrimitiveIntHashMap<Integer> index = new PrimitiveIntHashMap<>(256);
+		for (boolean bankVisited : new boolean[]{false, true})
+		{
+			for (Transport teleport : config.getUsableTeleports(bankVisited))
+			{
+				final int destination = teleport.getDestination();
+				if (destination == WorldPointUtil.UNDEFINED)
+				{
+					continue;
+				}
+				final int cost = Math.max(0, CostUnits.fromTicks(teleport.getDuration())
+					+ config.getAdditionalTransportCost(teleport));
+				final Integer current = index.get(destination);
+				if (current == null || cost < current)
+				{
+					index.put(destination, cost);
+				}
+			}
+		}
+		return index;
+	}
+
 	// Package-private for DistanceFieldTest's index-shape assertion. The OUTER map is keyed by a
 	// primitive int (the destination): the flood looks it up for every settled tile, and a
 	// Map<Integer, ...> would box that int into a throwaway Integer on each of the millions of tiles
