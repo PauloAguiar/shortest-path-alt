@@ -45,11 +45,19 @@ public final class DistanceField
 	// Distances are stored as shorts; anything longer than this is indistinguishable from
 	// unreached for heuristic purposes (searches never run that far).
 	private static final int MAX_DISTANCE = Short.MAX_VALUE - 1;
+	// The eight neighbour offsets (four cardinals, then four diagonals), shared by expandWalking and
+	// patchBlockedLandings. Static so the per-tile flood never re-allocates them.
+	private static final int[] DX = {-1, 1, 0, 0, -1, 1, -1, 1};
+	private static final int[] DY = {0, 0, -1, 1, -1, -1, 1, 1};
 
 	private final SplitFlagMap.RegionExtent regionExtents;
 	private final int widthInclusive;
 	private final short[][] regions;
 	private final CollisionMap map;
+	// Reused scratch for expandWalking's neighbour walkability. The flood is single-threaded per
+	// DistanceField instance, so one buffer avoids a boolean[8] allocation on every settled tile —
+	// which, across a whole-map flood, was the dominant allocation in build().
+	private final boolean[] traversable = new boolean[8];
 
 	private DistanceField(CollisionMap map)
 	{
@@ -251,8 +259,6 @@ public final class DistanceField
 				}
 			}
 		}
-		final int[] dx = {-1, 1, 0, 0, -1, 1, -1, 1};
-		final int[] dy = {0, 0, -1, 1, -1, -1, 1, 1};
 		for (int landing : landings)
 		{
 			final int x = WorldPointUtil.unpackWorldX(landing);
@@ -268,7 +274,7 @@ public final class DistanceField
 			final boolean eastBlocked = map.isBlocked(x + 1, y, plane);
 			final boolean southBlocked = map.isBlocked(x, y - 1, plane);
 			final boolean northBlocked = map.isBlocked(x, y + 1, plane);
-			final boolean[] traversable = {
+			final boolean[] stepOpen = {
 				!westBlocked, !eastBlocked, !southBlocked, !northBlocked,
 				!map.isBlocked(x - 1, y - 1, plane) && !westBlocked && !southBlocked,
 				!map.isBlocked(x + 1, y - 1, plane) && !eastBlocked && !southBlocked,
@@ -278,11 +284,11 @@ public final class DistanceField
 			int best = UNREACHED;
 			for (int i = 0; i < 8; i++)
 			{
-				if (!traversable[i])
+				if (!stepOpen[i])
 				{
 					continue;
 				}
-				final int neighbour = distance(WorldPointUtil.packWorldPoint(x + dx[i], y + dy[i], plane));
+				final int neighbour = distance(WorldPointUtil.packWorldPoint(x + DX[i], y + DY[i], plane));
 				if (neighbour != UNREACHED && neighbour + 1 < best)
 				{
 					best = neighbour + 1;
@@ -304,7 +310,6 @@ public final class DistanceField
 	private void expandWalking(int packed, int x, int y, int plane, int distance,
 		IntDeque fifo, VisitedTiles settled, PathfinderConfig config)
 	{
-		final boolean[] traversable = new boolean[8];
 		if (map.isBlocked(x, y, plane))
 		{
 			final boolean westBlocked = map.isBlocked(x - 1, y, plane);
@@ -337,14 +342,12 @@ public final class DistanceField
 			traversable[6] = n && map.w(x, y + 1, plane) && w && map.n(x - 1, y, plane);
 			traversable[7] = n && map.e(x, y + 1, plane) && e && map.n(x + 1, y, plane);
 		}
-		final int[] dx = {-1, 1, 0, 0, -1, 1, -1, 1};
-		final int[] dy = {0, 0, -1, 1, -1, -1, 1, 1};
 		for (int i = 0; i < 8; i++)
 		{
-			final int nx = x + dx[i];
-			final int ny = y + dy[i];
+			final int nx = x + DX[i];
+			final int ny = y + DY[i];
 			boolean canStep = traversable[i];
-			if (!canStep && Math.abs(dx[i] + dy[i]) == 1 && map.isBlocked(nx, ny, plane))
+			if (!canStep && Math.abs(DX[i] + DY[i]) == 1 && map.isBlocked(nx, ny, plane))
 			{
 				// Mirror of the forward rule that lets a path step onto a blocked tile hosting a
 				// transport origin (fairy ring platform). Superset bias: any transport there counts.
