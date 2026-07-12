@@ -146,16 +146,17 @@ public class DistanceFieldTest
 			}
 		}
 
-		Map<Integer, Map<Integer, Integer>> index = DistanceField.buildReverseTransportIndex(cfg);
+		PrimitiveIntHashMap<Map<Integer, Integer>> index = DistanceField.buildReverseTransportIndex(cfg);
 		assertFalse("The transport data must produce some reverse edges for this test to mean anything",
-			index.isEmpty());
-		assertEquals("Every landing (and only those) must be indexed", expected.keySet(), index.keySet());
-		for (Map.Entry<Integer, Map<Integer, Integer>> landing : index.entrySet())
+			index.size() == 0);
+		int[] landings = index.keys();
+		assertEquals("Every landing (and only those) must be indexed", expected.size(), landings.length);
+		for (int landing : landings)
 		{
 			// A Map<origin, cost> can't hold a duplicate origin, and each value must be the minimum
 			// cost across both bank states — exactly the reduction computed above.
-			assertEquals("One min-cost entry per origin at landing " + landing.getKey(),
-				expected.get(landing.getKey()), landing.getValue());
+			assertEquals("One min-cost entry per origin at landing " + landing,
+				expected.get(landing), index.get(landing));
 		}
 	}
 

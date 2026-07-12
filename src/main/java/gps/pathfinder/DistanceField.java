@@ -171,7 +171,7 @@ public final class DistanceField
 	{
 		final CollisionMap map = config.getMap();
 		final DistanceField field = new DistanceField(map);
-		final Map<Integer, Map<Integer, Integer>> reverseTransports = buildReverseTransportIndex(config);
+		final PrimitiveIntHashMap<Map<Integer, Integer>> reverseTransports = buildReverseTransportIndex(config);
 		final VisitedTiles settled = new VisitedTiles(map);
 		final IntDeque fifo = new IntDeque(4096);
 		// Transport relaxations only (a few tens of thousands at most): boxed entries are fine.
@@ -230,7 +230,7 @@ public final class DistanceField
 				}
 			}
 		}
-		field.patchBlockedLandings(config, reverseTransports.keySet());
+		field.patchBlockedLandings(config, reverseTransports.keys());
 		return field;
 	}
 
@@ -246,9 +246,13 @@ public final class DistanceField
 	 * No propagation is needed: blocked tiles have no walk edges into other blocked tiles, so a
 	 * patched value can never improve any other tile.
 	 */
-	private void patchBlockedLandings(PathfinderConfig config, Set<Integer> transportDestinations)
+	private void patchBlockedLandings(PathfinderConfig config, int[] transportDestinations)
 	{
-		final Set<Integer> landings = new HashSet<>(transportDestinations);
+		final Set<Integer> landings = new HashSet<>();
+		for (int destination : transportDestinations)
+		{
+			landings.add(destination);
+		}
 		for (boolean bankVisited : new boolean[]{false, true})
 		{
 			for (Transport teleport : config.getUsableTeleports(bankVisited))
@@ -380,10 +384,15 @@ public final class DistanceField
 	 * per origin as we build keeps the index minimal (and the flood's relax attempts non-redundant)
 	 * without changing a single field value.
 	 */
-	// Package-private for DistanceFieldTest's index-shape assertion.
-	static Map<Integer, Map<Integer, Integer>> buildReverseTransportIndex(PathfinderConfig config)
+	// Package-private for DistanceFieldTest's index-shape assertion. The OUTER map is keyed by a
+	// primitive int (the destination): the flood looks it up for every settled tile, and a
+	// Map<Integer, ...> would box that int into a throwaway Integer on each of the millions of tiles
+	// — the second-biggest allocation in build() after the per-tile scratch arrays. The inner
+	// origin -> min-cost map stays boxed: it is only iterated for the few thousand tiles that are
+	// actually transport destinations, not per settled tile.
+	static PrimitiveIntHashMap<Map<Integer, Integer>> buildReverseTransportIndex(PathfinderConfig config)
 	{
-		final Map<Integer, Map<Integer, Integer>> index = new HashMap<>();
+		final PrimitiveIntHashMap<Map<Integer, Integer>> index = new PrimitiveIntHashMap<>(4096);
 		for (boolean bankVisited : new boolean[]{false, true})
 		{
 			final PrimitiveIntHashMap<Transport[]> transports = config.getTransportsPacked(bankVisited);
@@ -404,8 +413,13 @@ public final class DistanceField
 					}
 					final int cost = Math.max(0, CostUnits.fromTicks(transport.getDuration())
 						+ config.getAdditionalTransportCost(transport));
-					index.computeIfAbsent(destination, k -> new HashMap<>())
-						.merge(transport.getOrigin(), cost, Math::min);
+					Map<Integer, Integer> byOrigin = index.get(destination);
+					if (byOrigin == null)
+					{
+						byOrigin = new HashMap<>();
+						index.put(destination, byOrigin);
+					}
+					byOrigin.merge(transport.getOrigin(), cost, Math::min);
 				}
 			}
 		}
