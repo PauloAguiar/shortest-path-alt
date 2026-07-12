@@ -1,8 +1,8 @@
 package gps.pathfinder;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 import gps.PrimitiveIntHashMap;
@@ -64,14 +64,17 @@ public final class TransportAvailability
 	static final class Builder
 	{
 		// Temporary accumulation; converted to flat arrays in build() and not retained afterwards.
-		private final Map<Integer, Set<Transport>> transportsByOrigin;
-		private final Set<Transport> usableTeleports;
+		// Primitive-keyed by origin tile: rebuildAvailabilityWithExclusions runs this per search, and a
+		// Map<Integer, ...> boxed the int origin on every transport added. Each origin holds no
+		// duplicate transports (every transport is added at most once), so a List is enough — no Set.
+		private final PrimitiveIntHashMap<List<Transport>> transportsByOrigin;
+		private final List<Transport> usableTeleports;
 		private final Set<Integer> pohOrigins = new HashSet<>();
 
 		Builder(int expectedTransportCount)
 		{
-			this.transportsByOrigin = new HashMap<>(expectedTransportCount / 2);
-			this.usableTeleports = new HashSet<>(expectedTransportCount / 20);
+			this.transportsByOrigin = new PrimitiveIntHashMap<>(Math.max(8, expectedTransportCount / 2));
+			this.usableTeleports = new ArrayList<>(Math.max(8, expectedTransportCount / 20));
 		}
 
 		void add(Transport transport)
@@ -82,22 +85,27 @@ public final class TransportAvailability
 				return;
 			}
 
-			transportsByOrigin.computeIfAbsent(transport.getOrigin(), ignored -> new HashSet<>()).add(transport);
+			List<Transport> atOrigin = transportsByOrigin.get(transport.getOrigin());
+			if (atOrigin == null)
+			{
+				atOrigin = new ArrayList<>(2);
+				transportsByOrigin.put(transport.getOrigin(), atOrigin);
+			}
+			atOrigin.add(transport);
 		}
 
 		void remapPohTransports()
 		{
 			int pohLanding = WorldPointUtil.packWorldPoint(1923, 5709, 0);
-			Set<Transport> pohTransports = new HashSet<>();
+			List<Transport> pohTransports = new ArrayList<>();
 
-			for (Map.Entry<Integer, Set<Transport>> entry : transportsByOrigin.entrySet())
+			for (int origin : transportsByOrigin.keys())
 			{
-				int origin = entry.getKey();
 				int originX = WorldPointUtil.unpackWorldX(origin);
 				int originY = WorldPointUtil.unpackWorldY(origin);
 				if (gps.ShortestPathPlugin.isInsidePoh(originX, originY))
 				{
-					pohTransports.addAll(entry.getValue());
+					pohTransports.addAll(transportsByOrigin.get(origin));
 					// Kept in the pathfinding view, collapsed out of the display view.
 					pohOrigins.add(origin);
 				}
@@ -105,7 +113,13 @@ public final class TransportAvailability
 
 			if (!pohTransports.isEmpty())
 			{
-				transportsByOrigin.computeIfAbsent(pohLanding, ignored -> new HashSet<>()).addAll(pohTransports);
+				List<Transport> landing = transportsByOrigin.get(pohLanding);
+				if (landing == null)
+				{
+					landing = new ArrayList<>(pohTransports.size());
+					transportsByOrigin.put(pohLanding, landing);
+				}
+				landing.addAll(pohTransports);
 			}
 		}
 
@@ -114,10 +128,9 @@ public final class TransportAvailability
 			int expected = Math.max(1, transportsByOrigin.size());
 			PrimitiveIntHashMap<Transport[]> packed = new PrimitiveIntHashMap<>(expected);
 			PrimitiveIntHashMap<Transport[]> display = new PrimitiveIntHashMap<>(expected);
-			for (Map.Entry<Integer, Set<Transport>> entry : transportsByOrigin.entrySet())
+			for (int origin : transportsByOrigin.keys())
 			{
-				int origin = entry.getKey();
-				Transport[] transports = entry.getValue().toArray(EMPTY_TRANSPORTS);
+				Transport[] transports = transportsByOrigin.get(origin).toArray(EMPTY_TRANSPORTS);
 				packed.put(origin, transports);
 				if (!pohOrigins.contains(origin))
 				{
