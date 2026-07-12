@@ -73,19 +73,35 @@ class IntMinHeap
 	}
 
 	/**
-	 * Ordering: orderCost first, node id (creation order) as the tie-break. The stability matters
-	 * for path SHAPE: with a near-exact heuristic every tile on the optimal corridor shares the
-	 * same f value, and an unstable heap pops those in arbitrary order — tiles get claimed by
-	 * random parents and the reconstructed path zigzags between cardinal and diagonal steps. In
-	 * creation order the claims mirror the FIFO search's (cardinals are generated first), which
-	 * produces the long straight runs that match the game's own click-walk movement. It also makes
-	 * searches fully deterministic.
+	 * Ordering: orderCost (f = g + h) first, then HIGHER g, then node id (creation order).
+	 * <p>
+	 * The g tie-break is what keeps a near-exact heuristic from flooding its own plateau: every
+	 * tile on any optimal corridor shares the same f, so f-only ordering explores that whole
+	 * plateau breadth-first — for a long walk that is the entire diamond of equal-cost grid paths
+	 * (hundreds of thousands of tiles) — before the target can pop. Preferring the higher g among
+	 * equal f always advances the deepest node (the one closest to the goal), so the search dives
+	 * down one corridor and reaches the target having settled little beside it. Any tie-break
+	 * among equal f is optimality-neutral under a consistent heuristic.
+	 * <p>
+	 * The final id (creation order) tie-break keeps the claims of same-f same-g tiles mirroring
+	 * the FIFO search's (cardinals are generated first), which produces the long straight runs
+	 * that match the game's own click-walk movement, and makes searches fully deterministic.
 	 */
 	private boolean less(int a, int b)
 	{
 		final int costA = graph.orderCost(a);
 		final int costB = graph.orderCost(b);
-		return costA < costB || (costA == costB && a < b);
+		if (costA != costB)
+		{
+			return costA < costB;
+		}
+		final int gA = graph.cost(a);
+		final int gB = graph.cost(b);
+		if (gA != gB)
+		{
+			return gA > gB;
+		}
+		return a < b;
 	}
 
 	private void siftUp(int index)

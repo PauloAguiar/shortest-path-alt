@@ -450,10 +450,14 @@ public class Pathfinder implements Runnable
 			{
 				continue;
 			}
-			// Cost cap: a node above the ceiling can't be on any path worth returning (edges are
-			// non-negative), so don't expand it. With the cap at the walk-only cost this bounds the
-			// whole search to the area walking could cover anyway. The optional dynamic ceiling can
-			// tighten it mid-search (the walk search drops it once the chain finds a cheaper route).
+			// Cost cap, checked against f = g + h (orderCost), not g alone: with an admissible h,
+			// g + h > cap proves no completion within the cap exists through this node, so it can be
+			// skipped long before its g reaches the ceiling. This is what keeps a capped search that
+			// has nothing left to find (the chain's terminal "no further route within the band" probe)
+			// from settling every tile the cap's g-ball can reach — with a near-exact heuristic the
+			// probe collapses to almost nothing. For uninformed searches h = 0 and this degenerates to
+			// the plain g check. The optional dynamic ceiling can tighten the cap mid-search (the walk
+			// search drops it once the chain finds a cheaper route).
 			int effectiveCap = costCap;
 			if (dynamicCostCap != null)
 			{
@@ -463,7 +467,7 @@ public class Pathfinder implements Runnable
 					effectiveCap = dynamic;
 				}
 			}
-			if (graph.cost(node) > effectiveCap)
+			if (effectiveCap != Integer.MAX_VALUE && graph.orderCost(node) > effectiveCap)
 			{
 				continue;
 			}
