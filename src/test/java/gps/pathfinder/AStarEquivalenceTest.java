@@ -59,7 +59,7 @@ public class AStarEquivalenceTest
 	/** Runs one search and returns the pathfinder (search finished synchronously). */
 	private static Pathfinder run(PathfinderConfig config, int start, Set<Integer> targets, SearchHeuristic heuristic)
 	{
-		Pathfinder pathfinder = new Pathfinder(config, start, targets, null, Integer.MAX_VALUE, heuristic);
+		Pathfinder pathfinder = new Pathfinder(config, start, targets, Integer.MAX_VALUE, heuristic);
 		pathfinder.run();
 		return pathfinder;
 	}

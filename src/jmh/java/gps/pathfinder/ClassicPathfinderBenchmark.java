@@ -60,8 +60,8 @@ public class ClassicPathfinderBenchmark
 	@Benchmark
 	public PathfinderResult search()
 	{
-		// The classic constructor: costCap = MAX_VALUE, heuristic = null (uninformed).
-		Pathfinder pathfinder = new Pathfinder(config, start, targets, null);
+		// The classic flow's configuration: costCap = MAX_VALUE, heuristic = null (uninformed).
+		Pathfinder pathfinder = new Pathfinder(config, start, targets);
 		pathfinder.run();
 		return pathfinder.getResult();
 	}

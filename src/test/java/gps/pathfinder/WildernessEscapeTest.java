@@ -90,7 +90,7 @@ public class WildernessEscapeTest
 		ReferenceDijkstra.Result oracle = ReferenceDijkstra.search(cfg, DEEP_WILDERNESS, targets);
 		assertTrue("oracle must reach Varrock", oracle.reached);
 
-		Pathfinder uninformed = new Pathfinder(cfg, DEEP_WILDERNESS, targets, null, Integer.MAX_VALUE, null);
+		Pathfinder uninformed = new Pathfinder(cfg, DEEP_WILDERNESS, targets, Integer.MAX_VALUE, null);
 		uninformed.run();
 		assertEquals("uninformed search must match the oracle",
 			oracle.cost, uninformed.getResult().getTotalCost());
@@ -98,7 +98,7 @@ public class WildernessEscapeTest
 		DistanceField field = DistanceField.build(cfg, targets);
 		SearchHeuristic heuristic = SearchHeuristic.buildWithField(cfg, field);
 		assertNotNull(heuristic);
-		Pathfinder astar = new Pathfinder(cfg, DEEP_WILDERNESS, targets, null, Integer.MAX_VALUE, heuristic);
+		Pathfinder astar = new Pathfinder(cfg, DEEP_WILDERNESS, targets, Integer.MAX_VALUE, heuristic);
 		astar.run();
 		assertEquals("A* must match the oracle despite the field ignoring wilderness gates",
 			oracle.cost, astar.getResult().getTotalCost());

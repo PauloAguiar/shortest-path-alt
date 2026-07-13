@@ -11,15 +11,12 @@ import gps.leagues.LeagueModeState;
 public class Pathfinder implements Runnable
 {
 	private final PathfinderStats stats;
-	@Getter
 	private final int start;
-	@Getter
 	private final Set<Integer> targets;
 	private final PathfinderConfig config;
 	private final CollisionMap map;
 	private final boolean targetInWilderness;
 	private final boolean targetInBlockedRegion;
-	private final Runnable completionCallback;
 	// Nodes are stored structure-of-arrays style: each node is an int id into the graph, instead of
 	// an object per explored tile. This keeps a whole search to a handful of arrays (issue #491).
 	private final NodeGraph graph;
@@ -49,16 +46,11 @@ public class Pathfinder implements Runnable
 	// go through, so costs stay exact.
 	private final TentativeCosts tentative;
 	private final VisitedTiles visited;
-	@Getter
-	private volatile boolean done = false;
-	private volatile boolean cancelled = false;
-	// Read by the render thread during the search to draw the partial path; written by the worker.
-	private volatile int bestLastNode = NodeGraph.NO_NODE;
-	// The path the render thread builds progressively while the search runs.
-	private List<PathStep> pathSteps = List.of();
-	private boolean pathNeedsUpdate = false;
-	// Built once on the worker thread when the search finishes, then served to the render thread so
-	// it never walks the node chain (which is released) after the search is done.
+	// The node the search ended on (the reached target, or the best closest-tile candidate).
+	private int bestLastNode = NodeGraph.NO_NODE;
+	// Built once when the search finishes, before the node graph is released. The classic plugin
+	// flow used to read a partial path progressively DURING the search; that machinery is retired -
+	// every consumer now runs the search to completion and reads this snapshot.
 	private volatile List<PathStep> finalPath = null;
 	// Accumulated cost of the path to bestLastNode, captured before the node graph is released so
 	// alternative-route ranking has a total cost without re-walking the (released) chain.
@@ -103,17 +95,7 @@ public class Pathfinder implements Runnable
 	 */
 	private int wildernessLevel;
 
-	public Pathfinder(PathfinderConfig config, int start, Set<Integer> targets, Runnable completionCallback)
-	{
-		this(config, start, targets, completionCallback, Integer.MAX_VALUE);
-	}
-
-	public Pathfinder(PathfinderConfig config, int start, Set<Integer> targets, Runnable completionCallback, int costCap)
-	{
-		this(config, start, targets, completionCallback, costCap, null);
-	}
-
-	public Pathfinder(PathfinderConfig config, int start, Set<Integer> targets, Runnable completionCallback,
+	public Pathfinder(PathfinderConfig config, int start, Set<Integer> targets,
 		int costCap, SearchHeuristic heuristic)
 	{
 		stats = new PathfinderStats();
@@ -121,7 +103,6 @@ public class Pathfinder implements Runnable
 		this.map = config.getMap();
 		this.start = start;
 		this.targets = targets;
-		this.completionCallback = completionCallback;
 		this.costCap = costCap;
 		this.astar = heuristic != null;
 		this.heapMode = astar || anyTransportsUsable(config);
@@ -174,12 +155,7 @@ public class Pathfinder implements Runnable
 
 	public Pathfinder(PathfinderConfig config, int start, Set<Integer> targets)
 	{
-		this(config, start, targets, null);
-	}
-
-	public void cancel()
-	{
-		cancelled = true;
+		this(config, start, targets, Integer.MAX_VALUE, null);
 	}
 
 	/**
@@ -202,37 +178,11 @@ public class Pathfinder implements Runnable
 		return null;
 	}
 
+	/** The finished search's path (empty before {@link #run()} completes). */
 	public List<PathStep> getPath()
 	{
-		int lastNode = bestLastNode; // For thread safety, read bestLastNode once
-		if (lastNode == NodeGraph.NO_NODE)
-		{
-			List<PathStep> finalised = finalPath;
-			return finalised != null ? finalised : pathSteps;
-		}
-
-		// Once the search is finished the node graph is released, so serve the pre-built snapshot.
-		if (done)
-		{
-			List<PathStep> finalised = finalPath;
-			if (finalised != null)
-			{
-				return finalised;
-			}
-		}
-
-		if (pathNeedsUpdate)
-		{
-			List<PathStep> walked = graph.getPathSteps(lastNode);
-			// An empty result means the graph was released mid-walk; keep the last good path.
-			if (!walked.isEmpty())
-			{
-				pathSteps = walked;
-				pathNeedsUpdate = false;
-			}
-		}
-
-		return pathSteps;
+		List<PathStep> finalised = finalPath;
+		return finalised != null ? finalised : List.of();
 	}
 
 	public PathfinderResult getResult()
@@ -347,7 +297,6 @@ public class Pathfinder implements Runnable
 				bestX = x;
 				bestY = y;
 				bestLastNode = node;
-				pathNeedsUpdate = true;
 				update = true;
 			}
 		}
@@ -388,8 +337,8 @@ public class Pathfinder implements Runnable
 		long cutoffDurationMillis = config.getCalculationCutoffMillis();
 		long cutoffTimeMillis = System.currentTimeMillis() + cutoffDurationMillis;
 
-		while (!cancelled && (!boundary.isEmpty() || !pending.isEmpty()
-			|| (buckets != null && !buckets.isEmpty())))
+		while (!boundary.isEmpty() || !pending.isEmpty()
+			|| (buckets != null && !buckets.isEmpty()))
 		{
 			int boundaryHead = boundary.peekFirst();
 
@@ -482,7 +431,6 @@ public class Pathfinder implements Runnable
 				if (targets.contains(nodePacked))
 				{
 					bestLastNode = node;
-					pathNeedsUpdate = true;
 					reachedTarget = nodePacked;
 					terminationReason = PathTerminationReason.TARGET_REACHED;
 					break;
@@ -508,11 +456,7 @@ public class Pathfinder implements Runnable
 			addNeighbors(node, nodeIsTile, nodePacked);
 		}
 
-		if (cancelled)
-		{
-			terminationReason = PathTerminationReason.CANCELLED;
-		}
-		else if (terminationReason == null)
+		if (terminationReason == null)
 		{
 			terminationReason = PathTerminationReason.SEARCH_EXHAUSTED;
 		}
@@ -520,7 +464,7 @@ public class Pathfinder implements Runnable
 		// The search ended without reaching a target: recover the exact closest tile (same
 		// tie-breaking as the sampled in-loop tracking) in one pass over the explored nodes —
 		// paying O(nodes × targets) once, instead of on every expansion.
-		if (!cancelled && reachedTarget == WorldPointUtil.UNDEFINED && targetArray.length > 0)
+		if (reachedTarget == WorldPointUtil.UNDEFINED && targetArray.length > 0)
 		{
 			for (int id = 0; id < graph.size(); id++)
 			{
@@ -531,9 +475,7 @@ public class Pathfinder implements Runnable
 			}
 		}
 
-		// Materialise the final path and closest reached tile on the worker thread, publish them,
-		// then release the large node graph. Once done is set the render thread serves finalPath
-		// and never touches the released graph, so this is race-free with progressive rendering.
+		// Materialise the final path and closest reached tile, then release the large node graph.
 		int lastNode = bestLastNode;
 		if (lastNode != NodeGraph.NO_NODE)
 		{
@@ -543,12 +485,10 @@ public class Pathfinder implements Runnable
 		}
 		else
 		{
-			finalPath = pathSteps;
+			finalPath = List.of();
 			closestReachedPoint = start;
 			finalCost = 0;
 		}
-
-		done = !cancelled;
 
 		boundary.clear();
 		visited.clear();
@@ -564,11 +504,6 @@ public class Pathfinder implements Runnable
 		graph.release();
 
 		stats.end(); // Include cleanup in stats to get the total cost of pathfinding
-
-		if (completionCallback != null)
-		{
-			completionCallback.run();
-		}
 	}
 
 	public static class PathfinderStats

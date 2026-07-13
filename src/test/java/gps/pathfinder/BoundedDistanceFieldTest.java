@@ -73,7 +73,7 @@ public class BoundedDistanceFieldTest
 		assertNotNull(heuristic);
 
 		ReferenceDijkstra.Result oracle = ReferenceDijkstra.search(cfg, start, targets);
-		Pathfinder astar = new Pathfinder(cfg, start, targets, null, Integer.MAX_VALUE, heuristic);
+		Pathfinder astar = new Pathfinder(cfg, start, targets, Integer.MAX_VALUE, heuristic);
 		astar.run();
 
 		assertEquals("bounded-field A* reached must match the oracle",
@@ -125,7 +125,7 @@ public class BoundedDistanceFieldTest
 
 		SearchHeuristic excludedHeuristic = SearchHeuristic.buildWithField(cfg, bounded);
 		ReferenceDijkstra.Result oracle = ReferenceDijkstra.search(cfg, LUMBRIDGE, targets);
-		Pathfinder astar = new Pathfinder(cfg, LUMBRIDGE, targets, null, Integer.MAX_VALUE, excludedHeuristic);
+		Pathfinder astar = new Pathfinder(cfg, LUMBRIDGE, targets, Integer.MAX_VALUE, excludedHeuristic);
 		astar.run();
 		assertEquals(oracle.reached, astar.getResult().isReached());
 		if (oracle.reached)

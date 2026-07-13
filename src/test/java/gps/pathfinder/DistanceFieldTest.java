@@ -64,7 +64,7 @@ public class DistanceFieldTest
 
 		assertEquals("A target tile must be at distance zero", 0, field.distance(VARROCK));
 
-		Pathfinder walk = new Pathfinder(config, LUMBRIDGE, Set.of(VARROCK), null, Integer.MAX_VALUE, null);
+		Pathfinder walk = new Pathfinder(config, LUMBRIDGE, Set.of(VARROCK), Integer.MAX_VALUE, null);
 		walk.run();
 		int walkCost = walk.getResult().getTotalCost();
 		int fieldAtStart = field.distance(LUMBRIDGE);

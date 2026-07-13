@@ -90,13 +90,13 @@ public class SearchOptimalityTest
 	{
 		ReferenceDijkstra.Result oracle = ReferenceDijkstra.search(config, start, targets);
 
-		Pathfinder uninformed = new Pathfinder(config, start, targets, null, Integer.MAX_VALUE, null);
+		Pathfinder uninformed = new Pathfinder(config, start, targets, Integer.MAX_VALUE, null);
 		uninformed.run();
 
 		DistanceField field = DistanceField.build(config, targets);
 		SearchHeuristic heuristic = SearchHeuristic.buildWithField(config, field);
 		assertNotNull("field heuristic must build", heuristic);
-		Pathfinder astar = new Pathfinder(config, start, targets, null, Integer.MAX_VALUE, heuristic);
+		Pathfinder astar = new Pathfinder(config, start, targets, Integer.MAX_VALUE, heuristic);
 		astar.run();
 
 		assertEquals("uninformed reached must match the oracle",

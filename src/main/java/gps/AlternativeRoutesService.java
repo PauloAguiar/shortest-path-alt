@@ -283,7 +283,7 @@ public class AlternativeRoutesService
 			// gets stronger exactly when the searches get expensive. Null field (map-wide target
 			// sets) means uninformed, which those cheap searches don't need anyway.
 			SearchHeuristic heuristic = SearchHeuristic.buildWithField(planningConfig, field);
-			Pathfinder pathfinder = new Pathfinder(planningConfig, start, ends, null, chainCap, heuristic);
+			Pathfinder pathfinder = new Pathfinder(planningConfig, start, ends, chainCap, heuristic);
 			pathfinder.run();
 			long searchNanos = System.nanoTime() - searchStart;
 			timer.searchNanos += searchNanos;
@@ -814,7 +814,7 @@ public class AlternativeRoutesService
 			// itself and the search's own optimal route uses it — strongly directed by
 			// construction, and the walk-cost cap bounds any residue.
 			SearchHeuristic heuristic = SearchHeuristic.buildWithField(config, field);
-			Pathfinder pathfinder = new Pathfinder(config, start, ends, null, costCap, heuristic);
+			Pathfinder pathfinder = new Pathfinder(config, start, ends, costCap, heuristic);
 			pathfinder.run();
 			long searchEnd = System.nanoTime();
 			synchronized (timer)
@@ -882,7 +882,7 @@ public class AlternativeRoutesService
 		// With every method excluded the floor is effectively unbounded, so h is the raw field —
 		// the walk search (the biggest disc of the generation) collapses to a corridor.
 		SearchHeuristic heuristic = SearchHeuristic.buildWithField(config, field);
-		Pathfinder pathfinder = new Pathfinder(config, start, ends, null, Integer.MAX_VALUE, heuristic);
+		Pathfinder pathfinder = new Pathfinder(config, start, ends, Integer.MAX_VALUE, heuristic);
 		pathfinder.setDynamicCostCap(walkCeiling::get);
 		pathfinder.run();
 		long searchEnd = System.nanoTime();
@@ -953,7 +953,7 @@ public class AlternativeRoutesService
 			final List<PathStep> outPath = oneWay.getPath();
 			final int endpoint = outPath.get(outPath.size() - 1).getPackedPosition();
 			long searchStart = System.nanoTime();
-			Pathfinder back = new Pathfinder(planningConfig, endpoint, home, null, Integer.MAX_VALUE, heuristic);
+			Pathfinder back = new Pathfinder(planningConfig, endpoint, home, Integer.MAX_VALUE, heuristic);
 			back.run();
 			long searchNanos = System.nanoTime() - searchStart;
 			synchronized (timer)

@@ -61,7 +61,7 @@ public class PathfinderBenchmark
 	@Benchmark
 	public PathfinderResult search()
 	{
-		Pathfinder pathfinder = new Pathfinder(config, start, targets, null, Integer.MAX_VALUE, heuristic);
+		Pathfinder pathfinder = new Pathfinder(config, start, targets, Integer.MAX_VALUE, heuristic);
 		pathfinder.run();
 		return pathfinder.getResult();
 	}

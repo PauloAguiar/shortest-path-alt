@@ -1807,7 +1807,7 @@ public class PathfinderTest
 		int optimal = uncapped.getResult().getTotalCost();
 
 		Pathfinder cappedAtOptimal = new Pathfinder(
-			pathfinderConfig, grandExchange, Set.of(varrockWest), null, optimal);
+			pathfinderConfig, grandExchange, Set.of(varrockWest), optimal, null);
 		cappedAtOptimal.run();
 		assertTrue("Capped at the optimal cost, the target must still be reached",
 			cappedAtOptimal.getResult().isReached());
@@ -1815,7 +1815,7 @@ public class PathfinderTest
 			optimal, cappedAtOptimal.getResult().getTotalCost());
 
 		Pathfinder cappedBelow = new Pathfinder(
-			pathfinderConfig, grandExchange, Set.of(varrockWest), null, optimal / 2);
+			pathfinderConfig, grandExchange, Set.of(varrockWest), optimal / 2, null);
 		cappedBelow.run();
 		assertFalse("Capped below the optimal cost, the target can't be reached",
 			cappedBelow.getResult().isReached());

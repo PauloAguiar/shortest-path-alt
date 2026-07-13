@@ -90,7 +90,7 @@ public class WalkableTargetsTest
 		// ring tile) instead of exhausting the map for a closest-tile fallback.
 		PathfinderConfig config = planningConfig();
 		Set<Integer> targets = Destinations.walkableTargets(config.getMap(), MANOR_PIN);
-		Pathfinder pathfinder = new Pathfinder(config, LUMBRIDGE, targets, null, Integer.MAX_VALUE, null);
+		Pathfinder pathfinder = new Pathfinder(config, LUMBRIDGE, targets, Integer.MAX_VALUE, null);
 		pathfinder.run();
 		assertTrue("The expanded pin must be reached", pathfinder.getResult().isReached());
 	}
