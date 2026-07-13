@@ -517,11 +517,11 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
-		hidden = true,
 		keyName = "usePoh",
 		name = "Enable POH teleports",
-		description = "Master toggle for all Player-Owned House (POH) teleports.<br>" +
-			"When disabled, all POH transports are excluded regardless of individual settings below.",
+		description = "Master toggle for all Player-Owned House (POH) teleports (house teleports, the exit<br>" +
+			"portal at your house location, and the features configured below). When disabled, all<br>" +
+			"POH transports are excluded regardless of the individual settings.",
 		position = 36,
 		section = sectionSettings
 	)
@@ -531,7 +531,6 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
-		hidden = true,
 		keyName = "usePohFairyRing",
 		name = "POH fairy ring",
 		description = "Whether to include the POH fairy ring in the path.<br>" +
@@ -545,7 +544,6 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
-		hidden = true,
 		keyName = "usePohSpiritTree",
 		name = "POH spirit tree",
 		description = "Whether to include the POH spirit tree in the path.<br>" +
@@ -559,7 +557,6 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
-		hidden = true,
 		keyName = "useTeleportationPortalsPoh",
 		name = "POH portal nexus",
 		description = "Whether to include POH teleportation portals/nexus in the path",
@@ -568,11 +565,10 @@ public interface ShortestPathConfig extends Config
 	)
 	default boolean useTeleportationPortalsPoh()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(
-		hidden = true,
 		keyName = "pohJewelleryBoxTier",
 		name = "POH jewellery box tier",
 		description = "The tier of jewellery box built in your POH<br>" +
@@ -586,7 +582,6 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
-		hidden = true,
 		keyName = "usePohMountedItems",
 		name = "POH mounted items",
 		description = "Whether to include POH mounted items in the path<br>" +
@@ -600,7 +595,6 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
-		hidden = true,
 		keyName = "usePohObelisk",
 		name = "POH wilderness obelisk",
 		description = "Whether to include the POH wilderness obelisk in the path.<br>" +

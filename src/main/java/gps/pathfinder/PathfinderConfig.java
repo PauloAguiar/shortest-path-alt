@@ -1074,8 +1074,8 @@ public class PathfinderConfig
 		final boolean isQuestLocked = transport.isQuestLocked();
 		TransportType type = transport.getType();
 
-		// Config-preference gates (type toggles, consumable/None item rules, jewellery-box tier):
-		// bypassed by the alternative-routes "All" family. See PathfinderConfig#bypassItemPossession.
+		// Config-preference gates (type toggles, consumable/None item rules): bypassed by the
+		// alternative-routes "All" family. See PathfinderConfig#bypassItemPossession.
 		if (!bypassItemPossession)
 		{
 			// Check if transport type is enabled in config
@@ -1090,11 +1090,6 @@ public class PathfinderConfig
 				return false;
 			}
 
-			// Handle jewellery box tier filtering
-			if (TransportType.TELEPORTATION_BOX.equals(type) && !checkJewelleryBoxTier(transport))
-			{
-				return false;
-			}
 		}
 
 		// Character-unlock gates (skills, quests, varbits/varplayers): only bypassed by the full
@@ -1165,6 +1160,14 @@ public class PathfinderConfig
 
 		// POH variants (fairy ring / spirit tree / obelisk inside the POH) depend on POH sub-settings.
 		if (!checkPohVariant(transport, type))
+		{
+			return false;
+		}
+
+		// The jewellery-box tier and mounted-item toggle describe what furniture EXISTS in the
+		// player's house — structural facts like the POH variants above, not character unlocks —
+		// so they apply in every mode, including the "All" family.
+		if (TransportType.TELEPORTATION_BOX.equals(type) && !checkJewelleryBoxTier(transport))
 		{
 			return false;
 		}
