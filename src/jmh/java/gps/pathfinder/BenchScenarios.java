@@ -44,6 +44,23 @@ final class BenchScenarios
 	}
 
 	/**
+	 * The classic (plugin) flow's config: NOT a planning copy, so possession/unlock gates apply.
+	 * TestShortestPathConfig is a real implementing class, so every unoverridden setting resolves to
+	 * the interface's default value — the plugin's real defaults (a Mockito CALLS_REAL_METHODS mock
+	 * cannot invoke interface defaults on this Mockito version). With the proxy client's empty
+	 * containers this models a default-config player with finished quests and no teleport items:
+	 * walking plus quest-gated networks.
+	 */
+	static PathfinderConfig classicConfig()
+	{
+		gps.TestShortestPathConfig cfg = new gps.TestShortestPathConfig();
+		cfg.setCalculationCutoffValue(120);
+		PathfinderConfig config = new TestPathfinderConfig(realisticClient(), cfg);
+		config.refresh();
+		return config;
+	}
+
+	/**
 	 * A real (non-Mockito) Client. refresh() makes thousands of getVarbitValue calls, and even a
 	 * stubOnly Mockito mock allocates a transient invocation on every one — that alone made refresh
 	 * measure ~15x slower and ~70x heavier than it is with a real client. A reflective Proxy returning
