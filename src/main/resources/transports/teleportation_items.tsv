@@ -116,7 +116,7 @@
 3028 3842 0			21166=1||21169=1||21171=1||21173=1||21175=1		4	Burning amulet: Lava Maze	T	20		
 										
 # Teleport to house (tablet) - These depend on the current player's home location, determined by varbit 2187, and teleport inside or outside determined by varbit 4744										
-1923 5709 0			8013=1		4	Teleport to House tablet	T	20	4744=0	
+1923 5709 0			8013=1		4	Teleport to House tablet	T	20	4744=0;2187>0	
 # 1 - Rimmington										
 2953 3224 0			8013=1		4	Teleport to House tablet (Outside Rimmington)	T	20	2187=1;4744=1	
 # 2 - Taverly										
@@ -221,7 +221,7 @@
 # Capes										
 2931 3286 0		99 Crafting	9780=1||9781=1		4	Crafting cape: Teleport	F	20		
 # The Construction cape's home teleports, determined by varbit 2187, and teleport inside or outside determined by varbit 4744										
-1923 5709 0			9789=1||9790=1		4	Construction cape: Tele to POH	F	20	4744=0	
+1923 5709 0			9789=1||9790=1		4	Construction cape: Tele to POH	F	20	4744=0;2187>0	
 # 1 - Rimmington										
 2952 3224 0			9789=1||9790=1		4	Construction cape: Home (Rimmington)	F	20	2187=1;4744=1	
 # 2 - Taverly										
@@ -257,7 +257,7 @@
 2865 3546 0		99 Strength	9750=1||9751=1		4	Strength cape: Teleport	F	20		
 # Max capes										
 # The Max cape's home teleports, determined by varbit 2187, and teleport inside or outside determined by varbit 4744										
-1923 5709 0		2376 Total	13280=1||13342=1		4	Max cape: Tele to POH	F	20	4744=0	
+1923 5709 0		2376 Total	13280=1||13342=1		4	Max cape: Tele to POH	F	20	4744=0;2187>0	
 # 1 - Rimmington										
 2952 3224 0		2376 Total	13280=1||13342=1		4	Max cape: Home (Rimmington)	F	20	2187=1;4744=1	
 # 2 - Taverly										

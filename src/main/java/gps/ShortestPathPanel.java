@@ -27,6 +27,8 @@ import java.util.TreeMap;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -149,6 +151,7 @@ public class ShortestPathPanel extends PluginPanel
 	// Whether the whole "Teleport methods" catalog section (shown at the top) is expanded. Collapsed
 	// by default so the routes stay the focus; the user opens it to browse/toggle methods.
 	private boolean catalogExpanded = false;
+	private boolean pohSectionExpanded = false;
 	// Funnel filter next to the catalog search: narrow the list to disabled methods or to a single
 	// kind of unavailability (missing item/level/quest, in bank, not unlocked).
 	private CatalogFilter catalogFilter = CatalogFilter.ALL;
@@ -1087,6 +1090,7 @@ public class ShortestPathPanel extends PluginPanel
 	private void refreshCatalog()
 	{
 		catalogHolder.removeAll();
+		catalogHolder.add(buildPohSection());
 		if (!cachedCatalog.isEmpty())
 		{
 			catalogHolder.add(buildCatalogSection());
@@ -1097,6 +1101,131 @@ public class ShortestPathPanel extends PluginPanel
 		renderedExclusions = cachedExclusions;
 		renderedUnavailable = cachedUnavailable;
 		renderedCatalogExpanded = catalogExpanded;
+	}
+
+	/**
+	 * The player-owned-house declarations: which POH teleport features GPS should assume exist.
+	 * Unlike the catalog's include/exclude (what the user WANTS used), these describe what is BUILT
+	 * in the house — facts GPS cannot detect from outside the house, so the player states them once.
+	 * The controls mirror the plugin's config items (same keys, kept in sync through the
+	 * ConfigManager); any change regenerates the current routes.
+	 */
+	private JPanel buildPohSection()
+	{
+		JPanel section = new JPanel();
+		section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+		section.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		section.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+		final boolean pohOn = plugin.getGpsConfig().usePoh();
+
+		JPanel titleRow = new JPanel(new BorderLayout(5, 0));
+		titleRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		titleRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+		titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+		titleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		titleRow.add(control(new JLabel(pohSectionExpanded ? RouteIcons.CHEVRON_DOWN : RouteIcons.CHEVRON_RIGHT)),
+			BorderLayout.WEST);
+		JLabel title = new JLabel("Player-owned house");
+		title.setForeground(Color.WHITE);
+		titleRow.add(title, BorderLayout.CENTER);
+		JLabel state = new JLabel(pohOn ? "on" : "off");
+		state.setForeground(pohOn ? ColorScheme.PROGRESS_COMPLETE_COLOR : ColorScheme.LIGHT_GRAY_COLOR);
+		titleRow.add(state, BorderLayout.EAST);
+		titleRow.setToolTipText("Declare which teleport features are built in your house so routes can use them");
+		titleRow.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		titleRow.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				pohSectionExpanded = !pohSectionExpanded;
+				refreshCatalog();
+			}
+		});
+		section.add(titleRow);
+
+		if (!pohSectionExpanded)
+		{
+			return section;
+		}
+
+		JPanel body = new JPanel();
+		body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+		body.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		body.setBorder(new EmptyBorder(4, 6, 6, 6));
+		body.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+		// What GPS detected on its own: the house location (varbit) — a confidence hint that the
+		// location-gated entries/exits will resolve correctly.
+		String house = plugin.getHouseLocationName();
+		JLabel houseLabel = new JLabel(house != null
+			? "Your house: " + house
+			: "No house detected (log in, or you don't own one)");
+		houseLabel.setForeground(house != null ? ColorScheme.LIGHT_GRAY_COLOR : ColorScheme.MEDIUM_GRAY_COLOR);
+		houseLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		houseLabel.setBorder(new EmptyBorder(0, 0, 4, 0));
+		body.add(houseLabel);
+
+		JCheckBox master = pohCheckBox("Use my house for routes", pohOn,
+			"Master switch: with this off, no POH teleport is ever routed",
+			v -> plugin.setPohConfig("usePoh", v));
+		body.add(master);
+
+		JPanel tierRow = new JPanel(new BorderLayout(5, 0));
+		tierRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		tierRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+		tierRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		tierRow.setBorder(new EmptyBorder(2, 18, 2, 0));
+		JLabel tierLabel = new JLabel("Jewellery box:");
+		tierLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		tierRow.add(tierLabel, BorderLayout.WEST);
+		JComboBox<JewelleryBoxTier> tierBox = new JComboBox<>(JewelleryBoxTier.values());
+		tierBox.setSelectedItem(plugin.getGpsConfig().pohJewelleryBoxTier());
+		tierBox.setEnabled(pohOn);
+		tierBox.setToolTipText("The tier built in your house (each tier includes the ones below it)");
+		tierBox.addActionListener(e -> plugin.setPohConfig("pohJewelleryBoxTier", tierBox.getSelectedItem()));
+		tierRow.add(tierBox, BorderLayout.CENTER);
+		body.add(tierRow);
+
+		JCheckBox portals = pohCheckBox("Teleport portals & nexus", plugin.getGpsConfig().useTeleportationPortalsPoh(),
+			"Portal chamber and portal nexus destinations",
+			v -> plugin.setPohConfig("useTeleportationPortalsPoh", v));
+		JCheckBox mounted = pohCheckBox("Mounted items", plugin.getGpsConfig().usePohMountedItems(),
+			"Mounted glory, Xeric's talisman, digsite pendant, mythical cape",
+			v -> plugin.setPohConfig("usePohMountedItems", v));
+		JCheckBox fairy = pohCheckBox("Fairy ring", plugin.getGpsConfig().usePohFairyRing(),
+			"Requires 85 Construction to build",
+			v -> plugin.setPohConfig("usePohFairyRing", v));
+		JCheckBox spirit = pohCheckBox("Spirit tree", plugin.getGpsConfig().usePohSpiritTree(),
+			"Requires 75 Construction and 83 Farming to build",
+			v -> plugin.setPohConfig("usePohSpiritTree", v));
+		JCheckBox obelisk = pohCheckBox("Wilderness obelisk", plugin.getGpsConfig().usePohObelisk(),
+			"Requires 80 Construction to build",
+			v -> plugin.setPohConfig("usePohObelisk", v));
+		for (JCheckBox box : new JCheckBox[]{portals, mounted, fairy, spirit, obelisk})
+		{
+			box.setEnabled(pohOn);
+			box.setBorder(new EmptyBorder(2, 18, 2, 0));
+			body.add(box);
+		}
+
+		section.add(body);
+		return section;
+	}
+
+	/** A POH declaration checkbox: writes its config key on change; the ConfigChanged regenerates. */
+	private JCheckBox pohCheckBox(String label, boolean value, String tooltip,
+		java.util.function.Consumer<Boolean> onChange)
+	{
+		JCheckBox box = new JCheckBox(label, value);
+		box.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		box.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		box.setToolTipText(tooltip);
+		box.setAlignmentX(Component.LEFT_ALIGNMENT);
+		box.setFocusPainted(false);
+		box.addActionListener(e -> onChange.accept(box.isSelected()));
+		return box;
 	}
 
 	private JPanel buildCatalogSection()

@@ -126,7 +126,7 @@ public class ShortestPathPlugin extends Plugin
 	private static final String FLASH_ICONS = "Flash icons";
 	private static final String TARGET = ColorUtil.wrapWithColorTag("GPS Target", JagexColors.MENU_TARGET);
 	private static final BufferedImage MARKER_IMAGE = ImageUtil.loadImageResource(ShortestPathPlugin.class, "/marker.png");
-	private static final Pattern TRANSPORT_OPTIONS_REGEX = Pattern.compile("^(avoidWilderness|includeBankPath|currencyThreshold|use\\w+|cost\\w+)$");
+	private static final Pattern TRANSPORT_OPTIONS_REGEX = Pattern.compile("^(avoidWilderness|includeBankPath|currencyThreshold|pohJewelleryBoxTier|use\\w+|cost\\w+)$");
 	private static final Map<String, Object> configOverride = new HashMap<>(50);
 	private static final Pattern SPIRIT_TREE_LABEL_PATTERN_MENU = Pattern.compile("<col=735a28>(.+)</col>: (<col=5f5f5f>)?(.+)");
 	private static final Pattern SPIRIT_TREE_LABEL_PATTERN_MENU_NEW = Pattern.compile("<col=ffffff>(.+)</col>: (<col=5f5f5f>)?(.+)");
@@ -1219,6 +1219,10 @@ public class ShortestPathPlugin extends Plugin
 
 		maybeAutoComputeAlternatives();
 
+		// The house-location varbit (2187): 0 = no house, 1-9 = the owned location. Cached here (the
+		// client thread) for the panel's POH section, which runs on the EDT.
+		houseLocationId = client.getVarbitValue(2187);
+
 		Player localPlayer = client.getLocalPlayer();
 		if (localPlayer == null || !hasPathTargets())
 		{
@@ -2189,6 +2193,34 @@ public class ShortestPathPlugin extends Plugin
 	public Set<TeleportMethod> getUserExclusions()
 	{
 		return new HashSet<>(userExclusions);
+	}
+
+	private volatile int houseLocationId;
+	private static final String[] HOUSE_LOCATIONS = {
+		null, "Rimmington", "Taverley", "Pollnivneach", "Rellekka", "Brimhaven",
+		"Yanille", "Prifddinas", "Hosidius", "Aldarin"};
+
+	/** The player's house location name (varbit 2187), or null when no house is detected. */
+	public String getHouseLocationName()
+	{
+		int id = houseLocationId;
+		return (id > 0 && id < HOUSE_LOCATIONS.length) ? HOUSE_LOCATIONS[id] : null;
+	}
+
+	/** The live config, for panel controls that mirror config items (the POH section). */
+	public ShortestPathConfig getGpsConfig()
+	{
+		return config;
+	}
+
+	/**
+	 * Writes a POH setting from the panel. Persisting through the ConfigManager keeps the panel and
+	 * the RuneLite config UI in sync (same keys), and the resulting ConfigChanged event re-caches
+	 * values and regenerates the routes (POH keys match TRANSPORT_OPTIONS_REGEX).
+	 */
+	public void setPohConfig(String key, Object value)
+	{
+		configManager.setConfiguration(CONFIG_GROUP, key, value);
 	}
 
 	/**
