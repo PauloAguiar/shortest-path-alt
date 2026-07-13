@@ -109,38 +109,39 @@ tasks.register('shadowJar', Jar) {
     archiveFileName.set("${rootProject.name}-${project.version}-all.jar")
 }
 
-// --- JMH microbenchmarks (dev-only) ---
-// Lives in its own 'jmh' source set: never compiled by build/check/jar, never shipped in the plugin,
-// and out of src/main so it adds nothing to the hub's (AI) review surface. It reuses the test
-// fixtures (TestPathfinderConfig loads the real collision map + transports) via the test output.
-// Run e.g.:  ./gradlew jmh --args='DistanceFieldBenchmark -f 1 -wi 3 -i 5'
-sourceSets {
-    jmh {
-        java.srcDir 'src/jmh/java'
+// --- JMH microbenchmarks (dev-only, opt-in) ---
+// Gated behind -Pjmh so the default build — including the plugin hub's — never defines the source
+// set, resolves jmh-core, or compiles src/jmh (which also keeps it off the hub's review surface).
+// The benchmarks reuse the test fixtures (TestPathfinderConfig loads the real collision map +
+// transports) via the test output.
+// Run e.g.:  ./gradlew -Pjmh jmh --args='DistanceFieldBenchmark -f 1 -wi 3 -i 5'
+if (project.hasProperty('jmh')) {
+    sourceSets {
+        jmh {
+            java.srcDir 'src/jmh/java'
+        }
     }
-}
 
-configurations {
-    jmhImplementation.extendsFrom testImplementation
-}
+    configurations {
+        jmhImplementation.extendsFrom testImplementation
+    }
 
-dependencies {
-    jmhImplementation 'org.openjdk.jmh:jmh-core:1.37'
-    jmhAnnotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
-    jmhImplementation 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
-    jmhImplementation sourceSets.main.output
-    jmhImplementation sourceSets.test.output
-}
+    dependencies {
+        jmhImplementation 'org.openjdk.jmh:jmh-core:1.37'
+        jmhAnnotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
+        jmhImplementation 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
+        jmhImplementation sourceSets.main.output
+        jmhImplementation sourceSets.test.output
+    }
 
-// Keep JMH out of the standard verification pipeline (and therefore the hub build): 'check'/'build'
-// never realise these tasks, so jmh-core is only downloaded when the 'jmh' task is run explicitly.
-tasks.matching { it.name == 'checkstyleJmh' }.configureEach { enabled = false }
+    tasks.matching { it.name == 'checkstyleJmh' }.configureEach { enabled = false }
 
-tasks.register('jmh', JavaExec) {
-    group = 'benchmark'
-    description = 'Run JMH microbenchmarks (dev-only; not part of build/check).'
-    mainClass = 'org.openjdk.jmh.Main'
-    classpath = sourceSets.jmh.runtimeClasspath
+    tasks.register('jmh', JavaExec) {
+        group = 'benchmark'
+        description = 'Run JMH microbenchmarks (dev-only; enable with -Pjmh).'
+        mainClass = 'org.openjdk.jmh.Main'
+        classpath = sourceSets.jmh.runtimeClasspath
+    }
 }
 
 
