@@ -50,7 +50,7 @@ public class GenerateBenchmark
 	// The production default from ShortestPathPlugin: cap each search at best-cost * this.
 	private static final int COST_MULTIPLE = 3;
 
-	@Param({"lumbridge-barrows", "ge-shilo", "capture"})
+	@Param({"lumbridge-barrows", "ge-shilo", "capture", "island", "deep-wild", "wilderness-escape"})
 	public String scenario;
 
 	@Param({"1", "10"})

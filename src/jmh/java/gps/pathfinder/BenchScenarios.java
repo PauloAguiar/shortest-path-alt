@@ -28,6 +28,10 @@ final class BenchScenarios
 		WorldPointUtil.packWorldPoint(1555, 3045, 0),
 		WorldPointUtil.packWorldPoint(1555, 3046, 0),
 		WorldPointUtil.packWorldPoint(1554, 3046, 0));
+	// Uncommon shapes (see UncommonPathShapesTest): boat-only island, deep wilderness both ways.
+	private static final int ENTRANA = WorldPointUtil.packWorldPoint(2830, 3335, 0);
+	private static final int DEEP_WILDERNESS = WorldPointUtil.packWorldPoint(3004, 3937, 0);
+	private static final int VARROCK = WorldPointUtil.packWorldPoint(3213, 3424, 0);
 
 	private BenchScenarios()
 	{
@@ -126,6 +130,11 @@ final class BenchScenarios
 				return GRAND_EXCHANGE;
 			case "capture":
 				return CAPTURE_START;
+			case "island":
+			case "deep-wild":
+				return LUMBRIDGE;
+			case "wilderness-escape":
+				return DEEP_WILDERNESS;
 			default:
 				throw new IllegalArgumentException("unknown scenario: " + scenario);
 		}
@@ -141,6 +150,12 @@ final class BenchScenarios
 				return Set.of(SHILO_VILLAGE);
 			case "capture":
 				return CAPTURE_TARGETS;
+			case "island":
+				return Set.of(ENTRANA);
+			case "deep-wild":
+				return Set.of(DEEP_WILDERNESS);
+			case "wilderness-escape":
+				return Set.of(VARROCK);
 			default:
 				throw new IllegalArgumentException("unknown scenario: " + scenario);
 		}

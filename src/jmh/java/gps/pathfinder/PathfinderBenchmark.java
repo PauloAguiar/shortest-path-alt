@@ -36,7 +36,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @Fork(1)
 public class PathfinderBenchmark
 {
-	@Param({"lumbridge-barrows", "ge-shilo", "capture"})
+	@Param({"lumbridge-barrows", "ge-shilo", "capture", "island", "deep-wild", "wilderness-escape"})
 	public String scenario;
 
 	@Param({"astar", "uninformed"})
