@@ -155,6 +155,107 @@ public class UncommonPathShapesTest
 	}
 
 	@Test
+	public void startOnBlockedFairyRingPlatform()
+	{
+		// The Karamja fairy ring's standing tile: transport ORIGINS on blocked tiles are enterable
+		// and leavable only through the dedicated step-off rules — starting a search there is the
+		// mirror image of the usual case and exercises the isBlocked branch of getTileNeighbors.
+		final int ring = WorldPointUtil.packWorldPoint(2996, 3114, 0);
+		PathfinderConfig cfg = everythingConfig();
+		assertTrue("premise: the fairy ring standing tile is blocked in the collision map",
+			cfg.getMap().isBlocked(2996, 3114, 0));
+		PathfinderResult result = assertParity(cfg, ring, Set.of(LUMBRIDGE));
+		assertTrue("a route off the ring platform must exist", result.isReached());
+	}
+
+	@Test
+	public void blockedTransportLandingAsTarget()
+	{
+		// A transport LANDING on a blocked tile (a fairy ring platform, a jetty): forward searches
+		// may step onto it only by taking the transport there; the reverse field values it via
+		// patchBlockedLandings. Discovered from the data rather than hardcoded, so the test follows
+		// the transport files.
+		PathfinderConfig cfg = everythingConfig();
+		int landing = WorldPointUtil.UNDEFINED;
+		outer:
+		for (boolean bankVisited : new boolean[]{false, true})
+		{
+			for (int origin : cfg.getTransportsPacked(bankVisited).keys())
+			{
+				for (gps.transport.Transport transport : cfg.getTransportsPacked(bankVisited).get(origin))
+				{
+					final int destination = transport.getDestination();
+					if (destination == WorldPointUtil.UNDEFINED)
+					{
+						continue;
+					}
+					if (cfg.getMap().isBlocked(WorldPointUtil.unpackWorldX(destination),
+						WorldPointUtil.unpackWorldY(destination), WorldPointUtil.unpackWorldPlane(destination)))
+					{
+						landing = destination;
+						break outer;
+					}
+				}
+			}
+		}
+		assertTrue("premise: the transport data must contain at least one blocked landing "
+			+ "(the reason patchBlockedLandings exists)", landing != WorldPointUtil.UNDEFINED);
+		PathfinderResult result = assertParity(cfg, LUMBRIDGE, Set.of(landing));
+		assertTrue("the blocked landing must be reachable by taking the transport there: "
+			+ WorldPointUtil.unpackWorldPoint(landing), result.isReached());
+	}
+
+	@Test
+	public void undergroundTargetThroughTrapdoor()
+	{
+		// The Lumbridge castle cellar: underground regions connect to the surface only through
+		// point transports (the kitchen trapdoor at 3210,3216 -> 3210,9616), so the route must
+		// contain that jump — there is no walkable connection.
+		final int cellar = WorldPointUtil.packWorldPoint(3210, 9616, 0);
+		PathfinderResult result = assertParity(everythingConfig(), LUMBRIDGE, Set.of(cellar));
+		assertTrue("the cellar must be reachable through the trapdoor", result.isReached());
+		List<PathStep> path = result.getPathSteps();
+		boolean jumped = false;
+		for (int i = 1; i < path.size(); i++)
+		{
+			if (WorldPointUtil.distanceBetween(
+				path.get(i - 1).getPackedPosition(), path.get(i).getPackedPosition()) > 20)
+			{
+				jumped = true;
+				break;
+			}
+		}
+		assertTrue("the route must include the trapdoor jump", jumped);
+	}
+
+	@Test
+	public void midBandWildernessStart()
+	{
+		// Start at the level-27 obelisk platform: inside the wilderness but BELOW the level-30 band,
+		// so the 20-30 abstract hub kind applies — teleports usable up to level 30 are legal right
+		// away (unlike the 30+ escape case, which must walk out first).
+		final int obelisk = WorldPointUtil.packWorldPoint(3035, 3732, 0);
+		assertTrue("premise: in the wilderness", WildernessChecker.isInWilderness(obelisk));
+		assertFalse("premise: below the level-30 band", WildernessChecker.isInLevel30Wilderness(obelisk));
+		PathfinderResult result = assertParity(everythingConfig(), obelisk, Set.of(
+			WorldPointUtil.packWorldPoint(3213, 3424, 0)));
+		assertTrue("Varrock must be reachable from mid-band wilderness", result.isReached());
+	}
+
+	@Test
+	public void startInsideTheTargetSet()
+	{
+		// Degenerate but real (e.g. "nearest bank" while standing in one): the search must finish
+		// immediately with a zero-cost single-step path, not explore anything.
+		PathfinderConfig cfg = everythingConfig();
+		PathfinderResult result = assertParity(cfg, LUMBRIDGE, Set.of(LUMBRIDGE, ENTRANA));
+		assertTrue(result.isReached());
+		assertEquals("a start-is-target route costs nothing", 0, result.getTotalCost());
+		assertEquals("the path is the single start tile", 1, result.getPathSteps().size());
+		assertEquals(LUMBRIDGE, result.getPathSteps().get(0).getPackedPosition());
+	}
+
+	@Test
 	public void planeChangeTargetBehindAStaircase()
 	{
 		PathfinderResult result = assertParity(everythingConfig(), LUMBRIDGE, Set.of(UPSTAIRS));
