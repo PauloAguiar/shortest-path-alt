@@ -165,56 +165,105 @@ public class AlternativeRoutesService
 		boolean roundTrip, ResultListener listener)
 	{
 		final int limit = Math.max(1, Math.min(maxRoutes, MAX_ROUTES_CAP));
+		final Set<Integer> rawTargets = new HashSet<>(targets);
 		final Set<Integer> ends = new HashSet<>(targets);
-		final Set<TeleportMethod> excluded = new HashSet<>(userExclusions);
 		final GenTimer timer = new GenTimer();
 		final long wallStart = System.nanoTime();
 
-		// Single client-thread pass per generation, with NO exclusions: snapshots the game state and
-		// builds the full availability (the complete method catalog, and the base lists that per-search
-		// availability is rebuilt from off-thread), and drops targets the avoid-wilderness setting forbids.
-		long clientStart = System.nanoTime();
-		boolean refreshed = refreshOnClientThread(Collections.emptySet(), ends, mode);
-		timer.clientNanos += System.nanoTime() - clientStart;
-		if (!refreshed)
+		// A widened re-request for the SAME query ("+ more routes": limit/multiple grew, nothing else
+		// changed) CONTINUES the previous generation instead of starting over: the exclusion chain's
+		// state is resumable, and widening only ever appends costlier routes. The already-found routes
+		// go out in the very first update, so the panel never blanks while the extra ones compute.
+		final ResumeState prior = resumeState;
+		final boolean resumed = !roundTrip && prior != null
+			&& prior.start == start && prior.rawTargets.equals(rawTargets)
+			&& prior.mode == mode && prior.userExclusions.equals(userExclusions)
+			&& limit >= prior.limit && costMultiple >= prior.costMultiple
+			&& (limit > prior.limit || costMultiple > prior.costMultiple);
+
+		final Set<TeleportMethod> excluded;
+		final List<TeleportMethod> catalog;
+		final Map<TeleportMethod, MethodAvailability> unavailable;
+		final List<Transport> seedCandidates;
+		final List<RouteOption> routes;
+		final Set<String> seenSignatures;
+		// Remaining distance to the target of the first route's endpoint; -1 until known. For an
+		// unreachable exact target (e.g. an NPC tile) every route ends at the closest reachable area,
+		// so later routes are only accepted while they get equally close (small tolerance).
+		int bestRemaining;
+
+		if (resumed)
 		{
-			emit(gen, listener, List.of(), List.of(), Map.of(), true);
-			return;
+			// No client-thread refresh: the cached routes were computed against the previous snapshot,
+			// and mixing a fresh one into a continued chain would make the page inconsistent. A real
+			// re-read happens on any non-widening regeneration (new target, Find routes, recompute).
+			ends.clear();
+			ends.addAll(prior.filteredEnds);
+			excluded = new HashSet<>(prior.excluded);
+			catalog = prior.catalog;
+			unavailable = prior.unavailable;
+			seedCandidates = prior.seedCandidates;
+			routes = new ArrayList<>(prior.routes);
+			seenSignatures = new HashSet<>(prior.seenSignatures);
+			bestRemaining = prior.bestRemaining;
+			// First update: the routes the user is already looking at, unchanged.
+			emit(gen, listener, new ArrayList<>(routes), catalog, unavailable, false);
+			log.debug("[alt-routes] resuming: {} route(s), limit {} -> {}, multiple {} -> {}",
+				routes.size(), prior.limit, limit, prior.costMultiple, costMultiple);
 		}
-		final List<TeleportMethod> catalog = new ArrayList<>(planningConfig.getMethodCatalog());
-		// The catalog is the full method universe in every mode; this maps each entry the player can't
-		// use straight from the inventory to WHY (missing item/level/quest, in the bank, not unlocked),
-		// mode-independently — the panel decides usability per mode (a banked item is usable in the
-		// "Inventory + bank" mode, whose route walks to a bank) and filters by these reasons.
-		final Map<TeleportMethod, MethodAvailability> statuses = planningConfig.getMethodAvailability();
-		final Map<TeleportMethod, MethodAvailability> notUsable = new HashMap<>();
-		for (TeleportMethod method : catalog)
+		else
 		{
-			MethodAvailability status = statuses.getOrDefault(method, MethodAvailability.AVAILABLE);
-			if (status == MethodAvailability.AVAILABLE)
+			excluded = new HashSet<>(userExclusions);
+			// Single client-thread pass per generation, with NO exclusions: snapshots the game state and
+			// builds the full availability (the complete method catalog, and the base lists that per-search
+			// availability is rebuilt from off-thread), and drops targets the avoid-wilderness setting forbids.
+			long clientStart = System.nanoTime();
+			boolean refreshed = refreshOnClientThread(Collections.emptySet(), ends, mode);
+			timer.clientNanos += System.nanoTime() - clientStart;
+			if (!refreshed)
 			{
-				continue;
+				emit(gen, listener, List.of(), List.of(), Map.of(), true);
+				return;
 			}
-			notUsable.put(method, status);
-		}
-		final Map<TeleportMethod, MethodAvailability> unavailable = Collections.unmodifiableMap(notUsable);
-		if (ends.isEmpty())
-		{
-			emit(gen, listener, List.of(), catalog, unavailable, true);
-			return;
-		}
-		// Show the catalog right away while the routes are still computing.
-		emit(gen, listener, List.of(), catalog, unavailable, false);
+			catalog = new ArrayList<>(planningConfig.getMethodCatalog());
+			// The catalog is the full method universe in every mode; this maps each entry the player can't
+			// use straight from the inventory to WHY (missing item/level/quest, in the bank, not unlocked),
+			// mode-independently — the panel decides usability per mode (a banked item is usable in the
+			// "Inventory + bank" mode, whose route walks to a bank) and filters by these reasons.
+			final Map<TeleportMethod, MethodAvailability> statuses = planningConfig.getMethodAvailability();
+			final Map<TeleportMethod, MethodAvailability> notUsable = new HashMap<>();
+			for (TeleportMethod method : catalog)
+			{
+				MethodAvailability status = statuses.getOrDefault(method, MethodAvailability.AVAILABLE);
+				if (status == MethodAvailability.AVAILABLE)
+				{
+					continue;
+				}
+				notUsable.put(method, status);
+			}
+			unavailable = Collections.unmodifiableMap(notUsable);
+			if (ends.isEmpty())
+			{
+				resumeState = null;
+				emit(gen, listener, List.of(), catalog, unavailable, true);
+				return;
+			}
+			routes = new ArrayList<>();
+			seenSignatures = new HashSet<>();
+			bestRemaining = -1;
+			// Show the catalog right away while the routes are still computing.
+			emit(gen, listener, List.of(), catalog, unavailable, false);
 
-		log.debug("[alt-routes] searching: start={}, target={}, mode={}, usableTeleports={}, catalog={}",
-			WorldPointUtil.unpackWorldPoint(start),
-			WorldPointUtil.unpackWorldPoint(ends.iterator().next()),
-			mode, planningConfig.getUsableTeleports(false).length, catalog.size());
+			log.debug("[alt-routes] searching: start={}, target={}, mode={}, usableTeleports={}, catalog={}",
+				WorldPointUtil.unpackWorldPoint(start),
+				WorldPointUtil.unpackWorldPoint(ends.iterator().next()),
+				mode, planningConfig.getUsableTeleports(false).length, catalog.size());
 
-		// Snapshot the global-teleport candidates now, while availability reflects no exclusions; used
-		// to seed extra routes if the exclusion loop dries up before the limit.
-		final List<Transport> seedCandidates = new ArrayList<>(Arrays.asList(
-			planningConfig.getUsableTeleports(mode == AlternativeRoutesMode.OWNED_WITH_BANK)));
+			// Snapshot the global-teleport candidates now, while availability reflects no exclusions; used
+			// to seed extra routes if the exclusion loop dries up before the limit.
+			seedCandidates = new ArrayList<>(Arrays.asList(
+				planningConfig.getUsableTeleports(mode == AlternativeRoutesMode.OWNED_WITH_BANK)));
+		}
 
 		// Per-generation preprocessing: one multi-source reverse flood from the target set builds a
 		// walking+transport distance field — the near-exact A* heuristic every search of this
@@ -237,16 +286,18 @@ public class AlternativeRoutesService
 		// dropped to that route's cost band so the walk stops flooding the map when walking is
 		// uncompetitive — which is most queries, since a teleport route usually wins.
 		final AtomicInteger walkCeiling = new AtomicInteger(Integer.MAX_VALUE);
+		if (resumed && !routes.isEmpty() && costMultiple > 0)
+		{
+			// The best route is already known, so the walk search starts pre-capped at the (widened)
+			// sanity ceiling instead of waiting for the chain's in-loop drop (which only fires on the
+			// FIRST route — already found on a resume).
+			walkCeiling.set((int) Math.min(Integer.MAX_VALUE,
+				(long) routes.get(0).getTotalCost() * 2 * costMultiple));
+		}
 		final Future<WalkResult> walkFuture = limit > 1
 			? seedExecutor.submit(() -> runWalkSearch(gen, start, ends, userExclusions, catalog, field, timer, walkCeiling))
 			: null;
 
-		final List<RouteOption> routes = new ArrayList<>();
-		final Set<String> seenSignatures = new HashSet<>();
-		// Remaining distance to the target of the first route's endpoint; -1 until known. For an
-		// unreachable exact target (e.g. an NPC tile) every route ends at the closest reachable area,
-		// so later routes are only accepted while they get equally close (small tolerance).
-		int bestRemaining = -1;
 		// Whether the cost cap (best * costMultiple, below the walk ceiling) held a route back — a
 		// search couldn't reach within the band. If so, "show more" (a higher multiple) can surface
 		// it. Set only for cost-cap truncations, not method exhaustion or the walk ceiling.
@@ -256,7 +307,7 @@ public class AlternativeRoutesService
 		// out of route-count budget — the count was binding, so a higher limit can surface more.
 		boolean chainExhausted = false;
 
-		for (int i = 0; i < limit; i++)
+		for (int i = routes.size(); i < limit; i++)
 		{
 			if (gen != generation.get())
 			{
@@ -493,8 +544,67 @@ public class AlternativeRoutesService
 				lastTimingSummary[0], lastTimingSummary[1], lastTimingSummary[2],
 				lastTimingSummary[3], lastTimingSummary[4]);
 		}
+		// Capture the chain state so a widened re-request ("+ more routes") can continue this
+		// generation instead of starting over. Round trips merge return legs into the route list,
+		// which the one-way chain state can't be rebuilt from — they always regenerate.
+		if (gen == generation.get() && !roundTrip)
+		{
+			resumeState = new ResumeState(start, rawTargets, Set.copyOf(ends), Set.copyOf(userExclusions),
+				mode, limit, costMultiple, Set.copyOf(excluded), Set.copyOf(seenSignatures),
+				List.copyOf(routes), bestRemaining, catalog, unavailable, seedCandidates);
+		}
+		// A superseded run leaves the previous state alone: the newer generation overwrites it when it
+		// completes, and the eligibility check (start/targets/mode/exclusions) guards staleness anyway.
 		emit(gen, listener, new ArrayList<>(routes), catalog, unavailable, true);
 	}
+
+	/**
+	 * A completed generation's chain state, kept so "+ more routes" (same query, wider
+	 * limit/multiple) resumes instead of recomputing: the found routes are emitted immediately and
+	 * the exclusion chain continues where it stopped. Only ever read and written on the generation
+	 * executor thread.
+	 */
+	private static final class ResumeState
+	{
+		final int start;
+		final Set<Integer> rawTargets;
+		final Set<Integer> filteredEnds;
+		final Set<TeleportMethod> userExclusions;
+		final AlternativeRoutesMode mode;
+		final int limit;
+		final int costMultiple;
+		final Set<TeleportMethod> excluded;
+		final Set<String> seenSignatures;
+		final List<RouteOption> routes;
+		final int bestRemaining;
+		final List<TeleportMethod> catalog;
+		final Map<TeleportMethod, MethodAvailability> unavailable;
+		final List<Transport> seedCandidates;
+
+		ResumeState(int start, Set<Integer> rawTargets, Set<Integer> filteredEnds,
+			Set<TeleportMethod> userExclusions, AlternativeRoutesMode mode, int limit, int costMultiple,
+			Set<TeleportMethod> excluded, Set<String> seenSignatures, List<RouteOption> routes,
+			int bestRemaining, List<TeleportMethod> catalog,
+			Map<TeleportMethod, MethodAvailability> unavailable, List<Transport> seedCandidates)
+		{
+			this.start = start;
+			this.rawTargets = rawTargets;
+			this.filteredEnds = filteredEnds;
+			this.userExclusions = userExclusions;
+			this.mode = mode;
+			this.limit = limit;
+			this.costMultiple = costMultiple;
+			this.excluded = excluded;
+			this.seenSignatures = seenSignatures;
+			this.routes = routes;
+			this.bestRemaining = bestRemaining;
+			this.catalog = catalog;
+			this.unavailable = unavailable;
+			this.seedCandidates = seedCandidates;
+		}
+	}
+
+	private ResumeState resumeState;
 
 	/**
 	 * The last completed generation's timing, for the GPS debug snapshot:
@@ -663,15 +773,21 @@ public class AlternativeRoutesService
 					log.warn("Seed search failed", e);
 					continue;
 				}
-				if (seedResult == null || !seenSignatures.add(signature(seedResult.scan.methods)))
+				if (seedResult == null)
 				{
 					continue;
 				}
 				// Same hybrid acceptance as the chain: a seed beyond the page-fill ceiling isn't shown
-				// (skip, not stop — seeds complete in parallel, a later one can be cheaper).
+				// (skip, not stop — seeds complete in parallel, a later one can be cheaper). Checked
+				// BEFORE the signature is consumed: a cost-rejected seed must stay eligible for a
+				// widened re-run ("+"), which resumes with this generation's seenSignatures.
 				if (costMultiple > 0 && !routes.isEmpty()
 					&& seedResult.totalCost > (long) Math.max(routes.get(0).getTotalCost(), MIN_BEST_FOR_BAND) * costMultiple
 					&& seedResult.totalCost > pageFillCeiling(routes.get(0).getTotalCost(), maxAcceptedCost(routes), costMultiple))
+				{
+					continue;
+				}
+				if (!seenSignatures.add(signature(seedResult.scan.methods)))
 				{
 					continue;
 				}
