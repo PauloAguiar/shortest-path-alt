@@ -224,7 +224,11 @@ public class CollisionMap
 					TransportAvailability.EMPTY_TRANSPORTS);
 				for (Transport transport : neighborTransports)
 				{
-					if (transport.getOrigin() == Transport.UNDEFINED_ORIGIN
+					// Remapped transports (POH interiors re-homed onto the landing by MAP KEY) keep
+					// their original origin field; stepping onto it would jump the path into the
+					// house template. Only true blocked-tile transports (origin == the map key,
+					// e.g. fairy rings) may be entered this way.
+					if (transport.getOrigin() != neighborPacked
 						|| !(transport.isUsableAtWildernessLevel(wildernessLevel))
 						|| visited.get(transport.getOrigin(), pathBankVisited))
 					{
