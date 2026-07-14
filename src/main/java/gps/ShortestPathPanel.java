@@ -2068,7 +2068,8 @@ public class ShortestPathPanel extends PluginPanel
 		destinationSearch.setIcon(IconTextField.Icon.SEARCH);
 		destinationSearch.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		destinationSearch.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
-		destinationSearch.setToolTipText("Search places, dungeons and minigames by name");
+		destinationSearch.setToolTipText("Search places, dungeons and minigames by name,"
+			+ " or type coordinates (\"3221, 3218\" — optional plane: \"3221 3218 1\")");
 		// Taller than the default field height for an easier click target and more presence — it's
 		// the section's primary control.
 		final int searchHeight = 32;
@@ -2347,6 +2348,18 @@ public class ShortestPathPanel extends PluginPanel
 			return;
 		}
 
+		// A typed coordinate pair ("3221, 3218", "3221 3218", optional plane "3221 3218 1") becomes
+		// a direct route-to-tile result ahead of the name matches.
+		int coordinate = parseCoordinateQuery(query);
+		if (coordinate != WorldPointUtil.UNDEFINED)
+		{
+			int plane = WorldPointUtil.unpackWorldPlane(coordinate);
+			addResultRow(new Destinations.Entry("coordinates",
+				"Tile (" + WorldPointUtil.unpackWorldX(coordinate) + ", " + WorldPointUtil.unpackWorldY(coordinate)
+					+ (plane > 0 ? ", plane " + plane : "") + ")",
+				coordinate), player);
+		}
+
 		// Fuzzy match, best first: the score tiers (exact > prefix > word prefixes > substring >
 		// subsequence) rank the list; proximity to the player breaks ties within a tier.
 		List<Destinations.Entry> matches = new ArrayList<>();
@@ -2381,7 +2394,7 @@ public class ShortestPathPanel extends PluginPanel
 				break;
 			}
 		}
-		if (shown == 0)
+		if (resultEntries.isEmpty())
 		{
 			JLabel none = new JLabel("No matching destination");
 			none.setForeground(Color.GRAY);
@@ -2391,6 +2404,32 @@ public class ShortestPathPanel extends PluginPanel
 		}
 		preselectFirstResult();
 		showDestinationPopup();
+	}
+
+	// "x, y" or "x y", with an optional plane (0-3): x is 4 digits (the playable range is roughly
+	// 1000-4600), y 4-5 digits (surface ~3000-4200; dungeon/instance planes reach past 10000).
+	private static final java.util.regex.Pattern COORDINATE_QUERY =
+		java.util.regex.Pattern.compile("(\\d{4})[,;\\s]+(\\d{4,5})(?:[,;\\s]+([0-3]))?");
+
+	/**
+	 * Parses a typed coordinate query into a packed world point, or {@link WorldPointUtil#UNDEFINED}
+	 * when the text isn't a plausible in-world coordinate pair.
+	 */
+	private static int parseCoordinateQuery(String query)
+	{
+		java.util.regex.Matcher matcher = COORDINATE_QUERY.matcher(query);
+		if (!matcher.matches())
+		{
+			return WorldPointUtil.UNDEFINED;
+		}
+		int x = Integer.parseInt(matcher.group(1));
+		int y = Integer.parseInt(matcher.group(2));
+		int plane = matcher.group(3) != null ? Integer.parseInt(matcher.group(3)) : 0;
+		if (x > 4600 || y > 12900)
+		{
+			return WorldPointUtil.UNDEFINED;
+		}
+		return WorldPointUtil.packWorldPoint(x, y, plane);
 	}
 
 	/** Builds a result row, adds it to the popup and tracks it for keyboard navigation. */
