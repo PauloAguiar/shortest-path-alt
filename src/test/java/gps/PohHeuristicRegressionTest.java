@@ -20,6 +20,7 @@ import gps.pathfinder.TestPathfinderConfig;
 public class PohHeuristicRegressionTest
 {
 	private AlternativeRoutesService service;
+	private PathfinderConfig planningConfig;
 
 	@Before
 	public void before()
@@ -46,6 +47,7 @@ public class PohHeuristicRegressionTest
 		Mockito.when(cfg.useTeleportationPortalsPoh()).thenReturn(true);
 		PathfinderConfig config = new TestPathfinderConfig(client, cfg).copyForPlanning();
 		config.refresh();
+		planningConfig = config;
 		ClientThread ct = Mockito.mock(ClientThread.class, Mockito.withSettings().stubOnly());
 		Mockito.doAnswer(i ->
 		{
@@ -100,5 +102,48 @@ public class PohHeuristicRegressionTest
 		}
 		assertTrue("the first page must include the house->Lassar Portal routes at the best cost tier"
 			+ " (found " + pohPortalRoutesAtBestTier + ")", pohPortalRoutesAtBestTier >= 3);
+	}
+
+	/**
+	 * Route 0 itself was vulnerable, not just the lower ranks: for a player without the direct
+	 * Lassar teleports, the TRUE optimum is the house route (29) — pre-fix, the inadmissible
+	 * heuristic made the first search return Mind Altar (67) as the top route instead. Excluding
+	 * the direct teleports simulates that player.
+	 */
+	@Test
+	public void routeZeroIsTheHouseRouteWhenDirectTeleportsAreMissing() throws Exception
+	{
+		Set<TeleportMethod> exclusions = new java.util.HashSet<>();
+		for (TeleportMethod method : planningConfig.getMethodCatalog())
+		{
+			if (method.label().equals("Lassar tablet") || method.label().equals("Lassar Teleport"))
+			{
+				exclusions.add(method);
+			}
+		}
+		assertTrue("both direct Lassar methods must exist in the catalog", exclusions.size() == 2);
+
+		CountDownLatch latch = new CountDownLatch(1);
+		AtomicReference<List<RouteOption>> out = new AtomicReference<>();
+		service.generate(WorldPointUtil.packWorldPoint(2907, 10172, 0),
+			Set.of(WorldPointUtil.packWorldPoint(3009, 3487, 0)), exclusions,
+			AlternativeRoutesMode.ALL_EVERYTHING, 10, 3, false,
+			(routes, catalog, unavailable, done) ->
+			{
+				if (done)
+				{
+					out.set(routes);
+					latch.countDown();
+				}
+			});
+		assertTrue(latch.await(60, TimeUnit.SECONDS));
+		List<RouteOption> routes = out.get();
+		assertNotNull(routes);
+		assertTrue("routes must be found", !routes.isEmpty());
+		RouteOption best = routes.get(0);
+		boolean viaPohPortal = best.getMethods().stream()
+			.anyMatch(m -> gps.transport.TransportType.TELEPORTATION_PORTAL_POH.equals(m.getType()));
+		assertTrue("route 0 must be the house-mediated optimum (cost " + best.getTotalCost()
+			+ ", methods " + best.getMethods() + ")", viaPohPortal && best.getTotalCost() <= 30);
 	}
 }
