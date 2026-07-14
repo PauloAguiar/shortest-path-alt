@@ -430,7 +430,7 @@ public interface ShortestPathConfig extends Config
 
 	@ConfigItem(
 		keyName = "balloonSmartMode",
-		name = "Balloon Log storage tracking",
+		name = "Balloon smart Log storage",
 		description = "Detect and keep track of the logs in the balloon stations' Log storage (from chat messages),<br>" +
 			"so flights can be paid from storage without carrying logs. Check the Log storage to sync.",
 		position = 101,

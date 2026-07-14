@@ -1340,7 +1340,7 @@ public class ShortestPathPanel extends PluginPanel
 			v -> plugin.setPanelConfig("useHotAirBalloons", v));
 		body.add(master);
 
-		JCheckBox smartBox = configCheckBox("Track Log storage", smart,
+		JCheckBox smartBox = configCheckBox("Smart Log storage", smart,
 			"<html><body style='width:220px'>Detect and keep track of the logs in the stations' Log"
 				+ " storage (read from chat messages); flights can then be paid from storage without"
 				+ " carrying logs.<br><br>When off, GPS ignores the Log storage: a flight is only"
