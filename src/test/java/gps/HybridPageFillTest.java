@@ -54,7 +54,7 @@ public class HybridPageFillTest
 
 	private AlternativeRoutesService service;
 
-	static Object defaultValue(Class<?> t)
+	public static Object defaultValue(Class<?> t)
 	{
 		if (t == int.class || t == short.class || t == byte.class)
 		{

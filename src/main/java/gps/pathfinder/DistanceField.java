@@ -503,8 +503,7 @@ public final class DistanceField
 				for (Transport transport : set)
 				{
 					final int destination = transport.getDestination();
-					if (destination == WorldPointUtil.UNDEFINED
-						|| transport.getOrigin() == WorldPointUtil.UNDEFINED)
+					if (destination == WorldPointUtil.UNDEFINED)
 					{
 						continue;
 					}
@@ -516,7 +515,12 @@ public final class DistanceField
 						byOrigin = new HashMap<>();
 						index.put(destination, byOrigin);
 					}
-					byOrigin.merge(transport.getOrigin(), cost, Math::min);
+					// Keyed by the availability map's origin (the loop key), NOT transport.getOrigin():
+					// the POH remap re-homes interior transports onto the landing tile by MAP KEY while
+					// each Transport keeps its interior origin. Crediting the interior tile left the
+					// landing unflooded, so the heuristic overestimated inside the POH (inadmissible)
+					// and house-mediated best routes only surfaced after "+" (user capture pair).
+					byOrigin.merge(origin, cost, Math::min);
 				}
 			}
 		}
