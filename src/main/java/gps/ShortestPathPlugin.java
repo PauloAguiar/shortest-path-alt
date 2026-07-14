@@ -2270,27 +2270,44 @@ public class ShortestPathPlugin extends Plugin
 		return (id > 0 && id < HOUSE_LOCATIONS.length) ? HOUSE_LOCATIONS[id] : null;
 	}
 
-	// Smart house furniture detection: scan the scene once each time the player enters their POH.
-	private boolean insidePoh = false;
+	// Smart house furniture detection: scan the scene while the player is inside their POH.
+	// VARBIT_IN_HOUSE (4744) is 1 inside, 0 outside — the game's own flag (see the house teleport
+	// data), more reliable than mapping the instanced player tile back to the template bounds.
+	private static final int VARBIT_IN_HOUSE = 4744;
 	private volatile boolean pohScanned = false;
 	private volatile PohScanner.Detected detectedPohFurniture;
+	// Reset when the player leaves the house, so the next visit re-scans (catching new furniture).
+	private boolean pohFurnitureFoundThisVisit = false;
+	// Bounds the "scene still loading" retries so a bare house doesn't rescan every tick forever.
+	private int pohScanAttempts = 0;
+	private static final int POH_SCAN_MAX_ATTEMPTS = 6;
 
 	/**
-	 * On entering the POH, scan the loaded scene for the furniture GPS can recognise (jewellery
+	 * While inside the POH, scan the loaded scene for the furniture GPS can recognise (jewellery
 	 * box, fairy ring, spirit tree, obelisk) and turn ON the matching declarations — never off, so
 	 * detection can only add routes, never silently drop one. The two coarse toggles (portals &
-	 * nexus, mounted items) bundle furniture GPS cannot verify and stay manual.
+	 * nexus, mounted items) bundle furniture GPS cannot verify and stay manual. Re-scans each tick
+	 * until something is found (the scene can still be populating on the entry tick), then stops.
 	 */
 	private void maybeScanPoh(Player localPlayer)
 	{
-		int loc = WorldPointUtil.fromLocalInstance(client, localPlayer);
-		boolean inside = loc != WorldPointUtil.UNDEFINED
-			&& isInsidePoh(WorldPointUtil.unpackWorldX(loc), WorldPointUtil.unpackWorldY(loc));
-		if (inside && !insidePoh && config.pohSmartDetect())
+		boolean inside = client.getVarbitValue(VARBIT_IN_HOUSE) == 1;
+		if (!inside)
 		{
-			scanPohFurniture();
+			pohFurnitureFoundThisVisit = false; // reset so the next visit re-scans
+			pohScanAttempts = 0;
+			return;
 		}
-		insidePoh = inside;
+		// Scan each tick until furniture is found (the scene can still be populating on the entry
+		// tick), then stop for this visit — the furniture doesn't change while standing here. The
+		// attempt cap stops a bare house (or undetectable-only furniture) rescanning forever.
+		if (!config.pohSmartDetect() || pohFurnitureFoundThisVisit || pohScanAttempts >= POH_SCAN_MAX_ATTEMPTS)
+		{
+			return;
+		}
+		pohScanAttempts++;
+		scanPohFurniture();
+		pohFurnitureFoundThisVisit = detectedPohFurniture != null && detectedPohFurniture.any();
 	}
 
 	private void scanPohFurniture()
@@ -2327,8 +2344,14 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		PohScanner.Detected detected = PohScanner.detect(ids);
+		boolean firstScan = !pohScanned;
+		boolean changed = firstScan || !detected.sameAs(detectedPohFurniture);
 		pohScanned = true;
 		detectedPohFurniture = detected;
+		if (!changed)
+		{
+			return; // nothing new this scan — don't churn the config or the panel
+		}
 
 		// Only ever raise declarations (turn a feature on / raise the jewellery tier). A partial
 		// scene load that missed a piece therefore can never wipe an existing declaration.

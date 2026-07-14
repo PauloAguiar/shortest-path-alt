@@ -1284,6 +1284,22 @@ public class ShortestPathPanel extends PluginPanel
 	}
 
 	/**
+	 * An attention note inside a configuration section rendered as a warning banner (amber accent
+	 * bar + warning glyph), matching the panel's other banners — used for the "needs a sync" hints.
+	 */
+	private JPanel configWarningBanner(String text)
+	{
+		JPanel wrap = new JPanel(new BorderLayout());
+		wrap.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
+		wrap.setBorder(new EmptyBorder(3, 0, 1, 0));
+		JPanel banner = buildBanner(RouteIcons.BANNER_WARNING, text, BANNER_WARN_ACCENT);
+		wrap.add(banner, BorderLayout.CENTER);
+		wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, banner.getPreferredSize().height + 4));
+		return wrap;
+	}
+
+	/**
 	 * The player-owned-house declarations: which POH teleport features GPS should assume exist.
 	 * Unlike the catalog's include/exclude (what the user WANTS used), these describe what is BUILT
 	 * in the house — facts GPS cannot detect from outside the house, so the player states them once.
@@ -1336,8 +1352,7 @@ public class ShortestPathPanel extends PluginPanel
 			List<String> detected = plugin.getDetectedPohFurniture();
 			if (!plugin.isPohScanned())
 			{
-				body.add(configNote("Enter your house once to auto-detect its furniture.",
-					ColorScheme.PROGRESS_INPROGRESS_COLOR));
+				body.add(configWarningBanner("Enter your house once to auto-detect its furniture."));
 			}
 			else if (detected.isEmpty())
 			{
@@ -1484,8 +1499,8 @@ public class ShortestPathPanel extends PluginPanel
 		{
 			if (!config.balloonStorageSynced())
 			{
-				body.add(configNote("Not synced yet — check the Log storage at a balloon station once"
-					+ " to import your stored log counts.", ColorScheme.PROGRESS_INPROGRESS_COLOR));
+				body.add(configWarningBanner("Not synced yet — check the Log storage at a balloon station"
+					+ " once to import your stored log counts."));
 			}
 			else
 			{
@@ -1550,8 +1565,8 @@ public class ShortestPathPanel extends PluginPanel
 		}
 		else if (!plugin.isSpiritTreeSynced())
 		{
-			body.add(configNote("Not synced yet — open a spirit tree travel menu once to detect"
-				+ " your planted trees.", ColorScheme.PROGRESS_INPROGRESS_COLOR));
+			body.add(configWarningBanner("Not synced yet — open a spirit tree travel menu once to detect"
+				+ " your planted trees."));
 		}
 		else if (planted.isEmpty())
 		{

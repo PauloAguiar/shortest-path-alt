@@ -40,6 +40,15 @@ public final class PohScanner
 		{
 			return fairyRing || spiritTree || obelisk || jewelleryBox != JewelleryBoxTier.NONE;
 		}
+
+		boolean sameAs(Detected other)
+		{
+			return other != null
+				&& fairyRing == other.fairyRing
+				&& spiritTree == other.spiritTree
+				&& obelisk == other.obelisk
+				&& jewelleryBox == other.jewelleryBox;
+		}
 	}
 
 	public static Detected detect(Set<Integer> objectIds)
