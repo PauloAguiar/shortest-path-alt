@@ -35,8 +35,10 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
@@ -2063,7 +2065,16 @@ public class ShortestPathPanel extends PluginPanel
 		wrap.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		wrap.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-		wrap.add(fullWidth(sectionLabel("Go to a place")));
+		// Header: the section label plus the favourite-saving heart on the right.
+		JPanel header = new JPanel(new BorderLayout());
+		header.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		header.setAlignmentX(LEFT_ALIGNMENT);
+		header.add(sectionLabel("Go to a place"), BorderLayout.CENTER);
+		IconActionLabel saveFavorite = new IconActionLabel(RouteIcons.FAVORITE, RouteIcons.FAVORITE_HOVER,
+			"Save a favourite position with a label (your current tile, or any coordinates)",
+			this::saveFavoriteDialog);
+		header.add(verticallyCentered(control(saveFavorite)), BorderLayout.EAST);
+		wrap.add(fullWidth(header));
 
 		destinationSearch.setIcon(IconTextField.Icon.SEARCH);
 		destinationSearch.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -2326,22 +2337,30 @@ public class ShortestPathPanel extends PluginPanel
 		final int player = plugin.getPlayerLocation();
 		if (query.isEmpty())
 		{
-			// An empty box offers the recent selections instead of hiding — reopening a frequent
-			// destination without retyping it.
+			// An empty box offers the saved favourites and the recent selections instead of hiding —
+			// reopening a frequent destination without retyping it.
+			List<Destinations.Entry> favorites = plugin.getFavoriteDestinations();
 			List<Destinations.Entry> history = plugin.getSearchHistory();
-			if (history.isEmpty())
+			if (favorites.isEmpty() && history.isEmpty())
 			{
 				destinationPopup.setVisible(false);
 				return;
 			}
-			JLabel header = new JLabel("Recent searches");
-			header.setForeground(Color.GRAY);
-			header.setFont(FontManager.getRunescapeSmallFont());
-			header.setBorder(new EmptyBorder(2, 4, 2, 4));
-			destinationResults.add(header);
-			for (Destinations.Entry entry : history)
+			if (!favorites.isEmpty())
 			{
-				addResultRow(entry, player);
+				destinationResults.add(resultsHeader("Favourites"));
+				for (Destinations.Entry entry : favorites)
+				{
+					addResultRow(entry, player);
+				}
+			}
+			if (!history.isEmpty())
+			{
+				destinationResults.add(resultsHeader("Recent searches"));
+				for (Destinations.Entry entry : history)
+				{
+					addResultRow(entry, player);
+				}
 			}
 			preselectFirstResult();
 			showDestinationPopup();
@@ -2361,10 +2380,13 @@ public class ShortestPathPanel extends PluginPanel
 		}
 
 		// Fuzzy match, best first: the score tiers (exact > prefix > word prefixes > substring >
-		// subsequence) rank the list; proximity to the player breaks ties within a tier.
+		// subsequence) rank the list; proximity to the player breaks ties within a tier. Saved
+		// favourites are part of the pool, matched by their label.
+		List<Destinations.Entry> pool = new ArrayList<>(plugin.getFavoriteDestinations());
+		pool.addAll(destinationIndex());
 		List<Destinations.Entry> matches = new ArrayList<>();
 		Map<Destinations.Entry, Integer> scores = new java.util.HashMap<>();
-		for (Destinations.Entry entry : destinationIndex())
+		for (Destinations.Entry entry : pool)
 		{
 			int score = SearchMatcher.score(entry.name, query);
 			if (score > 0)
@@ -2441,6 +2463,55 @@ public class ShortestPathPanel extends PluginPanel
 		destinationResults.add(row);
 	}
 
+	/** A small grey group header inside the results popup ("Favourites", "Recent searches"). */
+	private static JLabel resultsHeader(String text)
+	{
+		JLabel header = new JLabel(text);
+		header.setForeground(Color.GRAY);
+		header.setFont(FontManager.getRunescapeSmallFont());
+		header.setBorder(new EmptyBorder(2, 4, 2, 4));
+		return header;
+	}
+
+	/** The heart button: saves a labelled favourite position, prefilled with the current tile. */
+	private void saveFavoriteDialog()
+	{
+		JTextField labelField = new JTextField();
+		int player = plugin.getPlayerLocation();
+		String prefill = "";
+		if (player != WorldPointUtil.UNDEFINED)
+		{
+			int plane = WorldPointUtil.unpackWorldPlane(player);
+			prefill = WorldPointUtil.unpackWorldX(player) + ", " + WorldPointUtil.unpackWorldY(player)
+				+ (plane > 0 ? ", " + plane : "");
+		}
+		JTextField positionField = new JTextField(prefill);
+		JPanel form = new JPanel(new GridLayout(0, 1, 0, 4));
+		form.add(new JLabel("Label:"));
+		form.add(labelField);
+		form.add(new JLabel("Position — x, y with an optional plane (prefilled with your tile):"));
+		form.add(positionField);
+		if (JOptionPane.showConfirmDialog(this, form, "Save favourite position",
+			JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION)
+		{
+			return;
+		}
+		String label = labelField.getText().trim();
+		int position = parseCoordinateQuery(positionField.getText().trim());
+		if (label.isEmpty() || position == WorldPointUtil.UNDEFINED)
+		{
+			JOptionPane.showMessageDialog(this,
+				"A favourite needs a label and a valid position (x, y — e.g. 3221, 3218).",
+				"Favourite not saved", JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+		plugin.addFavoriteDestination(label, position);
+		if (destinationPopup.isVisible())
+		{
+			renderDestinationResults();
+		}
+	}
+
 	/** Preselects the top result so Enter works immediately; -1 when there are none. */
 	private void preselectFirstResult()
 	{
@@ -2514,6 +2585,8 @@ public class ShortestPathPanel extends PluginPanel
 		name.setFont(FontManager.getRunescapeSmallFont());
 		row.add(name, BorderLayout.CENTER);
 
+		JPanel east = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+		east.setOpaque(false);
 		if (player != WorldPointUtil.UNDEFINED)
 		{
 			int distance = WorldPointUtil.distanceBetween(player, entry.packedPosition);
@@ -2522,8 +2595,21 @@ public class ShortestPathPanel extends PluginPanel
 				JLabel dist = new JLabel(distance + " tiles");
 				dist.setForeground(Color.GRAY);
 				dist.setFont(FontManager.getRunescapeSmallFont());
-				row.add(dist, BorderLayout.EAST);
+				east.add(dist);
 			}
+		}
+		if ("favorite".equals(entry.category))
+		{
+			east.add(new IconActionLabel(RouteIcons.CROSS, RouteIcons.CROSS_HOVER,
+				"Remove this favourite", () ->
+			{
+				plugin.removeFavoriteDestination(entry);
+				renderDestinationResults();
+			}));
+		}
+		if (east.getComponentCount() > 0)
+		{
+			row.add(verticallyCentered(east), BorderLayout.EAST);
 		}
 
 		row.addMouseListener(new MouseAdapter()

@@ -221,6 +221,9 @@ public class ShortestPathPlugin extends Plugin
 	private static final String CONFIG_KEY_MODE = "alternativeRoutesMode";
 	// The search box's recent selections (most recent first), persisted across sessions.
 	private static final String CONFIG_KEY_SEARCH_HISTORY = "searchHistory";
+	private static final String CONFIG_KEY_FAVORITES = "favoriteDestinations";
+	private static final int FAVORITES_LIMIT = 100;
+	private volatile List<Destinations.Entry> favoriteDestinations = new ArrayList<>();
 	private volatile List<Destinations.Entry> searchHistory = new ArrayList<>();
 	private final Set<TeleportMethod> userExclusions = ConcurrentHashMap.newKeySet();
 	// The exclusions the current route list was generated with; diverging from userExclusions means
@@ -482,6 +485,8 @@ public class ShortestPathPlugin extends Plugin
 		loadExclusions();
 		searchHistory = SearchHistory.deserialize(
 			configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_SEARCH_HISTORY));
+		favoriteDestinations = SearchHistory.deserialize(
+			configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_FAVORITES), FAVORITES_LIMIT);
 		loadRoutesMode();
 		routeLimit = defaultRouteLimit();
 		altPanel = new ShortestPathPanel(this);
@@ -2422,6 +2427,45 @@ public class ShortestPathPlugin extends Plugin
 		List<Destinations.Entry> updated = SearchHistory.push(searchHistory, entry);
 		searchHistory = updated;
 		configManager.setConfiguration(CONFIG_GROUP, CONFIG_KEY_SEARCH_HISTORY, SearchHistory.serialize(updated));
+	}
+
+	/** The player's saved favourite positions, in saved order. */
+	public List<Destinations.Entry> getFavoriteDestinations()
+	{
+		return favoriteDestinations;
+	}
+
+	/** Saves a favourite position; a favourite with the same label is replaced. */
+	public void addFavoriteDestination(String label, int packedPosition)
+	{
+		List<Destinations.Entry> updated = new ArrayList<>();
+		for (Destinations.Entry entry : favoriteDestinations)
+		{
+			if (!entry.name.equals(label))
+			{
+				updated.add(entry);
+			}
+		}
+		if (updated.size() < FAVORITES_LIMIT)
+		{
+			updated.add(new Destinations.Entry("favorite", label, packedPosition));
+		}
+		favoriteDestinations = updated;
+		configManager.setConfiguration(CONFIG_GROUP, CONFIG_KEY_FAVORITES, SearchHistory.serialize(updated));
+	}
+
+	public void removeFavoriteDestination(Destinations.Entry favorite)
+	{
+		List<Destinations.Entry> updated = new ArrayList<>();
+		for (Destinations.Entry entry : favoriteDestinations)
+		{
+			if (!entry.name.equals(favorite.name) || entry.packedPosition != favorite.packedPosition)
+			{
+				updated.add(entry);
+			}
+		}
+		favoriteDestinations = updated;
+		configManager.setConfiguration(CONFIG_GROUP, CONFIG_KEY_FAVORITES, SearchHistory.serialize(updated));
 	}
 
 	public void clearExclusions()

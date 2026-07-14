@@ -51,6 +51,12 @@ final class SearchHistory
 
 	static List<Destinations.Entry> deserialize(String raw)
 	{
+		return deserialize(raw, LIMIT);
+	}
+
+	/** Deserializes an entry list with a caller-chosen cap (the favourites list allows more rows). */
+	static List<Destinations.Entry> deserialize(String raw, int limit)
+	{
 		List<Destinations.Entry> out = new ArrayList<>();
 		if (raw == null || raw.isEmpty())
 		{
@@ -66,7 +72,7 @@ final class SearchHistory
 			try
 			{
 				out.add(new Destinations.Entry(fields[0], fields[1], Integer.parseInt(fields[2])));
-				if (out.size() >= LIMIT)
+				if (out.size() >= limit)
 				{
 					break;
 				}

@@ -63,6 +63,11 @@ final class RouteIcons
 	// whose rows (unlike the catalog's) can be disabled.
 	static final ImageIcon CHECK_DIM = new ImageIcon(check(new Color(0x3F, 0x6E, 0x42)));
 	static final ImageIcon CROSS_DIM = new ImageIcon(cross(new Color(0x55, 0x55, 0x55)));
+	// Favourite positions: the save button beside the destination search, and the search results'
+	// category glyph for saved favourites.
+	private static final Color HEART_PINK = new Color(0xE0, 0x5B, 0x7B);
+	static final ImageIcon FAVORITE = new ImageIcon(heart(HEART_PINK));
+	static final ImageIcon FAVORITE_HOVER = new ImageIcon(heart(new Color(0xF2, 0x8B, 0xA5)));
 	// Expand/collapse a category.
 	// Route control panel: a green "+" for more routes, blue refresh, red clear.
 	static final ImageIcon SHOW_MORE = new ImageIcon(plus(GREEN));
@@ -156,6 +161,7 @@ final class RouteIcons
 			case "minigame": return DEST_MINIGAME;
 			case "landmark": return DEST_LANDMARK;
 			case "training": return DEST_TRAINING;
+			case "favorite": return FAVORITE;
 			default: return DEST_PIN;
 		}
 	}
@@ -473,6 +479,24 @@ final class RouteIcons
 	private interface Drawer
 	{
 		void draw(Graphics2D g);
+	}
+
+	private static BufferedImage heart(Color color)
+	{
+		return render(g ->
+		{
+			Path2D heart = new Path2D.Double();
+			heart.moveTo(8, 13.5);
+			heart.curveTo(3.2, 10.2, 1.6, 7.6, 1.6, 5.9);
+			heart.curveTo(1.6, 3.9, 3.1, 2.6, 4.9, 2.6);
+			heart.curveTo(6.2, 2.6, 7.4, 3.4, 8, 4.5);
+			heart.curveTo(8.6, 3.4, 9.8, 2.6, 11.1, 2.6);
+			heart.curveTo(12.9, 2.6, 14.4, 3.9, 14.4, 5.9);
+			heart.curveTo(14.4, 7.6, 12.8, 10.2, 8, 13.5);
+			heart.closePath();
+			g.setColor(color);
+			g.fill(heart);
+		});
 	}
 
 	private static BufferedImage render(Drawer drawer)
