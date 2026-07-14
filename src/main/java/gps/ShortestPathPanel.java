@@ -47,10 +47,13 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.IconTextField;
+import net.runelite.client.util.AsyncBufferedImage;
+import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
 import gps.transport.TransportType;
 
@@ -74,6 +77,14 @@ public class ShortestPathPanel extends PluginPanel
 	private static final Color BANNER_INFO_ACCENT = new Color(0x4C, 0x8B, 0xF5);   // GPS blue
 	private static final Color BANNER_WARN_ACCENT = new Color(0xFF, 0x98, 0x1F);   // amber
 	private static final Color BANNER_OK_ACCENT = new Color(0x4C, 0xAF, 0x50);     // green
+	// Items used purely as decorative icons on the POH configuration rows.
+	private static final int POH_TAB_ICON = ItemID.POH_TABLET_TELEPORTTOHOUSE;
+	private static final int DUELING_RING_ICON = ItemID.RING_OF_DUELING_8;
+	private static final int LAW_RUNE_ICON = ItemID.LAWRUNE;
+	private static final int GLORY_ICON = ItemID.AMULET_OF_GLORY_4;
+	private static final int DRAMEN_STAFF_ICON = ItemID.DRAMEN_STAFF;
+	private static final int SPIRIT_SEED_ICON = ItemID.SPIRIT_TREE_SEED;
+	private static final int ANCIENT_CRYSTAL_ICON = ItemID.WILD_CAVE_OBELISK_CRYSTAL;
 	// Tallest the expanded teleport-methods box may grow before it scrolls internally.
 	private static final int CATALOG_MAX_HEIGHT = 240;
 	// Where the header's GitHub mark points: straight at the issue tracker.
@@ -1238,23 +1249,20 @@ public class ShortestPathPanel extends PluginPanel
 		JCheckBox master = configCheckBox("Use my house for routes", pohOn,
 			"Master switch: with this off, no POH teleport is ever routed",
 			v -> plugin.setPanelConfig("usePoh", v));
-		body.add(master);
+		body.add(iconRow(POH_TAB_ICON, 0, master));
 
-		JPanel tierRow = new JPanel(new BorderLayout(5, 0));
-		tierRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		tierRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-		tierRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-		tierRow.setBorder(new EmptyBorder(2, 18, 2, 0));
+		JPanel tierInner = new JPanel(new BorderLayout(5, 0));
+		tierInner.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		JLabel tierLabel = new JLabel("Jewellery box:");
 		tierLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		tierRow.add(tierLabel, BorderLayout.WEST);
+		tierInner.add(tierLabel, BorderLayout.WEST);
 		JComboBox<JewelleryBoxTier> tierBox = new JComboBox<>(JewelleryBoxTier.values());
 		tierBox.setSelectedItem(plugin.getGpsConfig().pohJewelleryBoxTier());
 		tierBox.setEnabled(pohOn);
 		tierBox.setToolTipText("The tier built in your house (each tier includes the ones below it)");
 		tierBox.addActionListener(e -> plugin.setPanelConfig("pohJewelleryBoxTier", tierBox.getSelectedItem()));
-		tierRow.add(tierBox, BorderLayout.CENTER);
-		body.add(tierRow);
+		tierInner.add(tierBox, BorderLayout.CENTER);
+		body.add(iconRow(DUELING_RING_ICON, 18, tierInner));
 
 		JCheckBox portals = configCheckBox("Teleport portals & nexus", plugin.getGpsConfig().useTeleportationPortalsPoh(),
 			"Portal chamber and portal nexus destinations",
@@ -1271,11 +1279,12 @@ public class ShortestPathPanel extends PluginPanel
 		JCheckBox obelisk = configCheckBox("Wilderness obelisk", plugin.getGpsConfig().usePohObelisk(),
 			"Requires 80 Construction to build",
 			v -> plugin.setPanelConfig("usePohObelisk", v));
-		for (JCheckBox box : new JCheckBox[]{portals, mounted, fairy, spirit, obelisk})
+		int[] icons = {LAW_RUNE_ICON, GLORY_ICON, DRAMEN_STAFF_ICON, SPIRIT_SEED_ICON, ANCIENT_CRYSTAL_ICON};
+		JCheckBox[] boxes = {portals, mounted, fairy, spirit, obelisk};
+		for (int i = 0; i < boxes.length; i++)
 		{
-			box.setEnabled(pohOn);
-			box.setBorder(new EmptyBorder(2, 18, 2, 0));
-			body.add(box);
+			boxes[i].setEnabled(pohOn);
+			body.add(iconRow(icons[i], 18, boxes[i]));
 		}
 
 		section.add(body);
@@ -1334,13 +1343,19 @@ public class ShortestPathPanel extends PluginPanel
 		JPanel body = configSectionBody();
 
 		JCheckBox master = configCheckBox("Use balloon routes", balloonsOn,
-			"Master switch: include hot air balloon flights in routes (requires Enlightened Journey)",
+			"<html><body style='width:220px'>Master switch: include hot air balloon flights in routes"
+				+ " (requires Enlightened Journey).<br><br>Each flight consumes one log of its"
+				+ " destination's type, paid from your inventory or from the stations' Log"
+				+ " storage.</body></html>",
 			v -> plugin.setPanelConfig("useHotAirBalloons", v));
 		body.add(master);
 
 		JCheckBox smartBox = configCheckBox("Track Log storage", smart,
-			"Detect and keep track of the logs in the stations' Log storage (read from chat messages);"
-				+ " flights can then be paid from storage without carrying logs",
+			"<html><body style='width:220px'>Detect and keep track of the logs in the stations' Log"
+				+ " storage (read from chat messages); flights can then be paid from storage without"
+				+ " carrying logs.<br><br>When off, GPS ignores the Log storage: a flight is only"
+				+ " routed while you carry its log type (the All modes assume flights are available"
+				+ " either way).</body></html>",
 			v -> plugin.setPanelConfig("balloonSmartMode", v));
 		smartBox.setEnabled(balloonsOn);
 		smartBox.setBorder(new EmptyBorder(2, 18, 2, 0));
@@ -1388,6 +1403,33 @@ public class ShortestPathPanel extends PluginPanel
 
 		section.add(body);
 		return section;
+	}
+
+	/** A small item icon (the 36x32 sprite scaled down) for decorating configuration rows. */
+	private JLabel smallItemIcon(int itemId)
+	{
+		JLabel label = new JLabel();
+		label.setPreferredSize(new Dimension(20, 18));
+		AsyncBufferedImage img = plugin.getItemManager().getImage(itemId);
+		img.onLoaded(() ->
+		{
+			label.setIcon(new ImageIcon(ImageUtil.resizeImage(img, 20, 18)));
+			label.repaint();
+		});
+		return label;
+	}
+
+	/** A configuration row decorated with a small item icon to the left of its control. */
+	private JPanel iconRow(int itemId, int leftInset, JComponent control)
+	{
+		JPanel row = new JPanel(new BorderLayout(5, 0));
+		row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		row.setAlignmentX(Component.LEFT_ALIGNMENT);
+		row.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		row.setBorder(new EmptyBorder(2, leftInset, 2, 0));
+		row.add(smallItemIcon(itemId), BorderLayout.WEST);
+		row.add(control, BorderLayout.CENTER);
+		return row;
 	}
 
 	/**
