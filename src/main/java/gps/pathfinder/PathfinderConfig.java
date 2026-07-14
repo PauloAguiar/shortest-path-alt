@@ -1195,7 +1195,7 @@ public class PathfinderConfig
 		int originY = WorldPointUtil.unpackWorldY(transport.getOrigin());
 
 		// Check planted spirit tree origins (travel FROM a planted tree)
-		if (isPlantedSpiritTreeAllowed(originX, originY))
+		if (isPlantedSpiritTreeBlocked(originX, originY))
 		{
 			return false;
 		}
@@ -1204,7 +1204,7 @@ public class PathfinderConfig
 		int destX = WorldPointUtil.unpackWorldX(transport.getDestination());
 		int destY = WorldPointUtil.unpackWorldY(transport.getDestination());
 
-		return !isPlantedSpiritTreeAllowed(destX, destY);
+		return !isPlantedSpiritTreeBlocked(destX, destY);
 	}
 
 	/**
@@ -1572,12 +1572,17 @@ public class PathfinderConfig
 		return computeCombatLevel(attack, strength, defence, hitpoints, magic, ranged, prayer);
 	}
 
-	private boolean isPlantedSpiritTreeAllowed(int x, int y)
+	/**
+	 * Whether a farmable spirit-tree endpoint must be treated as NOT grown. Conservative until the
+	 * spirit-tree travel widget has been seen once ({@code availableSpiritTrees} null): a tree GPS
+	 * cannot confirm is excluded rather than assumed, so routes never depend on an unplanted tree.
+	 */
+	private boolean isPlantedSpiritTreeBlocked(int x, int y)
 	{
 		String treeName = getPlantedSpiritTreeName(x, y);
 		if (treeName == null)
 		{
-			return false; // 
+			return false; // not a farmable spirit-tree location: nothing to block
 		}
 		if (availableSpiritTrees == null)
 		{
