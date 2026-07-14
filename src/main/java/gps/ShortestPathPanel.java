@@ -577,6 +577,17 @@ public class ShortestPathPanel extends PluginPanel
 			notes.add(buildBanner(RouteIcons.BANNER_WARNING,
 				"Exclusions changed — press \"Refresh routes\" to apply.", BANNER_WARN_ACCENT));
 		}
+		// Log storage running low at the balloon stations (smart mode, synced, unlocked routes
+		// only). Lives here — not just inside the balloon section — so it shows while collapsed.
+		List<String> lowLogs = plugin.getBalloonLowLogTypes();
+		if (!lowLogs.isEmpty())
+		{
+			if (notes.getComponentCount() > 0)
+			{
+				notes.add(verticalGap(4));
+			}
+			notes.add(buildBalloonLowBanner(lowLogs));
+		}
 		// With no notices at all (the common "routes found" case) the strip collapses entirely
 		// instead of leaving its padding as a dead gap.
 		notes.setVisible(notes.getComponentCount() > 0);
@@ -1120,10 +1131,12 @@ public class ShortestPathPanel extends PluginPanel
 	/**
 	 * Rebuilds the configuration sections after one of their mirrored config keys changed outside
 	 * the panel (the RuneLite config UI, or the balloon chat parser updating stored log counts).
+	 * A full render follows so the notes strip (the Log storage low banner) tracks the change too.
 	 */
 	public void refreshConfigSections()
 	{
 		refreshCatalog();
+		render();
 	}
 
 	/**
@@ -1304,7 +1317,7 @@ public class ShortestPathPanel extends PluginPanel
 		final ShortestPathConfig config = plugin.getGpsConfig();
 		final boolean balloonsOn = config.useHotAirBalloons();
 		final boolean smart = config.balloonSmartMode();
-		List<String> lowTypes = balloonsOn ? plugin.getBalloonLowLogTypes() : List.of();
+		List<String> lowTypes = plugin.getBalloonLowLogTypes();
 
 		String stateText = !balloonsOn ? "off" : (lowTypes.isEmpty() ? "on" : "low logs");
 		Color stateColor = !balloonsOn ? ColorScheme.LIGHT_GRAY_COLOR
@@ -1358,24 +1371,58 @@ public class ShortestPathPanel extends PluginPanel
 			}
 			else
 			{
+				body.add(configNote("Log storage:", ColorScheme.LIGHT_GRAY_COLOR));
 				int[] counts = plugin.getBalloonStoredCounts();
-				StringBuilder stored = new StringBuilder("Log storage:");
+				JPanel storageRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+				storageRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+				storageRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+				storageRow.setBorder(new EmptyBorder(0, 14, 2, 0));
 				for (int i = 0; i < counts.length; i++)
 				{
-					stored.append(i == 0 ? " " : ", ").append(counts[i]).append(' ')
-						.append(BalloonLogStorage.TYPE_NAMES[i]);
+					storageRow.add(logIcon(i, counts[i]));
 				}
-				body.add(configNote(stored.toString(), ColorScheme.LIGHT_GRAY_COLOR));
-				if (!lowTypes.isEmpty())
-				{
-					body.add(configNote("Log storage low: " + String.join(", ", lowTypes),
-						ColorScheme.PROGRESS_INPROGRESS_COLOR));
-				}
+				storageRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, storageRow.getPreferredSize().height));
+				body.add(storageRow);
 			}
 		}
 
 		section.add(body);
 		return section;
+	}
+
+	/**
+	 * An item icon for one Log storage log type, with the stored count drawn as the stack quantity
+	 * (the same rendering the inventory uses) and spelled out in the tooltip.
+	 */
+	private JLabel logIcon(int typeIndex, int count)
+	{
+		JLabel icon = new JLabel();
+		icon.setToolTipText(count + " " + BalloonLogStorage.TYPE_NAMES[typeIndex] + " logs in storage");
+		plugin.getItemManager().getImage(BalloonLogStorage.ITEM_IDS[typeIndex], count, true).addTo(icon);
+		return icon;
+	}
+
+	/**
+	 * The Log-storage-low warning banner: like the bank warning, it lives in the notes strip so it
+	 * is visible even while the balloon section is collapsed. Shows the low types as item icons.
+	 */
+	private JPanel buildBalloonLowBanner(List<String> lowTypes)
+	{
+		JPanel banner = buildBanner(RouteIcons.BANNER_WARNING,
+			"Log storage low", "Restock logs at a balloon station:", BANNER_WARN_ACCENT);
+		int[] counts = plugin.getBalloonStoredCounts();
+		JPanel icons = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
+		icons.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		for (int i = 0; i < BalloonLogStorage.TYPE_NAMES.length; i++)
+		{
+			if (lowTypes.contains(BalloonLogStorage.TYPE_NAMES[i]))
+			{
+				icons.add(logIcon(i, counts[i]));
+			}
+		}
+		banner.add(icons, BorderLayout.SOUTH);
+		banner.setMaximumSize(new Dimension(Integer.MAX_VALUE, banner.getPreferredSize().height));
+		return banner;
 	}
 
 	/** A configuration checkbox: writes its config key on change; the ConfigChanged regenerates. */

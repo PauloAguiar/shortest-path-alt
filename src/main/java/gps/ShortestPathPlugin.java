@@ -206,6 +206,9 @@ public class ShortestPathPlugin extends Plugin
 	};
 	@Inject
 	private ClientToolbar clientToolbar;
+	// Item images for the panel's Log storage icons.
+	@Inject
+	private net.runelite.client.game.ItemManager itemManager;
 	// Alternative-routes feature: panel, async route generator, the methods the user has excluded, the
 	// generated routes, and which one is currently shown on the map.
 	private ShortestPathPanel altPanel;
@@ -2257,7 +2260,7 @@ public class ShortestPathPlugin extends Plugin
 	 */
 	public List<String> getBalloonLowLogTypes()
 	{
-		if (!config.balloonSmartMode() || !config.balloonStorageSynced())
+		if (!config.useHotAirBalloons() || !config.balloonSmartMode() || !config.balloonStorageSynced())
 		{
 			return List.of();
 		}
@@ -2275,6 +2278,12 @@ public class ShortestPathPlugin extends Plugin
 	{
 		return new int[]{config.balloonStoredLogs(), config.balloonStoredOakLogs(),
 			config.balloonStoredWillowLogs(), config.balloonStoredYewLogs(), config.balloonStoredMagicLogs()};
+	}
+
+	/** Item images for the panel's Log storage icons. */
+	public net.runelite.client.game.ItemManager getItemManager()
+	{
+		return itemManager;
 	}
 
 	/** The live config, for panel controls that mirror config items (the configuration sections). */

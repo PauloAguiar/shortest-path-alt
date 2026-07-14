@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.runelite.api.gameval.ItemID;
 
 /**
  * Parses the balloon log-storage chat messages into per-type stored counts. The storage crates'
@@ -25,6 +26,10 @@ public final class BalloonLogStorage
 
 	/** Display names per log type, in the same order as {@link #CONFIG_KEYS}. */
 	public static final String[] TYPE_NAMES = {"normal", "oak", "willow", "yew", "magic"};
+
+	/** Item ids per log type (for icons and requirement checks), in {@link #CONFIG_KEYS} order. */
+	public static final int[] ITEM_IDS = {
+		ItemID.LOGS, ItemID.OAK_LOGS, ItemID.WILLOW_LOGS, ItemID.YEW_LOGS, ItemID.MAGIC_LOGS};
 
 	private static final Pattern LEFT_PLURAL = Pattern.compile("You have (?<count>\\d+) sets of (?<type>.*) left in storage\\.");
 	private static final Pattern LEFT_SINGULAR = Pattern.compile("You have one set of (?<type>.*) left in storage\\.");
