@@ -234,19 +234,17 @@ final class RouteDirections
 	 */
 	static String methodText(TeleportMethod method)
 	{
-		// Balloon flights get the fairy-ring glyph treatment: their data label is just the
-		// destination name, so "Use Varrock" read as nonsense — say what the player actually does.
-		if (TransportType.HOT_AIR_BALLOON.equals(method.getType()) && method.getDisplayInfo() != null)
-		{
-			return "🎈 Balloon to " + method.getDisplayInfo();
-		}
 		if (TransportType.FAIRY_RING.equals(method.getType()) && method.getDisplayInfo() != null)
 		{
 			// The mushroom renders via the JVM's system-font fallback (verified in-game on
 			// Windows, monochrome); if other platforms report missing-glyph boxes, drop it.
 			return "🍄 Fairy ring to " + fairyRingLabel(method.getDisplayInfo());
 		}
-		return "Use " + method.label();
+		// Network methods (balloons, minecarts, mountain guides, ...) phrase themselves as
+		// "<Vehicle> to X" — their bare data label is a destination, so "Use Varrock" read as
+		// nonsense. Everything else keeps "Use X".
+		String routeLabel = method.routeLabel();
+		return routeLabel.equals(method.label()) ? "Use " + method.label() : routeLabel;
 	}
 
 	private static String fairyRingLabel(String displayInfo)

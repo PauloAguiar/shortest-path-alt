@@ -1012,8 +1012,9 @@ public class ShortestPathPanel extends PluginPanel
 		row.add(verticallyCentered(west), BorderLayout.WEST);
 
 		// No per-row step counts: the card's walk row totals every leg, and this row's tooltip
-		// still carries its own walk-to-reach detail.
-		JLabel text = wrappedLabel(escapeHtml(method.label()));
+		// still carries its own walk-to-reach detail. Route rows sit without their category header,
+		// so network methods name their vehicle ("Balloon to Varrock", not a bare "Varrock").
+		JLabel text = wrappedLabel(escapeHtml(method.routeLabel()));
 		text.setVerticalAlignment(SwingConstants.CENTER);
 		text.setToolTipText(walkBefore > 0
 			? "<html>Walk " + walkBefore + " tiles to reach this method.<br>" + methodTooltipBody(method) + "</html>"
@@ -1023,7 +1024,7 @@ public class ShortestPathPanel extends PluginPanel
 		// Nearly invisible at rest (always present, so the row never resizes), it reveals in red
 		// while the pointer is over THIS row — and redder still directly over the icon.
 		IconActionLabel exclude = new IconActionLabel(RouteIcons.EXCLUDE_DIM, RouteIcons.EXCLUDE_HOVER,
-			"Exclude \"" + method.label() + "\" from teleportation methods", () -> plugin.excludeMethod(method));
+			"Exclude \"" + method.routeLabel() + "\" from teleportation methods", () -> plugin.excludeMethod(method));
 		JPanel actionWrap = new JPanel(new GridBagLayout());
 		actionWrap.setOpaque(false);
 		actionWrap.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));

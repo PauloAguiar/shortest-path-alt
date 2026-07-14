@@ -60,17 +60,61 @@ public final class TeleportMethod
 	{
 		if (displayInfo != null)
 		{
-			// Balloon flights' data label is just the destination name ("Varrock"); alone on a route
-			// card or catalog row that reads as a place, not a travel method — name the vehicle.
-			if (TransportType.HOT_AIR_BALLOON.equals(type))
-			{
-				return "Balloon to " + displayInfo;
-			}
 			return displayInfo;
 		}
 		int x = WorldPointUtil.unpackWorldX(destination);
 		int y = WorldPointUtil.unpackWorldY(destination);
 		return category() + " (" + x + ", " + y + ")";
+	}
+
+	/**
+	 * The label used where the method appears WITHOUT its category heading (route cards, direction
+	 * steps): network methods' data labels are bare destinations ("Varrock", "6: Kourend Woodland"),
+	 * which read as places rather than travel methods there, so the vehicle is named. Catalog rows,
+	 * which sit under their category header, keep the bare {@link #label()}.
+	 */
+	public String routeLabel()
+	{
+		String vehicle = displayInfo == null ? null : vehiclePhrase(type);
+		return vehicle == null ? label() : vehicle + " to " + displayInfo;
+	}
+
+	/** The vehicle name for network methods whose data label is a bare destination; null otherwise. */
+	private static String vehiclePhrase(TransportType type)
+	{
+		switch (type)
+		{
+			case BOAT:
+				return "Boat";
+			case CANOE:
+				return "Canoe";
+			case CHARTER_SHIP:
+				return "Charter ship";
+			case SHIP:
+				return "Ship";
+			case GNOME_GLIDER:
+				return "Glider";
+			case HOT_AIR_BALLOON:
+				return "Balloon";
+			case MAGIC_CARPET:
+				return "Magic carpet";
+			case MAGIC_MUSHTREE:
+				return "Mushtree";
+			case MINECART:
+				return "Minecart";
+			case MOUNTAIN_GUIDE:
+				return "Mountain guide";
+			case QUETZAL:
+				return "Quetzal";
+			case SPIRIT_TREE:
+				return "Spirit tree";
+			case TELEPORTATION_BOX:
+				return "Jewellery box";
+			case WILDERNESS_OBELISK:
+				return "Obelisk";
+			default:
+				return null;
+		}
 	}
 
 	/**

@@ -106,7 +106,9 @@ public class BalloonRouteLabelTest
 			}
 		}
 		assertNotNull("standing at the Taverley basket, a route must use the balloon flight", flight);
-		org.junit.Assert.assertEquals("the method label must name the vehicle, not just the place",
-			"Balloon to Crafting Guild", flight.label());
+		org.junit.Assert.assertEquals("the route label must name the vehicle, not just the place",
+			"Balloon to Crafting Guild", flight.routeLabel());
+		org.junit.Assert.assertEquals("the catalog label stays the bare destination (it sits under"
+			+ " its category header)", "Crafting Guild", flight.label());
 	}
 }
