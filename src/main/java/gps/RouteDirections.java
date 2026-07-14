@@ -234,6 +234,12 @@ final class RouteDirections
 	 */
 	static String methodText(TeleportMethod method)
 	{
+		// Balloon flights get the fairy-ring glyph treatment: their data label is just the
+		// destination name, so "Use Varrock" read as nonsense — say what the player actually does.
+		if (TransportType.HOT_AIR_BALLOON.equals(method.getType()) && method.getDisplayInfo() != null)
+		{
+			return "🎈 Balloon to " + method.getDisplayInfo();
+		}
 		if (TransportType.FAIRY_RING.equals(method.getType()) && method.getDisplayInfo() != null)
 		{
 			// The mushroom renders via the JVM's system-font fallback (verified in-game on

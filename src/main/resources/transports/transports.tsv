@@ -2377,7 +2377,7 @@
 # Mining Guild									
 # Two entrances, both require 60 Mining									
 # Underground tunnels:									
-3046 9757 0	3046 9756 0	Open Door 30364	60 Mining					1    	
+3046 9757 0	3046 9756 0	Open Door 30364	60 Mining					1	
 3046 9756 0	3046 9757 0	Open Door 30364						1	
 # Surface entrance:									
 3019 9741 0	3019 9741 0 	Climb-down Ladder 30367	60 Mining					2	

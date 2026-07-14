@@ -60,6 +60,12 @@ public final class TeleportMethod
 	{
 		if (displayInfo != null)
 		{
+			// Balloon flights' data label is just the destination name ("Varrock"); alone on a route
+			// card or catalog row that reads as a place, not a travel method — name the vehicle.
+			if (TransportType.HOT_AIR_BALLOON.equals(type))
+			{
+				return "Balloon to " + displayInfo;
+			}
 			return displayInfo;
 		}
 		int x = WorldPointUtil.unpackWorldX(destination);
