@@ -269,6 +269,20 @@ public interface ShortestPathConfig extends Config
 
 	@ConfigItem(
 		hidden = true,
+		keyName = "pohSmartDetect",
+		name = "House smart furniture detection",
+		description = "While you are inside your house, auto-fill the built furniture GPS can recognise<br>" +
+			"(jewellery box, fairy ring, spirit tree, obelisk). You can still edit every checkbox.",
+		position = 155,
+		section = sectionSettings
+	)
+	default boolean pohSmartDetect()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		hidden = true,
 		keyName = "useTeleportationItems",
 		name = "Use teleportation items",
 		description = "Whether to include teleportation items from the player's inventory and equipment.<br>" +

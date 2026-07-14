@@ -1321,6 +1321,36 @@ public class ShortestPathPanel extends PluginPanel
 			v -> plugin.setPanelConfig("usePoh", v));
 		body.add(iconRow("house_portal", 0, master));
 
+		// Smart detection: while inside your house GPS auto-fills the furniture it can recognise.
+		final boolean smartDetect = plugin.getGpsConfig().pohSmartDetect();
+		JCheckBox smartBox = configCheckBox("Auto-detect furniture", smartDetect,
+			"<html><body style='width:220px'>While you are inside your house, fill the checkboxes below"
+				+ " from the furniture GPS recognises — jewellery box, fairy ring, spirit tree and"
+				+ " obelisk. It only ever ticks boxes (never unticks), and you can still edit any of"
+				+ " them.<br><br>Portals &amp; nexus and mounted items can't be auto-detected — set those"
+				+ " yourself.</body></html>",
+			v -> plugin.setPanelConfig("pohSmartDetect", v));
+		body.add(iconRow("house_portal", 18, smartBox));
+		if (smartDetect)
+		{
+			List<String> detected = plugin.getDetectedPohFurniture();
+			if (!plugin.isPohScanned())
+			{
+				body.add(configNote("Enter your house once to auto-detect its furniture.",
+					ColorScheme.PROGRESS_INPROGRESS_COLOR));
+			}
+			else if (detected.isEmpty())
+			{
+				body.add(configNote("No auto-detectable furniture found in your house.",
+					ColorScheme.MEDIUM_GRAY_COLOR));
+			}
+			else
+			{
+				body.add(configNote("Detected: " + String.join(", ", detected),
+					ColorScheme.LIGHT_GRAY_COLOR));
+			}
+		}
+
 		JPanel tierInner = new JPanel(new BorderLayout(5, 0));
 		tierInner.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		JLabel tierLabel = new JLabel("Jewellery box:");

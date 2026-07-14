@@ -30,12 +30,14 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.GameObject;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.KeyCode;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
+import net.runelite.api.Tile;
 import net.runelite.api.ScriptID;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
@@ -915,7 +917,8 @@ public class ShortestPathPlugin extends Plugin
 		// Keys mirrored by the panel's configuration sections (POH, wilderness, balloons): rebuild
 		// those sections so their labels track changes made from chat parsing or the config UI.
 		if (altPanel != null
-			&& (event.getKey().startsWith("balloon") || TRANSPORT_OPTIONS_REGEX.matcher(event.getKey()).find()))
+			&& (event.getKey().startsWith("balloon") || "pohSmartDetect".equals(event.getKey())
+			|| TRANSPORT_OPTIONS_REGEX.matcher(event.getKey()).find()))
 		{
 			SwingUtilities.invokeLater(altPanel::refreshConfigSections);
 		}
@@ -1271,7 +1274,14 @@ public class ShortestPathPlugin extends Plugin
 			client.getVarbitValue(2870), client.getVarbitValue(2871), client.getVarbitValue(2872)};
 
 		Player localPlayer = client.getLocalPlayer();
-		if (localPlayer == null || !hasPathTargets())
+		if (localPlayer == null)
+		{
+			return;
+		}
+
+		maybeScanPoh(localPlayer);
+
+		if (!hasPathTargets())
 		{
 			return;
 		}
@@ -2258,6 +2268,125 @@ public class ShortestPathPlugin extends Plugin
 	{
 		int id = houseLocationId;
 		return (id > 0 && id < HOUSE_LOCATIONS.length) ? HOUSE_LOCATIONS[id] : null;
+	}
+
+	// Smart house furniture detection: scan the scene once each time the player enters their POH.
+	private boolean insidePoh = false;
+	private volatile boolean pohScanned = false;
+	private volatile PohScanner.Detected detectedPohFurniture;
+
+	/**
+	 * On entering the POH, scan the loaded scene for the furniture GPS can recognise (jewellery
+	 * box, fairy ring, spirit tree, obelisk) and turn ON the matching declarations — never off, so
+	 * detection can only add routes, never silently drop one. The two coarse toggles (portals &
+	 * nexus, mounted items) bundle furniture GPS cannot verify and stay manual.
+	 */
+	private void maybeScanPoh(Player localPlayer)
+	{
+		int loc = WorldPointUtil.fromLocalInstance(client, localPlayer);
+		boolean inside = loc != WorldPointUtil.UNDEFINED
+			&& isInsidePoh(WorldPointUtil.unpackWorldX(loc), WorldPointUtil.unpackWorldY(loc));
+		if (inside && !insidePoh && config.pohSmartDetect())
+		{
+			scanPohFurniture();
+		}
+		insidePoh = inside;
+	}
+
+	private void scanPohFurniture()
+	{
+		Set<Integer> ids = new HashSet<>();
+		Tile[][][] tiles = client.getTopLevelWorldView().getScene().getTiles();
+		for (Tile[][] plane : tiles)
+		{
+			if (plane == null)
+			{
+				continue;
+			}
+			for (Tile[] column : plane)
+			{
+				if (column == null)
+				{
+					continue;
+				}
+				for (Tile tile : column)
+				{
+					if (tile == null || tile.getGameObjects() == null)
+					{
+						continue;
+					}
+					for (GameObject object : tile.getGameObjects())
+					{
+						if (object != null)
+						{
+							ids.add(object.getId());
+						}
+					}
+				}
+			}
+		}
+
+		PohScanner.Detected detected = PohScanner.detect(ids);
+		pohScanned = true;
+		detectedPohFurniture = detected;
+
+		// Only ever raise declarations (turn a feature on / raise the jewellery tier). A partial
+		// scene load that missed a piece therefore can never wipe an existing declaration.
+		if (detected.fairyRing && !config.usePohFairyRing())
+		{
+			setPanelConfig("usePohFairyRing", true);
+		}
+		if (detected.spiritTree && !config.usePohSpiritTree())
+		{
+			setPanelConfig("usePohSpiritTree", true);
+		}
+		if (detected.obelisk && !config.usePohObelisk())
+		{
+			setPanelConfig("usePohObelisk", true);
+		}
+		if (detected.jewelleryBox.ordinal() > config.pohJewelleryBoxTier().ordinal())
+		{
+			setPanelConfig("pohJewelleryBoxTier", detected.jewelleryBox);
+		}
+
+		if (altPanel != null)
+		{
+			SwingUtilities.invokeLater(altPanel::refreshConfigSections);
+		}
+	}
+
+	/** Whether the player's house has been scanned this session (its furniture is known). */
+	public boolean isPohScanned()
+	{
+		return pohScanned;
+	}
+
+	/** The furniture the last house scan recognised, as display names (empty until scanned). */
+	public List<String> getDetectedPohFurniture()
+	{
+		PohScanner.Detected detected = detectedPohFurniture;
+		if (detected == null)
+		{
+			return List.of();
+		}
+		List<String> names = new ArrayList<>();
+		if (detected.jewelleryBox != JewelleryBoxTier.NONE)
+		{
+			names.add(detected.jewelleryBox + " jewellery box");
+		}
+		if (detected.fairyRing)
+		{
+			names.add("Fairy ring");
+		}
+		if (detected.spiritTree)
+		{
+			names.add("Spirit tree");
+		}
+		if (detected.obelisk)
+		{
+			names.add("Obelisk");
+		}
+		return names;
 	}
 
 	// ZEP_MULTI_* values in {2867 Entrana, 2868 Taverley, 2869 Castle Wars, 2870 Grand Tree,
