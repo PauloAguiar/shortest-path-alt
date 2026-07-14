@@ -22,6 +22,7 @@ public interface ShortestPathConfig extends Config
 	String sectionSettings = "sectionSettings";
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "avoidWilderness",
 		name = "Avoid wilderness",
 		description = "Whether the wilderness should be avoided if possible<br>" +
@@ -429,6 +430,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "balloonSmartMode",
 		name = "Balloon smart Log storage",
 		description = "Detect and keep track of the logs in the balloon stations' Log storage (from chat messages),<br>" +
@@ -443,6 +445,7 @@ public interface ShortestPathConfig extends Config
 
 	@Range(max = 100)
 	@ConfigItem(
+		hidden = true,
 		keyName = "balloonLogWarningThreshold",
 		name = "Balloon low-log warning",
 		description = "Warn in the GPS panel when an unlocked balloon route's Log storage count falls below this<br>" +
@@ -622,6 +625,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePoh",
 		name = "Enable POH teleports",
 		description = "Master toggle for all Player-Owned House (POH) teleports (house teleports, the exit<br>" +
@@ -636,6 +640,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePohFairyRing",
 		name = "POH fairy ring",
 		description = "Whether to include the POH fairy ring in the path.<br>" +
@@ -649,6 +654,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePohSpiritTree",
 		name = "POH spirit tree",
 		description = "Whether to include the POH spirit tree in the path.<br>" +
@@ -662,6 +668,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "useTeleportationPortalsPoh",
 		name = "POH portal nexus",
 		description = "Whether to include POH teleportation portals/nexus in the path",
@@ -674,6 +681,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "pohJewelleryBoxTier",
 		name = "POH jewellery box tier",
 		description = "The tier of jewellery box built in your POH<br>" +
@@ -687,6 +695,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePohMountedItems",
 		name = "POH mounted items",
 		description = "Whether to include POH mounted items in the path<br>" +
@@ -700,6 +709,7 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		hidden = true,
 		keyName = "usePohObelisk",
 		name = "POH wilderness obelisk",
 		description = "Whether to include the POH wilderness obelisk in the path.<br>" +
