@@ -125,6 +125,9 @@ public class ShortestPathPanel extends PluginPanel
 	private Map<TeleportMethod, MethodAvailability> renderedUnavailable;
 	private boolean renderedCatalogExpanded;
 	private final JPanel listPanel = new JPanel();
+	// Fixed (non-scrolling) slot for the routes header (count + more/refresh/clear controls),
+	// mounted above the route-card scroll area so it stays visible while the cards scroll.
+	private final JPanel resultsHeaderHolder = new JPanel();
 	// "Go to" destination search: type a place or amenity ("Falador bank", "nearest altar")
 	// and pick a result to set it as the GPS destination.
 	private final IconTextField destinationSearch = new IconTextField();
@@ -273,7 +276,15 @@ public class ShortestPathPanel extends PluginPanel
 			ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setBorder(BorderFactory.createEmptyBorder());
 		scroll.getVerticalScrollBar().setUnitIncrement(16);
-		add(scroll, BorderLayout.CENTER);
+		// The routes header (count + the more/refresh/clear controls) sits in a fixed slot ABOVE
+		// the scroll area, so it stays visible while the route cards scroll beneath it.
+		resultsHeaderHolder.setLayout(new BoxLayout(resultsHeaderHolder, BoxLayout.Y_AXIS));
+		resultsHeaderHolder.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		JPanel results = new JPanel(new BorderLayout());
+		results.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		results.add(resultsHeaderHolder, BorderLayout.NORTH);
+		results.add(scroll, BorderLayout.CENTER);
+		add(results, BorderLayout.CENTER);
 
 		render();
 	}
@@ -611,14 +622,18 @@ public class ShortestPathPanel extends PluginPanel
 		}
 
 		// The results get a proper section header (like "Teleport methods"): the route count, plus
-		// a quiet busy note while the generation streams. Routes are shown as they stream in; the
-		// previous list was cleared when this generation started, so only the new routes appear.
-		// The highlighted card is the route actually drawn on the map — the explicitly selected
-		// one, or route 1 by default.
+		// a quiet busy note while the generation streams. It lives in its fixed slot above the
+		// scroll area so the count and controls stay visible while the cards scroll. Routes are
+		// shown as they stream in; the previous list was cleared when this generation started, so
+		// only the new routes appear. The highlighted card is the route actually drawn on the map —
+		// the explicitly selected one, or route 1 by default.
+		resultsHeaderHolder.removeAll();
 		if (cachedHasTarget || cachedCalculating || !cachedRoutes.isEmpty())
 		{
-			listPanel.add(buildResultsHeader(cachedRoutes.size(), cachedCalculating));
+			resultsHeaderHolder.add(buildResultsHeader(cachedRoutes.size(), cachedCalculating));
 		}
+		resultsHeaderHolder.revalidate();
+		resultsHeaderHolder.repaint();
 		RouteOption selected = plugin.getDisplayedRoute();
 		for (int i = 0; i < cachedRoutes.size(); i++)
 		{
