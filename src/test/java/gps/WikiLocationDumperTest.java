@@ -200,14 +200,16 @@ public class WikiLocationDumperTest
 
 		final int lumbridge = WorldPointUtil.packWorldPoint(3221, 3218, 0);
 		List<String> dropped = new ArrayList<>();
+		List<String> review = new ArrayList<>();
 		int salvagedByLaterPin = 0;
 		for (Map.Entry<String, List<int[]>> candidate : candidates.entrySet())
 		{
-			int[] chosen = null;
+			// Evaluate EVERY pin, not just up to the first reachable one: when several distinct
+			// sites are reachable, the first-pin choice is a guess that a human should review.
 			List<int[]> pins = candidate.getValue();
-			for (int i = 0; i < pins.size() && chosen == null; i++)
+			List<int[]> reachable = new ArrayList<>();
+			for (int[] pin : pins)
 			{
-				int[] pin = pins.get(i);
 				Set<Integer> ring = Destinations.walkableTargets(collisionMap,
 					WorldPointUtil.packWorldPoint(pin[0], pin[1], pin[2]));
 				if (ring.isEmpty())
@@ -218,17 +220,34 @@ public class WikiLocationDumperTest
 				pathfinder.run();
 				if (pathfinder.getResult().isReached())
 				{
-					chosen = pin;
-					if (i > 0)
-					{
-						salvagedByLaterPin++;
-					}
+					reachable.add(pin);
 				}
 			}
-			if (chosen == null)
+			if (reachable.isEmpty())
 			{
 				dropped.add(candidate.getKey());
 				continue;
+			}
+			int[] chosen = reachable.get(0);
+			if (!java.util.Arrays.equals(chosen, pins.get(0)))
+			{
+				salvagedByLaterPin++;
+			}
+			// Ambiguous pick: more than one reachable pin, meaningfully apart — flag for a human.
+			// A wrong pick is overridden by adding a curated row with the same name (the dedupe
+			// then drops the wiki entry on the next run).
+			for (int i = 1; i < reachable.size(); i++)
+			{
+				int[] other = reachable.get(i);
+				if (other[2] != chosen[2]
+					|| Math.abs(other[0] - chosen[0]) + Math.abs(other[1] - chosen[1]) > 40)
+				{
+					review.add(candidate.getKey() + "\tchose (" + chosen[0] + ", " + chosen[1] + ", " + chosen[2]
+						+ ")\talternatives " + reachable.stream()
+							.map(p -> "(" + p[0] + ", " + p[1] + ", " + p[2] + ")")
+							.reduce((a, b) -> a + " " + b).orElse(""));
+					break;
+				}
 			}
 			String key = candidate.getKey();
 			String category = key.substring(0, key.indexOf('|'));
@@ -238,6 +257,11 @@ public class WikiLocationDumperTest
 		}
 		System.out.println("salvaged by a later pin: " + salvagedByLaterPin);
 		System.out.println("unreachable entries dropped: " + dropped.size() + " " + dropped);
+		System.out.println("AMBIGUOUS picks needing review: " + review.size());
+		for (String line : review)
+		{
+			System.out.println("  REVIEW " + line);
+		}
 	}
 
 	/**
