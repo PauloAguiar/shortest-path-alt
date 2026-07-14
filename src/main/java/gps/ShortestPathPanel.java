@@ -1433,14 +1433,17 @@ public class ShortestPathPanel extends PluginPanel
 		warnRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		warnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 		warnRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-		warnRow.setBorder(new EmptyBorder(2, 36, 2, 0));
-		JLabel warnLabel = new JLabel("Warn when logs below:");
+		warnRow.setBorder(new EmptyBorder(2, 28, 2, 0));
+		String warnTooltip = "Warn when an unlocked route's Log storage count falls below this (0 = never warn)";
+		// Deliberately terse — the full wording clipped at this indent on the sidebar's width.
+		JLabel warnLabel = new JLabel("Warn below:");
 		warnLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		warnLabel.setToolTipText(warnTooltip);
 		warnRow.add(warnLabel, BorderLayout.CENTER);
 		JSpinner warnSpinner = new JSpinner(
 			new SpinnerNumberModel(config.balloonLogWarningThreshold(), 0, 100, 1));
 		warnSpinner.setEnabled(balloonsOn && smart);
-		warnSpinner.setToolTipText("Warn when an unlocked route's Log storage count falls below this (0 = never warn)");
+		warnSpinner.setToolTipText(warnTooltip);
 		warnSpinner.addChangeListener(e -> plugin.setPanelConfig("balloonLogWarningThreshold", warnSpinner.getValue()));
 		warnRow.add(warnSpinner, BorderLayout.EAST);
 		body.add(warnRow);
