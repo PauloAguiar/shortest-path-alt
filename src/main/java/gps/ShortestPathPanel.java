@@ -159,6 +159,7 @@ public class ShortestPathPanel extends PluginPanel
 	// Whether the whole "Teleport methods" catalog section (shown at the top) is expanded. Collapsed
 	// by default so the routes stay the focus; the user opens it to browse/toggle methods.
 	private boolean catalogExpanded = false;
+	private boolean travelSectionExpanded = false;
 	private boolean pohSectionExpanded = false;
 	private boolean wildernessSectionExpanded = false;
 	private boolean balloonSectionExpanded = false;
@@ -1130,21 +1131,7 @@ public class ShortestPathPanel extends PluginPanel
 		final int rowsScrollPosition = catalogRowsScroll != null
 			? catalogRowsScroll.getVerticalScrollBar().getValue() : 0;
 		catalogHolder.removeAll();
-		// The "general configuration" group: player-stated facts and travel policies that the
-		// catalog's include/exclude toggles can't express.
-		JLabel caption = new JLabel("General configuration");
-		caption.setFont(FontManager.getRunescapeSmallFont());
-		caption.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
-		caption.setBorder(new EmptyBorder(2, 0, 3, 0));
-		caption.setAlignmentX(Component.LEFT_ALIGNMENT);
-		catalogHolder.add(caption);
-		catalogHolder.add(buildPohSection());
-		catalogHolder.add(buildWildernessSection());
-		catalogHolder.add(buildBalloonSection());
-		if (!cachedCatalog.isEmpty())
-		{
-			catalogHolder.add(buildCatalogSection());
-		}
+		catalogHolder.add(buildTravelSection());
 		catalogHolder.revalidate();
 		catalogHolder.repaint();
 		if (rowsScrollPosition > 0 && catalogRowsScroll != null)
@@ -1178,6 +1165,16 @@ public class ShortestPathPanel extends PluginPanel
 	private JPanel configSectionShell(String title, String tooltip, boolean expanded, Runnable toggle,
 		String stateText, Color stateColor)
 	{
+		return configSectionShell(title, tooltip, expanded, toggle, stateText, stateColor, false);
+	}
+
+	/**
+	 * As above; {@code headline} styles the title like the panel's top-level section headers
+	 * (bold, brand orange) — used by the "Travel options" section that groups the others.
+	 */
+	private JPanel configSectionShell(String title, String tooltip, boolean expanded, Runnable toggle,
+		String stateText, Color stateColor, boolean headline)
+	{
 		JPanel section = new JPanel();
 		section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
 		section.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -1191,7 +1188,15 @@ public class ShortestPathPanel extends PluginPanel
 		titleRow.add(control(new JLabel(expanded ? RouteIcons.CHEVRON_DOWN : RouteIcons.CHEVRON_RIGHT)),
 			BorderLayout.WEST);
 		JLabel titleLabel = new JLabel(title);
-		titleLabel.setForeground(Color.WHITE);
+		if (headline)
+		{
+			titleLabel.setFont(FontManager.getRunescapeBoldFont());
+			titleLabel.setForeground(ColorScheme.BRAND_ORANGE);
+		}
+		else
+		{
+			titleLabel.setForeground(Color.WHITE);
+		}
 		titleRow.add(titleLabel, BorderLayout.CENTER);
 		JLabel state = new JLabel(stateText);
 		state.setForeground(stateColor);
@@ -1208,6 +1213,49 @@ public class ShortestPathPanel extends PluginPanel
 			}
 		});
 		section.add(titleRow);
+		return section;
+	}
+
+	/**
+	 * The "Travel options" section: one collapsible home for everything routing may use — the
+	 * player-stated configuration (POH, wilderness, balloons) and the teleport-methods catalog —
+	 * all sharing the same header style.
+	 */
+	private JPanel buildTravelSection()
+	{
+		int enabled = 0;
+		for (TeleportMethod method : cachedCatalog)
+		{
+			if (isUsable(method) && !cachedExclusions.contains(method))
+			{
+				enabled++;
+			}
+		}
+		JPanel section = configSectionShell("Travel options",
+			"Everything routing may use: your house, wilderness policy, balloons and the teleport methods",
+			travelSectionExpanded, () -> travelSectionExpanded = !travelSectionExpanded,
+			cachedCatalog.isEmpty() ? "" : enabled + "/" + cachedCatalog.size(),
+			ColorScheme.LIGHT_GRAY_COLOR, true);
+		if (!travelSectionExpanded)
+		{
+			catalogRowsPanel = null;
+			catalogRowsScroll = null;
+			return section;
+		}
+
+		JPanel body = new JPanel();
+		body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+		body.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		body.setAlignmentX(Component.LEFT_ALIGNMENT);
+		body.setBorder(new EmptyBorder(0, 8, 0, 0));
+		body.add(buildPohSection());
+		body.add(buildWildernessSection());
+		body.add(buildBalloonSection());
+		if (!cachedCatalog.isEmpty())
+		{
+			body.add(buildCatalogSection());
+		}
+		section.add(body);
 		return section;
 	}
 
@@ -1518,18 +1566,6 @@ public class ShortestPathPanel extends PluginPanel
 
 	private JPanel buildCatalogSection()
 	{
-		JPanel section = new JPanel();
-		section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
-		section.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		section.setBorder(new EmptyBorder(0, 0, 0, 0));
-		section.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-		// Collapsible section header: chevron + title + method count.
-		JPanel titleRow = new JPanel(new BorderLayout(5, 0));
-		titleRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		titleRow.setBorder(new EmptyBorder(0, 0, 4, 0));
-		titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-		titleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 		// The headline count is the methods a search can ACTUALLY use: usable right now (not
 		// missing an item/level/quest/unlock) AND not excluded — so it responds to the toggles.
 		// Broken down into permanent (unlimited use) and charged (consumes a charge or the item
@@ -1564,28 +1600,13 @@ public class ShortestPathPanel extends PluginPanel
 				}
 			}
 		}
-		JLabel title = new JLabel("Teleport methods (" + enabled + "/" + cachedCatalog.size() + ")");
-		title.setFont(FontManager.getRunescapeBoldFont());
-		title.setForeground(ColorScheme.BRAND_ORANGE);
-		title.setToolTipText(enabled + " enabled (usable and included) · " + usable + " usable now · "
-			+ included + " included in searches · " + cachedCatalog.size() + " total");
-		titleRow.add(title, BorderLayout.CENTER);
-		titleRow.add(control(new JLabel(catalogExpanded ? RouteIcons.CHEVRON_DOWN : RouteIcons.CHEVRON_RIGHT)),
-			BorderLayout.EAST);
-		titleRow.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		titleRow.setToolTipText(catalogExpanded ? "Collapse the methods list" : "Expand the methods list");
-		addClickRecursively(titleRow, new MouseAdapter()
-		{
-			@Override
-			public void mouseClicked(MouseEvent e)
-			{
-				// Toggle just the catalog — rebuilding the whole panel (and every route card) on a
-				// collapse was the source of the lag.
-				catalogExpanded = !catalogExpanded;
-				refreshCatalog();
-			}
-		});
-		section.add(titleRow);
+		// Same collapsible shell as the other Travel options sub-sections; the enabled count is
+		// the state text.
+		JPanel section = configSectionShell("Teleport methods",
+			enabled + " enabled (usable and included) · " + usable + " usable now · "
+				+ included + " included in searches · " + cachedCatalog.size() + " total",
+			catalogExpanded, () -> catalogExpanded = !catalogExpanded,
+			enabled + "/" + cachedCatalog.size(), ColorScheme.LIGHT_GRAY_COLOR);
 
 		if (!catalogExpanded)
 		{
