@@ -1,6 +1,8 @@
 package gps;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,6 +22,9 @@ public final class BalloonLogStorage
 	public static final String[] CONFIG_KEYS = {
 		"balloonStoredLogs", "balloonStoredOakLogs", "balloonStoredWillowLogs",
 		"balloonStoredYewLogs", "balloonStoredMagicLogs"};
+
+	/** Display names per log type, in the same order as {@link #CONFIG_KEYS}. */
+	public static final String[] TYPE_NAMES = {"normal", "oak", "willow", "yew", "magic"};
 
 	private static final Pattern LEFT_PLURAL = Pattern.compile("You have (?<count>\\d+) sets of (?<type>.*) left in storage\\.");
 	private static final Pattern LEFT_SINGULAR = Pattern.compile("You have one set of (?<type>.*) left in storage\\.");
@@ -84,6 +89,24 @@ public final class BalloonLogStorage
 			return updates;
 		}
 		return updates;
+	}
+
+	/**
+	 * The log types worth warning about: below the threshold in storage AND belonging to a balloon
+	 * route the player has unlocked (a locked route's empty storage is noise, not a warning).
+	 * Arrays follow the {@link #TYPE_NAMES} order; returns display names.
+	 */
+	public static List<String> lowTypes(int[] stored, boolean[] unlocked, int threshold)
+	{
+		List<String> low = new ArrayList<>();
+		for (int i = 0; i < TYPE_NAMES.length; i++)
+		{
+			if (unlocked[i] && stored[i] < threshold)
+			{
+				low.add(TYPE_NAMES[i]);
+			}
+		}
+		return low;
 	}
 
 	private static void put(Map<String, Integer> updates, String type, int count)

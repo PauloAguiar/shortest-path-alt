@@ -126,7 +126,7 @@ public class ShortestPathPlugin extends Plugin
 	private static final String FLASH_ICONS = "Flash icons";
 	private static final String TARGET = ColorUtil.wrapWithColorTag("GPS Target", JagexColors.MENU_TARGET);
 	private static final BufferedImage MARKER_IMAGE = ImageUtil.loadImageResource(ShortestPathPlugin.class, "/marker.png");
-	private static final Pattern TRANSPORT_OPTIONS_REGEX = Pattern.compile("^(avoidWilderness|includeBankPath|currencyThreshold|pohJewelleryBoxTier|use\\w+|cost\\w+)$");
+	private static final Pattern TRANSPORT_OPTIONS_REGEX = Pattern.compile("^(avoidWilderness|includeBankPath|currencyThreshold|pohJewelleryBoxTier|balloonSmartMode|balloonStored\\w+|use\\w+|cost\\w+)$");
 	private static final Map<String, Object> configOverride = new HashMap<>(50);
 	private static final Pattern SPIRIT_TREE_LABEL_PATTERN_MENU = Pattern.compile("<col=735a28>(.+)</col>: (<col=5f5f5f>)?(.+)");
 	private static final Pattern SPIRIT_TREE_LABEL_PATTERN_MENU_NEW = Pattern.compile("<col=ffffff>(.+)</col>: (<col=5f5f5f>)?(.+)");
@@ -903,6 +903,14 @@ public class ShortestPathPlugin extends Plugin
 				recomputeAlternatives();
 			}
 		}
+
+		// Keys mirrored by the panel's configuration sections (POH, wilderness, balloons): rebuild
+		// those sections so their labels track changes made from chat parsing or the config UI.
+		if (altPanel != null
+			&& (event.getKey().startsWith("balloon") || TRANSPORT_OPTIONS_REGEX.matcher(event.getKey()).find()))
+		{
+			SwingUtilities.invokeLater(altPanel::refreshConfigSections);
+		}
 	}
 
 	/** Whether the original Shortest Path plugin is also enabled — the panel shows a warning. */
@@ -1214,8 +1222,9 @@ public class ShortestPathPlugin extends Plugin
 	@Subscribe
 	public void onChatMessage(net.runelite.api.events.ChatMessage event)
 	{
-		if (event.getType() != net.runelite.api.ChatMessageType.SPAM
-			&& event.getType() != net.runelite.api.ChatMessageType.MESBOX)
+		if (!config.balloonSmartMode()
+			|| (event.getType() != net.runelite.api.ChatMessageType.SPAM
+				&& event.getType() != net.runelite.api.ChatMessageType.MESBOX))
 		{
 			return;
 		}
@@ -1223,6 +1232,10 @@ public class ShortestPathPlugin extends Plugin
 		for (Map.Entry<String, Integer> update : updates.entrySet())
 		{
 			configManager.setConfiguration(CONFIG_GROUP, update.getKey(), update.getValue());
+		}
+		if (!updates.isEmpty() && !config.balloonStorageSynced())
+		{
+			configManager.setConfiguration(CONFIG_GROUP, "balloonStorageSynced", true);
 		}
 	}
 
@@ -1242,6 +1255,12 @@ public class ShortestPathPlugin extends Plugin
 		// The house-location varbit (2187): 0 = no house, 1-9 = the owned location. Cached here (the
 		// client thread) for the panel's POH section, which runs on the EDT.
 		houseLocationId = client.getVarbitValue(2187);
+
+		// The balloon route unlock varbits (ZEP_MULTI_*), cached for the panel's low-log warning:
+		// only unlocked routes' log types are worth warning about.
+		balloonUnlockVarbits = new int[]{
+			client.getVarbitValue(2867), client.getVarbitValue(2868), client.getVarbitValue(2869),
+			client.getVarbitValue(2870), client.getVarbitValue(2871), client.getVarbitValue(2872)};
 
 		Player localPlayer = client.getLocalPlayer();
 		if (localPlayer == null || !hasPathTargets())
@@ -2227,18 +2246,50 @@ public class ShortestPathPlugin extends Plugin
 		return (id > 0 && id < HOUSE_LOCATIONS.length) ? HOUSE_LOCATIONS[id] : null;
 	}
 
-	/** The live config, for panel controls that mirror config items (the POH section). */
+	// ZEP_MULTI_* values in {2867 Entrana, 2868 Taverley, 2869 Castle Wars, 2870 Grand Tree,
+	// 2871 Crafting Guild, 2872 Varrock} order; cached each game tick for the panel (EDT).
+	private volatile int[] balloonUnlockVarbits = new int[6];
+
+	/**
+	 * The balloon log types that warrant a low-storage warning: routes the player has unlocked
+	 * (per the cached varbits) whose stored count sits below the configured threshold. Empty when
+	 * smart mode is off, the threshold is 0, the storage was never synced, or nothing is low.
+	 */
+	public List<String> getBalloonLowLogTypes()
+	{
+		if (!config.balloonSmartMode() || !config.balloonStorageSynced())
+		{
+			return List.of();
+		}
+		int[] unlocks = balloonUnlockVarbits;
+		// Entrana/Taverley (normal logs) unlock at quest completion (=2); the rest on first flight (=1).
+		boolean[] unlocked = {
+			unlocks[0] >= 2 || unlocks[1] >= 2, unlocks[4] >= 1, unlocks[5] >= 1,
+			unlocks[2] >= 1, unlocks[3] >= 1};
+		return BalloonLogStorage.lowTypes(getBalloonStoredCounts(), unlocked,
+			config.balloonLogWarningThreshold());
+	}
+
+	/** The chat-parsed stored log counts, in {@link BalloonLogStorage#TYPE_NAMES} order. */
+	public int[] getBalloonStoredCounts()
+	{
+		return new int[]{config.balloonStoredLogs(), config.balloonStoredOakLogs(),
+			config.balloonStoredWillowLogs(), config.balloonStoredYewLogs(), config.balloonStoredMagicLogs()};
+	}
+
+	/** The live config, for panel controls that mirror config items (the configuration sections). */
 	public ShortestPathConfig getGpsConfig()
 	{
 		return config;
 	}
 
 	/**
-	 * Writes a POH setting from the panel. Persisting through the ConfigManager keeps the panel and
-	 * the RuneLite config UI in sync (same keys), and the resulting ConfigChanged event re-caches
-	 * values and regenerates the routes (POH keys match TRANSPORT_OPTIONS_REGEX).
+	 * Writes a setting from the panel's configuration sections (POH, wilderness, balloons).
+	 * Persisting through the ConfigManager keeps the panel and the RuneLite config UI in sync (same
+	 * keys), and the resulting ConfigChanged event re-caches values and regenerates the routes
+	 * (route-affecting keys match TRANSPORT_OPTIONS_REGEX).
 	 */
-	public void setPohConfig(String key, Object value)
+	public void setPanelConfig(String key, Object value)
 	{
 		configManager.setConfiguration(CONFIG_GROUP, key, value);
 	}

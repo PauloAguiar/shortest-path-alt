@@ -311,6 +311,7 @@ public class PathfinderConfig
 		copy.leagueModeState = leagueModeState;
 		copy.costConsumableTeleportationItems = costConsumableTeleportationItems;
 		copy.currencyThreshold = currencyThreshold;
+		copy.balloonStoredLogs.putAll(balloonStoredLogs);
 		copy.bankPickupCost = bankPickupCost;
 		copy.bank = bank;
 		copy.bankSnapshot = bankSnapshot;
@@ -520,12 +521,17 @@ public class PathfinderConfig
 		costConsumableTeleportationItems = ShortestPathPlugin.override("costConsumableTeleportationItems", config.costConsumableTeleportationItems());
 		bankPickupCost = ShortestPathPlugin.override("costBankPickup", config.costBankPickup());
 
-		// Balloon log storage counts (chat-parsed by the plugin; see BalloonLogStorage).
-		balloonStoredLogs.put(ItemID.LOGS, config.balloonStoredLogs());
-		balloonStoredLogs.put(ItemID.OAK_LOGS, config.balloonStoredOakLogs());
-		balloonStoredLogs.put(ItemID.WILLOW_LOGS, config.balloonStoredWillowLogs());
-		balloonStoredLogs.put(ItemID.YEW_LOGS, config.balloonStoredYewLogs());
-		balloonStoredLogs.put(ItemID.MAGIC_LOGS, config.balloonStoredMagicLogs());
+		// Balloon log storage counts (chat-parsed by the plugin; see BalloonLogStorage). Outside
+		// smart mode the storage is not tracked, so flights fall back to inventory checks only.
+		balloonStoredLogs.clear();
+		if (config.balloonSmartMode())
+		{
+			balloonStoredLogs.put(ItemID.LOGS, config.balloonStoredLogs());
+			balloonStoredLogs.put(ItemID.OAK_LOGS, config.balloonStoredOakLogs());
+			balloonStoredLogs.put(ItemID.WILLOW_LOGS, config.balloonStoredWillowLogs());
+			balloonStoredLogs.put(ItemID.YEW_LOGS, config.balloonStoredYewLogs());
+			balloonStoredLogs.put(ItemID.MAGIC_LOGS, config.balloonStoredMagicLogs());
+		}
 
 		// Alternative-routes "Owned" family: restrict teleport items to what the player possesses —
 		// inventory + equipment only, or additionally the bank (routing through a bank to pick items

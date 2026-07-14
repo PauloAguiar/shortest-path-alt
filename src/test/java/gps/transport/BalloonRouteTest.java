@@ -147,19 +147,31 @@ public class BalloonRouteTest
 	}
 
 	/**
-	 * The balloon log storage pays for flights without carrying logs: an empty inventory plus a
-	 * chat-parsed stored willow count makes the Varrock flight usable, while Entrana (normal logs;
-	 * that type's storage is empty) stays gated.
+	 * In smart mode the balloon log storage pays for flights without carrying logs: an empty
+	 * inventory plus a chat-parsed stored willow count makes the Varrock flight usable, while
+	 * Entrana (normal logs; that type's storage is empty) stays gated.
 	 */
 	@Test
 	public void storedLogsCoverFlightsWithoutCarrying()
 	{
 		ShortestPathConfig config = balloonConfig();
+		when(config.balloonSmartMode()).thenReturn(true);
 		when(config.balloonStoredWillowLogs()).thenReturn(5);
 
 		boolean[] usable = flightUsability(loggedInClient(), config);
 		assertTrue("with willow logs in storage, the Varrock flight must be usable", usable[0]);
 		assertFalse("with no normal log stored or carried, the Entrana flight must not be usable", usable[1]);
+	}
+
+	/** With smart mode off the storage is not tracked, so stored counts must not pay for flights. */
+	@Test
+	public void smartModeOffIgnoresTheStoredCounts()
+	{
+		ShortestPathConfig config = balloonConfig();
+		when(config.balloonStoredWillowLogs()).thenReturn(5);
+
+		boolean[] usable = flightUsability(loggedInClient(), config);
+		assertFalse("without smart mode, stored counts must not make the Varrock flight usable", usable[0]);
 	}
 
 	private static ShortestPathConfig balloonConfig()

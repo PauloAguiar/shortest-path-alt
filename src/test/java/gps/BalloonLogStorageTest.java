@@ -59,4 +59,19 @@ public class BalloonLogStorageTest
 		assertTrue(BalloonLogStorage.parse(
 			"You put the Redwood logs in the crate. You now have 2 stored.").isEmpty());
 	}
+
+	@Test
+	public void lowTypesWarnsOnlyForUnlockedRoutesBelowTheThreshold()
+	{
+		int[] stored = {0, 5, 0, 2, 0};
+		boolean[] unlocked = {true, true, true, true, false};
+		// normal (0) and willow (0) are unlocked and below 1; oak (5) and yew (2) are covered;
+		// magic (0) is low but the route is locked, so it is noise rather than a warning.
+		assertEquals(java.util.List.of("normal", "willow"),
+			BalloonLogStorage.lowTypes(stored, unlocked, 1));
+		// Threshold 3 pulls yew (2) in; threshold 0 disables warnings entirely.
+		assertEquals(java.util.List.of("normal", "willow", "yew"),
+			BalloonLogStorage.lowTypes(stored, unlocked, 3));
+		assertTrue(BalloonLogStorage.lowTypes(stored, unlocked, 0).isEmpty());
+	}
 }

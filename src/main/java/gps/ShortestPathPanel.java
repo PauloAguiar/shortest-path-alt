@@ -39,7 +39,9 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
@@ -152,6 +154,8 @@ public class ShortestPathPanel extends PluginPanel
 	// by default so the routes stay the focus; the user opens it to browse/toggle methods.
 	private boolean catalogExpanded = false;
 	private boolean pohSectionExpanded = false;
+	private boolean wildernessSectionExpanded = false;
+	private boolean balloonSectionExpanded = false;
 	// Funnel filter next to the catalog search: narrow the list to disabled methods or to a single
 	// kind of unavailability (missing item/level/quest, in bank, not unlocked).
 	private CatalogFilter catalogFilter = CatalogFilter.ALL;
@@ -1090,7 +1094,17 @@ public class ShortestPathPanel extends PluginPanel
 	private void refreshCatalog()
 	{
 		catalogHolder.removeAll();
+		// The "general configuration" group: player-stated facts and travel policies that the
+		// catalog's include/exclude toggles can't express.
+		JLabel caption = new JLabel("General configuration");
+		caption.setFont(FontManager.getRunescapeSmallFont());
+		caption.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
+		caption.setBorder(new EmptyBorder(2, 0, 3, 0));
+		caption.setAlignmentX(Component.LEFT_ALIGNMENT);
+		catalogHolder.add(caption);
 		catalogHolder.add(buildPohSection());
+		catalogHolder.add(buildWildernessSection());
+		catalogHolder.add(buildBalloonSection());
 		if (!cachedCatalog.isEmpty())
 		{
 			catalogHolder.add(buildCatalogSection());
@@ -1104,6 +1118,78 @@ public class ShortestPathPanel extends PluginPanel
 	}
 
 	/**
+	 * Rebuilds the configuration sections after one of their mirrored config keys changed outside
+	 * the panel (the RuneLite config UI, or the balloon chat parser updating stored log counts).
+	 */
+	public void refreshConfigSections()
+	{
+		refreshCatalog();
+	}
+
+	/**
+	 * Collapsible shell shared by the configuration sections: a clickable header row (chevron,
+	 * title, colored state text) that flips the given expanded flag. The caller adds the body when
+	 * expanded.
+	 */
+	private JPanel configSectionShell(String title, String tooltip, boolean expanded, Runnable toggle,
+		String stateText, Color stateColor)
+	{
+		JPanel section = new JPanel();
+		section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+		section.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		section.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+		JPanel titleRow = new JPanel(new BorderLayout(5, 0));
+		titleRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		titleRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+		titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+		titleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		titleRow.add(control(new JLabel(expanded ? RouteIcons.CHEVRON_DOWN : RouteIcons.CHEVRON_RIGHT)),
+			BorderLayout.WEST);
+		JLabel titleLabel = new JLabel(title);
+		titleLabel.setForeground(Color.WHITE);
+		titleRow.add(titleLabel, BorderLayout.CENTER);
+		JLabel state = new JLabel(stateText);
+		state.setForeground(stateColor);
+		titleRow.add(state, BorderLayout.EAST);
+		titleRow.setToolTipText(tooltip);
+		titleRow.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		titleRow.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				toggle.run();
+				refreshCatalog();
+			}
+		});
+		section.add(titleRow);
+		return section;
+	}
+
+	/** The body box of an expanded configuration section. */
+	private static JPanel configSectionBody()
+	{
+		JPanel body = new JPanel();
+		body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+		body.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		body.setBorder(new EmptyBorder(4, 6, 6, 6));
+		body.setAlignmentX(Component.LEFT_ALIGNMENT);
+		return body;
+	}
+
+	/** A small wrapped note line inside a configuration section body. */
+	private static JLabel configNote(String text, Color color)
+	{
+		JLabel note = new JLabel("<html>" + text + "</html>");
+		note.setFont(FontManager.getRunescapeSmallFont());
+		note.setForeground(color);
+		note.setAlignmentX(Component.LEFT_ALIGNMENT);
+		note.setBorder(new EmptyBorder(2, 18, 2, 0));
+		return note;
+	}
+
+	/**
 	 * The player-owned-house declarations: which POH teleport features GPS should assume exist.
 	 * Unlike the catalog's include/exclude (what the user WANTS used), these describe what is BUILT
 	 * in the house — facts GPS cannot detect from outside the house, so the player states them once.
@@ -1112,49 +1198,18 @@ public class ShortestPathPanel extends PluginPanel
 	 */
 	private JPanel buildPohSection()
 	{
-		JPanel section = new JPanel();
-		section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
-		section.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		section.setAlignmentX(Component.LEFT_ALIGNMENT);
-
 		final boolean pohOn = plugin.getGpsConfig().usePoh();
-
-		JPanel titleRow = new JPanel(new BorderLayout(5, 0));
-		titleRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		titleRow.setBorder(new EmptyBorder(0, 0, 4, 0));
-		titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-		titleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-		titleRow.add(control(new JLabel(pohSectionExpanded ? RouteIcons.CHEVRON_DOWN : RouteIcons.CHEVRON_RIGHT)),
-			BorderLayout.WEST);
-		JLabel title = new JLabel("Player-owned house");
-		title.setForeground(Color.WHITE);
-		titleRow.add(title, BorderLayout.CENTER);
-		JLabel state = new JLabel(pohOn ? "on" : "off");
-		state.setForeground(pohOn ? ColorScheme.PROGRESS_COMPLETE_COLOR : ColorScheme.LIGHT_GRAY_COLOR);
-		titleRow.add(state, BorderLayout.EAST);
-		titleRow.setToolTipText("Declare which teleport features are built in your house so routes can use them");
-		titleRow.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		titleRow.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mousePressed(MouseEvent e)
-			{
-				pohSectionExpanded = !pohSectionExpanded;
-				refreshCatalog();
-			}
-		});
-		section.add(titleRow);
-
+		JPanel section = configSectionShell("Player-owned house",
+			"Declare which teleport features are built in your house so routes can use them",
+			pohSectionExpanded, () -> pohSectionExpanded = !pohSectionExpanded,
+			pohOn ? "on" : "off",
+			pohOn ? ColorScheme.PROGRESS_COMPLETE_COLOR : ColorScheme.LIGHT_GRAY_COLOR);
 		if (!pohSectionExpanded)
 		{
 			return section;
 		}
 
-		JPanel body = new JPanel();
-		body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-		body.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		body.setBorder(new EmptyBorder(4, 6, 6, 6));
-		body.setAlignmentX(Component.LEFT_ALIGNMENT);
+		JPanel body = configSectionBody();
 
 		// What GPS detected on its own: the house location (varbit) — a confidence hint that the
 		// location-gated entries/exits will resolve correctly.
@@ -1167,9 +1222,9 @@ public class ShortestPathPanel extends PluginPanel
 		houseLabel.setBorder(new EmptyBorder(0, 0, 4, 0));
 		body.add(houseLabel);
 
-		JCheckBox master = pohCheckBox("Use my house for routes", pohOn,
+		JCheckBox master = configCheckBox("Use my house for routes", pohOn,
 			"Master switch: with this off, no POH teleport is ever routed",
-			v -> plugin.setPohConfig("usePoh", v));
+			v -> plugin.setPanelConfig("usePoh", v));
 		body.add(master);
 
 		JPanel tierRow = new JPanel(new BorderLayout(5, 0));
@@ -1184,25 +1239,25 @@ public class ShortestPathPanel extends PluginPanel
 		tierBox.setSelectedItem(plugin.getGpsConfig().pohJewelleryBoxTier());
 		tierBox.setEnabled(pohOn);
 		tierBox.setToolTipText("The tier built in your house (each tier includes the ones below it)");
-		tierBox.addActionListener(e -> plugin.setPohConfig("pohJewelleryBoxTier", tierBox.getSelectedItem()));
+		tierBox.addActionListener(e -> plugin.setPanelConfig("pohJewelleryBoxTier", tierBox.getSelectedItem()));
 		tierRow.add(tierBox, BorderLayout.CENTER);
 		body.add(tierRow);
 
-		JCheckBox portals = pohCheckBox("Teleport portals & nexus", plugin.getGpsConfig().useTeleportationPortalsPoh(),
+		JCheckBox portals = configCheckBox("Teleport portals & nexus", plugin.getGpsConfig().useTeleportationPortalsPoh(),
 			"Portal chamber and portal nexus destinations",
-			v -> plugin.setPohConfig("useTeleportationPortalsPoh", v));
-		JCheckBox mounted = pohCheckBox("Mounted items", plugin.getGpsConfig().usePohMountedItems(),
+			v -> plugin.setPanelConfig("useTeleportationPortalsPoh", v));
+		JCheckBox mounted = configCheckBox("Mounted items", plugin.getGpsConfig().usePohMountedItems(),
 			"Mounted glory, Xeric's talisman, digsite pendant, mythical cape",
-			v -> plugin.setPohConfig("usePohMountedItems", v));
-		JCheckBox fairy = pohCheckBox("Fairy ring", plugin.getGpsConfig().usePohFairyRing(),
+			v -> plugin.setPanelConfig("usePohMountedItems", v));
+		JCheckBox fairy = configCheckBox("Fairy ring", plugin.getGpsConfig().usePohFairyRing(),
 			"Requires 85 Construction to build",
-			v -> plugin.setPohConfig("usePohFairyRing", v));
-		JCheckBox spirit = pohCheckBox("Spirit tree", plugin.getGpsConfig().usePohSpiritTree(),
+			v -> plugin.setPanelConfig("usePohFairyRing", v));
+		JCheckBox spirit = configCheckBox("Spirit tree", plugin.getGpsConfig().usePohSpiritTree(),
 			"Requires 75 Construction and 83 Farming to build",
-			v -> plugin.setPohConfig("usePohSpiritTree", v));
-		JCheckBox obelisk = pohCheckBox("Wilderness obelisk", plugin.getGpsConfig().usePohObelisk(),
+			v -> plugin.setPanelConfig("usePohSpiritTree", v));
+		JCheckBox obelisk = configCheckBox("Wilderness obelisk", plugin.getGpsConfig().usePohObelisk(),
 			"Requires 80 Construction to build",
-			v -> plugin.setPohConfig("usePohObelisk", v));
+			v -> plugin.setPanelConfig("usePohObelisk", v));
 		for (JCheckBox box : new JCheckBox[]{portals, mounted, fairy, spirit, obelisk})
 		{
 			box.setEnabled(pohOn);
@@ -1214,8 +1269,117 @@ public class ShortestPathPanel extends PluginPanel
 		return section;
 	}
 
-	/** A POH declaration checkbox: writes its config key on change; the ConfigChanged regenerates. */
-	private JCheckBox pohCheckBox(String label, boolean value, String tooltip,
+	/** The wilderness travel policy: whether routes may cross the wilderness at all. */
+	private JPanel buildWildernessSection()
+	{
+		final boolean avoid = plugin.getGpsConfig().avoidWilderness();
+		JPanel section = configSectionShell("Wilderness",
+			"Choose whether routes may cross the wilderness",
+			wildernessSectionExpanded, () -> wildernessSectionExpanded = !wildernessSectionExpanded,
+			avoid ? "avoided" : "allowed",
+			avoid ? ColorScheme.PROGRESS_COMPLETE_COLOR : ColorScheme.PROGRESS_INPROGRESS_COLOR);
+		if (!wildernessSectionExpanded)
+		{
+			return section;
+		}
+
+		JPanel body = configSectionBody();
+		body.add(configCheckBox("Avoid the wilderness", avoid,
+			"Route around the wilderness whenever possible (e.g. skip the Edgeville lever to Ardougne)",
+			v -> plugin.setPanelConfig("avoidWilderness", v)));
+		body.add(configNote("Routes still enter the wilderness when the destination itself is inside it.",
+			ColorScheme.MEDIUM_GRAY_COLOR));
+		section.add(body);
+		return section;
+	}
+
+	/**
+	 * Balloon travel: the master toggle plus smart mode, which tracks the stations' log storage
+	 * from chat so flights can be paid from storage — including a low-storage warning (threshold
+	 * configurable; only routes the player has unlocked are considered) and a first-time sync hint,
+	 * since the counts only become known once a storage message has been seen.
+	 */
+	private JPanel buildBalloonSection()
+	{
+		final ShortestPathConfig config = plugin.getGpsConfig();
+		final boolean balloonsOn = config.useHotAirBalloons();
+		final boolean smart = config.balloonSmartMode();
+		List<String> lowTypes = balloonsOn ? plugin.getBalloonLowLogTypes() : List.of();
+
+		String stateText = !balloonsOn ? "off" : (lowTypes.isEmpty() ? "on" : "low logs");
+		Color stateColor = !balloonsOn ? ColorScheme.LIGHT_GRAY_COLOR
+			: (lowTypes.isEmpty() ? ColorScheme.PROGRESS_COMPLETE_COLOR : ColorScheme.PROGRESS_INPROGRESS_COLOR);
+		JPanel section = configSectionShell("Hot air balloons",
+			"Balloon travel and smart tracking of the stations' log storage",
+			balloonSectionExpanded, () -> balloonSectionExpanded = !balloonSectionExpanded,
+			stateText, stateColor);
+		if (!balloonSectionExpanded)
+		{
+			return section;
+		}
+
+		JPanel body = configSectionBody();
+
+		JCheckBox master = configCheckBox("Use balloon routes", balloonsOn,
+			"Master switch: include hot air balloon flights in routes (requires Enlightened Journey)",
+			v -> plugin.setPanelConfig("useHotAirBalloons", v));
+		body.add(master);
+
+		JCheckBox smartBox = configCheckBox("Smart log tracking", smart,
+			"Detect and keep track of the logs stored at balloon stations (read from chat messages);"
+				+ " flights can then be paid from storage without carrying logs",
+			v -> plugin.setPanelConfig("balloonSmartMode", v));
+		smartBox.setEnabled(balloonsOn);
+		smartBox.setBorder(new EmptyBorder(2, 18, 2, 0));
+		body.add(smartBox);
+
+		JPanel warnRow = new JPanel(new BorderLayout(5, 0));
+		warnRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		warnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+		warnRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+		warnRow.setBorder(new EmptyBorder(2, 36, 2, 0));
+		JLabel warnLabel = new JLabel("Warn when logs below:");
+		warnLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		warnRow.add(warnLabel, BorderLayout.CENTER);
+		JSpinner warnSpinner = new JSpinner(
+			new SpinnerNumberModel(config.balloonLogWarningThreshold(), 0, 100, 1));
+		warnSpinner.setEnabled(balloonsOn && smart);
+		warnSpinner.setToolTipText("Warn when an unlocked route's stored logs fall below this many (0 = never warn)");
+		warnSpinner.addChangeListener(e -> plugin.setPanelConfig("balloonLogWarningThreshold", warnSpinner.getValue()));
+		warnRow.add(warnSpinner, BorderLayout.EAST);
+		body.add(warnRow);
+
+		if (balloonsOn && smart)
+		{
+			if (!config.balloonStorageSynced())
+			{
+				body.add(configNote("Not synced yet — check a balloon storage crate once to import"
+					+ " your stored log counts.", ColorScheme.PROGRESS_INPROGRESS_COLOR));
+			}
+			else
+			{
+				int[] counts = plugin.getBalloonStoredCounts();
+				StringBuilder stored = new StringBuilder("Stored:");
+				for (int i = 0; i < counts.length; i++)
+				{
+					stored.append(i == 0 ? " " : ", ").append(counts[i]).append(' ')
+						.append(BalloonLogStorage.TYPE_NAMES[i]);
+				}
+				body.add(configNote(stored.toString(), ColorScheme.LIGHT_GRAY_COLOR));
+				if (!lowTypes.isEmpty())
+				{
+					body.add(configNote("Low storage: " + String.join(", ", lowTypes),
+						ColorScheme.PROGRESS_INPROGRESS_COLOR));
+				}
+			}
+		}
+
+		section.add(body);
+		return section;
+	}
+
+	/** A configuration checkbox: writes its config key on change; the ConfigChanged regenerates. */
+	private JCheckBox configCheckBox(String label, boolean value, String tooltip,
 		java.util.function.Consumer<Boolean> onChange)
 	{
 		JCheckBox box = new JCheckBox(label, value);
