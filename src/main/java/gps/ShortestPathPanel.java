@@ -1106,6 +1106,12 @@ public class ShortestPathPanel extends PluginPanel
 	/** Rebuilds just the teleport-methods catalog slot (used on collapse/expand and dirty renders). */
 	private void refreshCatalog()
 	{
+		// The rebuild replaces the method-rows scroll pane; carry its position over so toggling a
+		// method or category (which regenerates routes and re-renders) doesn't jump the list back
+		// to the top. Applied after the rebuilt pane has been laid out (nested invokeLater), since
+		// a fresh scrollbar clamps everything to 0 until validation.
+		final int rowsScrollPosition = catalogRowsScroll != null
+			? catalogRowsScroll.getVerticalScrollBar().getValue() : 0;
 		catalogHolder.removeAll();
 		// The "general configuration" group: player-stated facts and travel policies that the
 		// catalog's include/exclude toggles can't express.
@@ -1124,6 +1130,12 @@ public class ShortestPathPanel extends PluginPanel
 		}
 		catalogHolder.revalidate();
 		catalogHolder.repaint();
+		if (rowsScrollPosition > 0 && catalogRowsScroll != null)
+		{
+			final JScrollPane scroll = catalogRowsScroll;
+			SwingUtilities.invokeLater(() -> SwingUtilities.invokeLater(
+				() -> scroll.getVerticalScrollBar().setValue(rowsScrollPosition)));
+		}
 		renderedCatalog = cachedCatalog;
 		renderedExclusions = cachedExclusions;
 		renderedUnavailable = cachedUnavailable;
@@ -1820,7 +1832,10 @@ public class ShortestPathPanel extends PluginPanel
 		{
 			text.setForeground(ColorScheme.LIGHT_GRAY_COLOR.darker());
 		}
-		row.add(text, BorderLayout.CENTER);
+		// Centre the label at its preferred height instead of letting BorderLayout stretch it: a
+		// stretched html JLabel top-anchors its text (the html view claims the full height), which
+		// left the text floating high beside the vertically-centred icons.
+		row.add(verticallyCentered(text), BorderLayout.CENTER);
 
 		return row;
 	}
