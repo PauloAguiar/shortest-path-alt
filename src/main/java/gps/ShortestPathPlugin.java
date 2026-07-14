@@ -2286,6 +2286,16 @@ public class ShortestPathPlugin extends Plugin
 		return itemManager;
 	}
 
+	/**
+	 * The specific reason a catalog method is unavailable ("Requires 60 Mining", "Missing item:
+	 * Willow logs"), or null when nothing more specific than its status is known.
+	 */
+	public String methodUnavailabilityDetail(TeleportMethod method)
+	{
+		AlternativeRoutesService service = altRoutesService;
+		return service == null ? null : service.getAvailabilityDetails().get(method);
+	}
+
 	/** The live config, for panel controls that mirror config items (the configuration sections). */
 	public ShortestPathConfig getGpsConfig()
 	{

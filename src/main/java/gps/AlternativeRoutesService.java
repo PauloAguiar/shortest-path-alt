@@ -106,6 +106,15 @@ public class AlternativeRoutesService
 	}
 
 	/**
+	 * The specific missing-unlock reason per unavailable catalog method ("Requires 60 Mining"),
+	 * from the same client-thread refresh that produced the availability statuses.
+	 */
+	public Map<TeleportMethod, String> getAvailabilityDetails()
+	{
+		return planningConfig.getMethodAvailabilityDetail();
+	}
+
+	/**
 	 * Asynchronously computes the alternative routes, streaming progressive updates to {@code listener}
 	 * (catalog first, then each route as it's found, then a final done update). Supersedes any in-flight
 	 * generation.

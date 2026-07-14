@@ -18,6 +18,7 @@ import net.runelite.api.EnumComposition;
 import net.runelite.api.EnumID;
 import net.runelite.api.GameState;
 import net.runelite.api.Item;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
@@ -138,6 +139,14 @@ public class PathfinderConfig
 	 */
 	@Getter
 	private Map<TeleportMethod, MethodAvailability> methodAvailability = Collections.emptyMap();
+	/**
+	 * The specific missing unlock behind each unavailable catalog method ("Requires 60 Mining",
+	 * "Requires quest: Enlightened Journey", "Missing item: Willow logs"), for the panel's status
+	 * tooltips. Computed on the client thread alongside {@link #methodAvailability}; a method with
+	 * no entry has nothing more specific to say than its status.
+	 */
+	@Getter
+	private Map<TeleportMethod, String> methodAvailabilityDetail = Collections.emptyMap();
 	/**
 	 * Reference that points to either allDestinations or filteredDestinations
 	 */
@@ -754,6 +763,7 @@ public class PathfinderConfig
 		// independent of the current mode/possession/unlocks) alongside a per-method availability status,
 		// so the panel can show — and explain — the methods the player can't use right now in any mode.
 		Map<TeleportMethod, MethodAvailability> catalog = planningCopy ? new LinkedHashMap<>() : null;
+		Map<TeleportMethod, String> catalogDetail = planningCopy ? new HashMap<>() : null;
 		for (Transport transport : allTransports)
 		{
 			for (Quest quest : transport.getQuests())
@@ -785,8 +795,24 @@ public class PathfinderConfig
 			// here (excluded methods still appear in the catalog, flagged separately).
 			if (catalog != null && TeleportMethod.isMethodType(transport.getType()) && passesStructuralGates(transport))
 			{
-				catalog.merge(TeleportMethod.fromTransport(transport), classifyAvailability(transport),
-					MethodAvailability::best);
+				// Keep the BEST status among the transports sharing a method identity, and the
+				// missing-unlock detail of that best transport (its requirements are the mildest).
+				TeleportMethod method = TeleportMethod.fromTransport(transport);
+				MethodAvailability status = classifyAvailability(transport);
+				MethodAvailability prior = catalog.get(method);
+				if (prior == null || status.ordinal() < prior.ordinal())
+				{
+					catalog.put(method, status);
+					String detail = availabilityDetail(transport, status);
+					if (detail != null)
+					{
+						catalogDetail.put(method, detail);
+					}
+					else
+					{
+						catalogDetail.remove(method);
+					}
+				}
 			}
 
 			if (!useTransport(transport))
@@ -823,6 +849,143 @@ public class PathfinderConfig
 			baseUsableWithoutBank = baseWithoutBank;
 			baseUsableWithBank = baseWithBank;
 			methodAvailability = (catalog != null) ? Collections.unmodifiableMap(catalog) : Collections.emptyMap();
+			methodAvailabilityDetail = (catalogDetail != null)
+				? Collections.unmodifiableMap(catalogDetail) : Collections.emptyMap();
+		}
+	}
+
+	/**
+	 * The specific unlock this transport is missing, phrased for the panel's status tooltip. Null
+	 * when there is nothing more specific than the status itself (LOCKED's varbit gates carry no
+	 * player-facing name). Runs on the client thread during refresh, so live item names, skill
+	 * levels and quest states are readable.
+	 */
+	private String availabilityDetail(Transport transport, MethodAvailability status)
+	{
+		switch (status)
+		{
+			case MISSING_LEVEL:
+				return missingLevelsDetail(transport);
+			case MISSING_QUEST:
+				return missingQuestsDetail(transport);
+			case MISSING_ITEM:
+			{
+				String items = itemRequirementNames(transport.getItemRequirements());
+				return items == null ? null : "Missing item: " + items;
+			}
+			case IN_BANK:
+			{
+				String items = itemRequirementNames(transport.getItemRequirements());
+				return items == null ? null : "In your bank: " + items;
+			}
+			default:
+				return null;
+		}
+	}
+
+	private String missingLevelsDetail(Transport transport)
+	{
+		Skill[] skills = Skill.values();
+		int[] required = transport.getSkillLevels();
+		List<String> missing = new ArrayList<>();
+		for (int i = 0; i < boostedSkillLevelsAndMore.length && i < required.length; i++)
+		{
+			if (boostedSkillLevelsAndMore[i] >= required[i]
+				|| (leagueModeState.isSeasonal() && i == skills.length))
+			{
+				continue;
+			}
+			if (i < skills.length)
+			{
+				missing.add(required[i] + " " + skills[i].getName());
+			}
+			else
+			{
+				String name = i == skills.length ? "total level" : (i == skills.length + 1 ? "combat level" : "quest points");
+				missing.add(required[i] + " " + name);
+			}
+		}
+		return missing.isEmpty() ? null : "Requires " + String.join(", ", missing);
+	}
+
+	private String missingQuestsDetail(Transport transport)
+	{
+		List<String> missing = new ArrayList<>();
+		// The type-level network gates (see classifyAvailability) come first: they block the whole
+		// network even when the transport carries no quest requirement of its own.
+		Quest typeQuest = typeGateQuest(transport.getType());
+		if (typeQuest != null && !QuestState.FINISHED.equals(getQuestState(typeQuest)))
+		{
+			missing.add(typeQuest.getName());
+		}
+		if (TransportType.FAIRY_RING.equals(transport.getType())
+			&& client.getVarbitValue(VarbitID.FAIRY2_QUEENCURE_QUEST) <= 39)
+		{
+			missing.add("Fairy Tale II (partial)");
+		}
+		for (Quest quest : transport.getQuests())
+		{
+			if (!QuestState.FINISHED.equals(getQuestState(quest)) && !missing.contains(quest.getName()))
+			{
+				missing.add(quest.getName());
+			}
+		}
+		return missing.isEmpty() ? null : "Requires quest: " + String.join(", ", missing);
+	}
+
+	private static Quest typeGateQuest(TransportType type)
+	{
+		switch (type)
+		{
+			case GNOME_GLIDER:
+				return Quest.THE_GRAND_TREE;
+			case MAGIC_MUSHTREE:
+				return Quest.BONE_VOYAGE;
+			case SPIRIT_TREE:
+				return Quest.TREE_GNOME_VILLAGE;
+			default:
+				return null;
+		}
+	}
+
+	/**
+	 * The item requirements as player-facing names ("Willow logs", "Law rune x2, Air rune"), read
+	 * from the live item definitions (client thread). Null when no name could be resolved (e.g.
+	 * under test mocks), so callers fall back to the generic status wording.
+	 */
+	private String itemRequirementNames(TransportItems items)
+	{
+		if (items == null)
+		{
+			return null;
+		}
+		List<String> names = new ArrayList<>();
+		for (ItemRequirement requirement : items.getRequirements())
+		{
+			int[] ids = requirement.getItemIds();
+			if (ids == null || ids.length == 0)
+			{
+				continue;
+			}
+			String name = itemName(ids[0]);
+			if (name != null)
+			{
+				names.add(requirement.getQuantity() > 1 ? name + " x" + requirement.getQuantity() : name);
+			}
+		}
+		return names.isEmpty() ? null : String.join(", ", names);
+	}
+
+	private String itemName(int itemId)
+	{
+		try
+		{
+			ItemComposition definition = client.getItemDefinition(itemId);
+			return definition != null ? definition.getName() : null;
+		}
+		catch (RuntimeException e)
+		{
+			return null;
 		}
 	}
 

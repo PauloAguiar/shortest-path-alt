@@ -1004,7 +1004,7 @@ public class ShortestPathPanel extends PluginPanel
 		// the bank marker above, so only add the status marker for other, distinct reasons.
 		if (status != null && !bankGated)
 		{
-			JLabel statusMarker = statusLabel(status);
+			JLabel statusMarker = statusLabel(status, method);
 			statusMarker.setAlignmentY(Component.CENTER_ALIGNMENT);
 			statusMarker.setBorder(new EmptyBorder(0, 3, 0, 0));
 			west.add(statusMarker);
@@ -1796,19 +1796,23 @@ public class ShortestPathPanel extends PluginPanel
 				"Excluded — click to include", () -> plugin.includeMethod(item))
 			: new IconActionLabel(RouteIcons.CHECK, RouteIcons.CHECK_HOVER,
 				"Included — click to exclude", () -> plugin.excludeMethod(item));
-		JPanel icons = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
-		icons.setOpaque(false);
-		icons.add(control(toggle));
+		// Same structure as the route cards' west markers: natural-size icons, each centred on the
+		// row axis, the whole strip vertically centred against the (possibly wrapped) label.
+		JPanel west = new JPanel();
+		west.setLayout(new BoxLayout(west, BoxLayout.X_AXIS));
+		west.setOpaque(false);
+		JLabel toggleControl = control(toggle);
+		toggleControl.setAlignmentY(Component.CENTER_ALIGNMENT);
+		west.add(toggleControl);
 		MethodAvailability status = cachedUnavailable.get(item);
 		if (status != null)
 		{
-			icons.add(control(statusLabel(status)));
+			JLabel statusMarker = statusLabel(status, item);
+			statusMarker.setAlignmentY(Component.CENTER_ALIGNMENT);
+			statusMarker.setBorder(new EmptyBorder(0, 3, 0, 0));
+			west.add(statusMarker);
 		}
-		// GridBag centres the icons vertically against the label instead of top-anchoring them.
-		JPanel west = new JPanel(new GridBagLayout());
-		west.setOpaque(false);
-		west.add(icons);
-		row.add(west, BorderLayout.WEST);
+		row.add(verticallyCentered(west), BorderLayout.WEST);
 
 		JLabel text = wrappedLabel(escapeHtml(item.label()));
 		text.setToolTipText(methodTooltip(item));
@@ -1825,10 +1829,22 @@ public class ShortestPathPanel extends PluginPanel
 	 * Marker for a method the player can't use in the current mode: a bank glyph for an item that's only
 	 * in the bank, a padlock for everything else, each with a reason tooltip.
 	 */
-	private static JLabel statusLabel(MethodAvailability status)
+	private JLabel statusLabel(MethodAvailability status, TeleportMethod method)
 	{
 		JLabel label = new JLabel(status == MethodAvailability.IN_BANK ? RouteIcons.IN_BANK : RouteIcons.LOCKED);
-		label.setToolTipText(statusReason(status));
+		// Name exactly what is missing when the classification recorded it ("Requires 60 Mining",
+		// "Missing item: Willow logs"); the per-status generic wording is the fallback.
+		String detail = plugin.methodUnavailabilityDetail(method);
+		if (detail == null)
+		{
+			label.setToolTipText(statusReason(status));
+		}
+		else
+		{
+			label.setToolTipText(status == MethodAvailability.IN_BANK
+				? detail + " — switch to \"Inventory + bank\" or withdraw it"
+				: detail);
+		}
 		return label;
 	}
 
