@@ -3110,9 +3110,17 @@ public class ShortestPathPlugin extends Plugin
 		if (done)
 		{
 			// If nothing reached the target, work out what stopped the closest route (a locked gate)
-			// so the "can't reach" banner can name it. Computed once here (not per render), on the
-			// live config whose quest/item state reflects reality.
-			unreachableBlockerHint = computeUnreachableBlocker(routes);
+			// so the "can't reach" banner can name it. The requirement checks read live client state
+			// (quests, items, varbits), so this must run on the CLIENT thread — doing it here on the
+			// alt-routes worker threw and left the generation stuck "calculating". Cleared now; the
+			// scheduled task fills it in a tick later and refreshes the panel.
+			unreachableBlockerHint = null;
+			int frontier = closestUnreachedFrontier(routes);
+			if (frontier != WorldPointUtil.UNDEFINED)
+			{
+				Set<Integer> targets = new HashSet<>(lastAltTargets);
+				clientThread.invokeLater(() -> computeUnreachableBlocker(frontier, targets));
+			}
 			// "More" is available while the last generation left routes unshown (cost cap or count
 			// budget), until the route-count budget reaches the service's runaway backstop.
 			moreRoutesLikely = !routes.isEmpty() && altRoutesService.wasMoreLikely()
@@ -3151,23 +3159,23 @@ public class ShortestPathPlugin extends Plugin
 	}
 
 	/**
-	 * If no route reached the target, the requirement blocking the route that got closest ("Open
-	 * Colony gate — requires quest: Swan Song"). Uses the closest-reached tile of that route as the
-	 * frontier the search stopped at.
+	 * The closest-reached tile among a failed generation's routes — the frontier the search stopped
+	 * at, closest to the target. {@link WorldPointUtil#UNDEFINED} when a route reached (no blocker
+	 * to explain) or there's nothing to measure. Pure path math — safe off the client thread.
 	 */
-	private String computeUnreachableBlocker(List<RouteOption> routes)
+	private int closestUnreachedFrontier(List<RouteOption> routes)
 	{
-		if (pathfinderConfig == null || routes.isEmpty() || lastAltTargets.isEmpty())
+		if (routes.isEmpty() || lastAltTargets.isEmpty())
 		{
-			return null;
+			return WorldPointUtil.UNDEFINED;
 		}
-		RouteOption closest = null;
+		int frontier = WorldPointUtil.UNDEFINED;
 		int closestDist = Integer.MAX_VALUE;
 		for (RouteOption route : routes)
 		{
 			if (routeReachesTarget(route) || route.getPath() == null || route.getPath().isEmpty())
 			{
-				return null; // something reached — no blocker to report (or nothing to measure)
+				return WorldPointUtil.UNDEFINED; // something reached — no blocker to report
 			}
 			int end = route.getPath().get(route.getPath().size() - 1).getPackedPosition();
 			int d = Integer.MAX_VALUE;
@@ -3178,20 +3186,30 @@ public class ShortestPathPlugin extends Plugin
 			if (d < closestDist)
 			{
 				closestDist = d;
-				closest = route;
+				frontier = end;
 			}
 		}
-		if (closest == null)
+		return frontier;
+	}
+
+	/**
+	 * Names the requirement blocking the closest route from reaching the target ("Open Colony gate
+	 * — requires quest: Swan Song"). CLIENT THREAD ONLY — reads live quest/item/varbit state. A
+	 * quick radius guess first, then a precise path trace (see {@link #refineUnreachableBlocker}).
+	 */
+	private void computeUnreachableBlocker(int frontier, Set<Integer> targets)
+	{
+		if (pathfinderConfig == null || frontier == WorldPointUtil.UNDEFINED || targets.isEmpty())
 		{
-			return null;
+			return;
 		}
-		int frontier = closest.getPath().get(closest.getPath().size() - 1).getPackedPosition();
-		Set<Integer> targets = new HashSet<>(lastAltTargets);
-		// Refine the quick radius guess with a precise path trace: walk from the frontier to the
-		// target with gates bypassed and teleports off, then name every requirement on that path.
-		// Runs on the client thread (refresh() needs it) since it can't run on this worker thread.
-		clientThread.invokeLater(() -> refineUnreachableBlocker(frontier, targets));
-		return pathfinderConfig.describeTargetBlocker(frontier, targets);
+		String radius = pathfinderConfig.describeTargetBlocker(frontier, targets);
+		if (!java.util.Objects.equals(radius, unreachableBlockerHint))
+		{
+			unreachableBlockerHint = radius;
+			refreshPanel(altGenerationInFlight);
+		}
+		refineUnreachableBlocker(frontier, targets);
 	}
 
 	/**
@@ -3201,12 +3219,26 @@ public class ShortestPathPlugin extends Plugin
 	 * staff"). If even a gates-open walk can't reach, the target is genuinely walled (island) and
 	 * the hint is cleared to the plain "closest point" wording.
 	 */
+	// The blocker trace only makes sense when the closest-reached tile sits near the target (a gate
+	// right in front of you). Beyond this it's a far/island target — skip, so the trace never floods.
+	private static final int BLOCKER_REFINE_MAX_DISTANCE = 250;
+
 	private void refineUnreachableBlocker(int frontier, Set<Integer> targets)
 	{
 		if (pathfinderConfig == null || frontier == WorldPointUtil.UNDEFINED || targets.isEmpty())
 		{
 			return;
 		}
+		int closestDist = Integer.MAX_VALUE;
+		for (int target : targets)
+		{
+			closestDist = Math.min(closestDist, WorldPointUtil.distanceBetween(frontier, target));
+		}
+		if (closestDist == Integer.MAX_VALUE || closestDist > BLOCKER_REFINE_MAX_DISTANCE)
+		{
+			return; // frontier isn't near the target — not a gate-at-the-doorstep situation
+		}
+
 		gps.pathfinder.PathfinderConfig bypass = pathfinderConfig.copyForPlanning();
 		bypass.refresh(); // planning copy: builds its own method catalog + full availability
 		// Walk + gates/doors/shortcuts only — exclude every teleport method so the trace follows the
@@ -3214,7 +3246,15 @@ public class ShortestPathPlugin extends Plugin
 		Set<TeleportMethod> methods = bypass.getMethodCatalog();
 		bypass.setExcludedMethods(methods);
 		bypass.rebuildAvailabilityWithExclusions(methods);
-		gps.pathfinder.Pathfinder pathfinder = new gps.pathfinder.Pathfinder(bypass, frontier, targets);
+
+		// Bound the trace hard: a cost cap (so an island target can never flood the whole landmass on
+		// the client thread) plus a distance-field heuristic to keep the walk directed and fast.
+		int costCap = closestDist * 3 + 200;
+		gps.pathfinder.DistanceField field = gps.pathfinder.DistanceField.buildIfCompact(bypass, targets, 3);
+		gps.pathfinder.SearchHeuristic heuristic = field != null
+			? gps.pathfinder.SearchHeuristic.buildWithField(bypass, field) : null;
+		gps.pathfinder.Pathfinder pathfinder =
+			new gps.pathfinder.Pathfinder(bypass, frontier, targets, costCap, heuristic);
 		pathfinder.run();
 		String refined;
 		if (pathfinder.getResult().isReached())
@@ -3224,7 +3264,7 @@ public class ShortestPathPlugin extends Plugin
 		}
 		else
 		{
-			refined = null; // no gates-open walking route either — genuinely walled off
+			refined = null; // no gates-open walking route within the cap — genuinely walled off
 		}
 		if (!java.util.Objects.equals(refined, unreachableBlockerHint))
 		{
