@@ -528,12 +528,7 @@ public class ShortestPathPanel extends PluginPanel
 		{
 			// Routes exist but every one stops short of the target — it can't actually be reached
 			// (e.g. a tile on an island with no connecting path or teleport). Say so, don't imply success.
-			// When a locked gate is what stopped the route, name it and its missing requirement.
-			String blocker = plugin.getUnreachableBlockerHint();
-			status = "<b>Destination can't be reached.</b><br>"
-				+ (blocker != null
-					? "Blocked by: " + escapeHtml(blocker) + "."
-					: "Showing the route to the closest reachable point.");
+			status = "<b>Destination can't be reached.</b><br>Showing the route to the closest reachable point.";
 			statusIcon = RouteIcons.BANNER_WARNING;
 			statusAccent = BANNER_WARN_ACCENT;
 		}
