@@ -31,4 +31,26 @@ public class RouteEtaTest
 		assertEquals(84, ShortestPathPanel.etaUnits(84, true, -50));
 		assertEquals(84, ShortestPathPanel.etaUnits(84, false, -50));
 	}
+
+	/**
+	 * The directions overlay's bank-withdraw step and the route card's ETA must count the same bank
+	 * time, so the two surfaces agree. The card adds {@code costBankPickup} cost units; the overlay
+	 * adds {@code bankWithdrawTicks} ticks — those ticks, back in cost units, must match (within the
+	 * one-unit granularity of whole ticks).
+	 */
+	@Test
+	public void directionsBankTicksMatchTheCardEta()
+	{
+		for (int cost : new int[]{0, 15, 16, 30, 100})
+		{
+			int cardUnits = ShortestPathPanel.etaUnits(0, true, cost); // = max(0, cost)
+			int overlayUnits = RouteDirections.bankWithdrawTicks(cost)
+				* gps.pathfinder.CostUnits.UNITS_PER_TICK;
+			assertTrue("bank time must agree for costBankPickup=" + cost
+				+ " (card " + cardUnits + " vs overlay " + overlayUnits + ")",
+				Math.abs(cardUnits - overlayUnits) <= 1);
+		}
+		// A negative modifier counts as no bank time on both surfaces.
+		assertEquals(0, RouteDirections.bankWithdrawTicks(-50));
+	}
 }

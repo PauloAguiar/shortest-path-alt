@@ -22,7 +22,6 @@ final class RouteDirections
 	 * Running covers 2 tiles per 0.6s game tick; estimates assume the player runs.
 	 */
 	static final double SECONDS_PER_TICK = 0.6;
-	private static final int BANK_WITHDRAW_TICKS = 8;
 
 	/**
 	 * One direction step, the route-path index range [start, end] it spans, and its estimated
@@ -126,7 +125,7 @@ final class RouteDirections
 					walk = 0;
 					legStart = i;
 					steps.add(new Step("Withdraw item for: " + joinLabels(route.getBankMethods()), i, i,
-						BANK_WITHDRAW_TICKS));
+						bankWithdrawTicks(plugin.getGpsConfig().costBankPickup())));
 				}
 			}
 
@@ -186,6 +185,17 @@ final class RouteDirections
 				legStart, path.size() - 1, walkTicks(walk)));
 		}
 		return steps;
+	}
+
+	/**
+	 * The bank-withdrawal step's duration in game ticks: the configured bank-pickup cost (in cost
+	 * units) converted to ticks — the SAME value the search charges and the route card's ETA adds,
+	 * so the overlay total and the card ETA agree on the bank detour. A negative modifier is a
+	 * "favour banking" preference, not negative time, so it's clamped out.
+	 */
+	static int bankWithdrawTicks(int costBankPickup)
+	{
+		return (int) Math.round(Math.max(0, costBankPickup) / (double) gps.pathfinder.CostUnits.UNITS_PER_TICK);
 	}
 
 	/**
