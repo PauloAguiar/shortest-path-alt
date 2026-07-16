@@ -8,18 +8,19 @@ Built on [Shortest Path](https://github.com/Skretzo/shortest-path): the classic 
 
 ## Features
 
-- **Turn-by-turn directions** — a movable overlay lists the route as steps: walking legs, doors to open, teleports and transports to use, bank detours with what to withdraw. Live progress with a per-step ETA, including mid-ride on carpets, canoes and gliders.
-- **Alternative routes** — the side panel (blue pin icon) lists routes to the destination, each using a *different* travel method, ranked by travel time. Click a card to draw that route everywhere.
-- **Teleport-method catalog** — every method, categorised and searchable, with per-method include/exclude toggles that persist and availability markers (missing item, in your bank, level too low, quest not done). Seasonal (Leagues) methods are listed but disabled by default.
+- **Turn-by-turn directions** — a movable overlay lists the route as steps: walking legs, doors to open, and the transports to use (teleports, boats, minecarts, balloons, gnome gliders, and more), with bank detours spelling out what to withdraw. Live progress with a per-step ETA, including mid-ride on carpets, canoes and gliders.
+- **Alternative routes** — the side panel (blue pin icon) lists routes to the destination, each using a *different* travel method, ranked by travel time. Press **+** for more (the header and controls stay pinned as the cards scroll). Click a card to draw that route everywhere.
+- **Travel methods catalog** — every method, categorised and searchable, with per-method include/exclude toggles that persist and availability markers that say exactly what's missing ("Requires 40 Firemaking", "Missing item: Willow logs", in your bank, quest not done). Seasonal (Leagues) methods are listed but disabled by default.
+- **Travel options** — one panel section for the facts GPS can't read off the map, so routes match what you can actually use: your **house** contents (auto-detected while you're inside, and editable by hand), a **wilderness** avoid/allow toggle, balloon **Log storage** (tracked from chat so flights can be paid from storage), and which farmable **spirit trees** you've grown (read from the travel menu).
 - **Availability modes** — route with only what you carry, what you carry plus your bank (routes detour to withdraw), everything you've unlocked, or every teleport in the game.
-- **Destination search** — type a place, dungeon or minigame in the panel and pick a result; or use **Find nearest…** for the closest bank, altar, anvil, fairy ring and more — including **Bank (and back)**, a round trip ranked by the combined out-and-back time.
+- **Destination search** — type a place, dungeon or minigame — or plain **coordinates** like `3221, 3218` — and pick a result; or use **Find nearest…** for the closest bank, altar, anvil, fairy ring and more, including **Bank (and back)**, a round trip ranked by the combined out-and-back time. Save any spot as a **favourite** (♥) and recall it by label.
 - **Integration** — picks up destinations set by [Quest Helper](https://github.com/Zoinkwiz/quest-helper) and any plugin using the `gps` plugin-message API (the legacy `shortestpath` namespace is accepted too, so existing integrations keep working unchanged).
 
 ![Alternative routes panel](docs/screenshots/panel.png)
 
 ## Getting started
 
-1. Set a destination: **right click** a spot on the world map, or **shift + right click** a tile in the scene — or let Quest Helper set one.
+1. Set a destination: **right click** a spot on the world map, or **shift + right click** a tile in the scene — or search for a place (or coordinates) in the panel, or let Quest Helper set one.
 2. Follow the directions overlay; drag it wherever you like.
 3. For alternatives, open the side panel (blue pin icon) and click a route to travel it instead.
 
@@ -34,7 +35,7 @@ Built on [Shortest Path](https://github.com/Skretzo/shortest-path): the classic 
 
 ## Credits
 
-GPS is built on **[Shortest Path](https://github.com/Skretzo/shortest-path)** by Runemoro, Skretzo, FIrgolitsch, wvanderp and contributors, used under the BSD 2-Clause licence. The pathfinding engine, collision data and transport data come from that project; GPS adds the turn-by-turn navigation (directions, progress, ETA, arrival), the alternative-routes explorer, the method catalog with availability modes, the destination search, the door registry and hints, and the route rendering (arrow line, flowing glow, pulses and markers).
+GPS is built on **[Shortest Path](https://github.com/Skretzo/shortest-path)** by Runemoro, Skretzo, FIrgolitsch, wvanderp and contributors, used under the BSD 2-Clause licence. The pathfinding engine, collision data and transport data come from that project; GPS adds the turn-by-turn navigation (directions, progress, ETA, arrival), the alternative-routes explorer, the travel-methods catalog with availability modes, the travel-options declarations (house, balloon and spirit-tree auto-detection), the destination search with coordinates and favourites, the door registry and hints, and the route rendering (arrow line, flowing glow, pulses and markers).
 
 ## License
 
