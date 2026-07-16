@@ -792,16 +792,20 @@ public class ShortestPathPanel extends PluginPanel
 		rank.setFont(FontManager.getRunescapeSmallFont());
 		rank.setForeground(Color.GRAY);
 		left.add(rank);
-		boolean weighted = route.getRawCost() != route.getTotalCost();
+		// The ETA counts travel + the bank detour; ordering additionally counts preference
+		// modifiers (transport type, currency), so a route can be faster yet ranked lower.
+		int etaUnits = routeEtaUnits(route);
+		boolean weighted = etaUnits != route.getTotalCost();
 		JLabel eta = new JLabel(formatDuration(routeEtaSeconds(route)), RouteIcons.CLOCK, SwingConstants.LEADING);
 		eta.setIconTextGap(3);
 		eta.setBorder(new EmptyBorder(0, 12, 0, 0));
 		eta.setFont(FontManager.getRunescapeBoldFont());
 		eta.setForeground(selected ? ColorScheme.BRAND_ORANGE : Color.WHITE);
-		eta.setToolTipText("<html>Estimated travel time, assuming you run.<br>"
+		eta.setToolTipText("<html>Estimated travel time, assuming you run"
+			+ (route.isViaBank() ? " — includes the bank detour" : "") + ".<br>"
 			+ (weighted
-				? "Ordering also counts your method modifiers: adjusted cost " + route.getTotalCost()
-					+ " vs " + route.getRawCost() + " unadjusted (run-tiles, 0.3s each)."
+				? "Ordering also counts your method preferences: adjusted cost " + route.getTotalCost()
+					+ " vs " + etaUnits + " for time (run-tiles, 0.3s each)."
 				: "Routes are ordered by this time.")
 			+ "</html>");
 		if (!reaches)
@@ -901,14 +905,25 @@ public class ShortestPathPanel extends PluginPanel
 	}
 
 	/**
-	 * The route's estimated travel time in seconds: its unweighted cost is time-normalized (one
-	 * cost unit = one run-tile = 0.3s), so the ETA is a direct conversion — and because routes are
-	 * ordered by that same cost (plus any configured preference weights), the displayed ETAs can
-	 * never disagree with the ordering.
+	 * The route's time in cost units (run-tiles, 0.3s each): the unweighted travel cost plus the
+	 * bank-detour cost when the route banks. The bank pickup is real time (walking to a bank and
+	 * withdrawing), so it belongs in the ETA — unlike the transport-type and currency modifiers,
+	 * which are pure ordering preferences. A negative bank modifier is a "favour banking" preference,
+	 * not negative time, so it's clamped out.
 	 */
+	private int routeEtaUnits(RouteOption route)
+	{
+		return etaUnits(route.getRawCost(), route.isViaBank(), plugin.getGpsConfig().costBankPickup());
+	}
+
+	static int etaUnits(int rawCost, boolean viaBank, int bankPickupCost)
+	{
+		return rawCost + (viaBank ? Math.max(0, bankPickupCost) : 0);
+	}
+
 	private int routeEtaSeconds(RouteOption route)
 	{
-		return (int) Math.ceil(route.getRawCost() * gps.pathfinder.CostUnits.SECONDS_PER_UNIT);
+		return (int) Math.ceil(routeEtaUnits(route) * gps.pathfinder.CostUnits.SECONDS_PER_UNIT);
 	}
 
 	private static String formatDuration(int seconds)
