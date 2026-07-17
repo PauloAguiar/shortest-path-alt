@@ -355,6 +355,10 @@ public class ShortestPathPanel extends PluginPanel
 		actions.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		// The GitHub link sits in the open (like Quest Helper's): the shortest path to reporting an
 		// issue. Everything else — the occasional-use actions — tucks into the burger menu beside it.
+		// The red flag beside it opens a NEW issue pre-filled with the current routing context.
+		actions.add(control(new IconActionLabel(RouteIcons.REPORT, RouteIcons.REPORT_HOVER,
+			"Report an issue — opens GitHub pre-filled with the current routes and settings",
+			plugin::reportIssue)));
 		actions.add(control(new IconActionLabel(RouteIcons.GITHUB, RouteIcons.GITHUB_HOVER,
 			"Report issues or contribute on GitHub",
 			() -> LinkBrowser.browse(GITHUB_ISSUES_URL))));

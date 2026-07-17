@@ -95,6 +95,9 @@ final class RouteIcons
 	// GitHub mark linking to the plugin's repository (report issues / contribute).
 	static final ImageIcon GITHUB = new ImageIcon(github(false));
 	static final ImageIcon GITHUB_HOVER = new ImageIcon(github(true));
+	// Report an issue: a red warning triangle, opening a GitHub issue pre-filled with the state.
+	static final ImageIcon REPORT = new ImageIcon(warningTriangle(RED));
+	static final ImageIcon REPORT_HOVER = new ImageIcon(warningTriangle(RED_LIGHT));
 
 	// The plugin's identity mark: the navigation-blue location pin, matching the GPS overlay's
 	// title glyph. Used for the sidebar tab (and exportable for the hub listing icon).

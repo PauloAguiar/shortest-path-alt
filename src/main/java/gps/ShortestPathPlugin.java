@@ -2796,6 +2796,97 @@ public class ShortestPathPlugin extends Plugin
 		return stepsJson;
 	}
 
+	// Keep in sync with runelite-plugin.properties on each release — shown in the issue report so
+	// bug reports carry the version.
+	private static final String PLUGIN_VERSION = "0.11.0";
+	private static final String GITHUB_NEW_ISSUE = "https://github.com/PauloAguiar/runelite-gps-plugin/issues/new";
+
+	/**
+	 * Opens a GitHub "new issue" page pre-filled with the current routing context — mode, start,
+	 * target, config and the routes found — so a bug report carries what's needed to reproduce it.
+	 * The page only opens pre-filled; the player reviews and submits it themselves.
+	 */
+	public void reportIssue()
+	{
+		StringBuilder body = new StringBuilder();
+		body.append("**Describe the issue**\n\n\n");
+		body.append("**What did you expect?**\n\n\n");
+		body.append("---\n*Auto-captured context — please keep:*\n");
+		body.append("- GPS ").append(PLUGIN_VERSION).append('\n');
+		body.append("- Mode: ").append(routesMode).append(" · limit ").append(routeLimit)
+			.append(" · band x").append(routeCostMultiple).append('\n');
+		body.append("- Start: ").append(issuePointText(lastAltStart)).append('\n');
+		List<String> targets = new ArrayList<>();
+		for (int target : lastAltTargets)
+		{
+			targets.add(issuePointText(target));
+		}
+		body.append("- Target(s): ").append(targets.isEmpty() ? "(none)" : String.join("; ", targets)).append('\n');
+		body.append("- Config: avoidWilderness=").append(override("avoidWilderness", config.avoidWilderness()))
+			.append(", teleportItems=").append(override("useTeleportationItems", config.useTeleportationItems()))
+			.append(", includeBankPath=").append(override("includeBankPath", config.includeBankPath()))
+			.append(", bankPickup=").append(override("costBankPickup", config.costBankPickup())).append('\n');
+		List<RouteOption> routes = alternativeRoutes;
+		body.append("- Routes (").append(routes.size()).append("):\n");
+		int shown = Math.min(routes.size(), 12);
+		for (int i = 0; i < shown; i++)
+		{
+			RouteOption route = routes.get(i);
+			body.append("  ").append(i).append(". ").append(route.getTotalCost())
+				.append(route.isReached() ? "" : " (closest)").append(" · ").append(issueMethodSummary(route)).append('\n');
+		}
+		if (routes.size() > shown)
+		{
+			body.append("  … ").append(routes.size() - shown).append(" more\n");
+		}
+		body.append("\nFor a full reproduction, attach the newest file from your `.runelite/gps-debug/` folder"
+			+ " (use \"Save debug snapshot\" in the ⋯ menu first).\n");
+
+		net.runelite.client.util.LinkBrowser.browse(issueUrl("[Bug] ", body.toString()));
+	}
+
+	/** The GitHub new-issue URL for a pre-filled title and body (both URL-encoded). */
+	static String issueUrl(String title, String body)
+	{
+		return GITHUB_NEW_ISSUE + "?title=" + issueEncode(title) + "&body=" + issueEncode(body);
+	}
+
+	private static String issuePointText(int packed)
+	{
+		if (packed == WorldPointUtil.UNDEFINED)
+		{
+			return "(none)";
+		}
+		return WorldPointUtil.unpackWorldX(packed) + ", " + WorldPointUtil.unpackWorldY(packed)
+			+ ", " + WorldPointUtil.unpackWorldPlane(packed);
+	}
+
+	private static String issueMethodSummary(RouteOption route)
+	{
+		if (route.getMethods().isEmpty())
+		{
+			return "walk";
+		}
+		List<String> parts = new ArrayList<>();
+		for (TeleportMethod method : route.getMethods())
+		{
+			parts.add(method.routeLabel());
+		}
+		return String.join(" + ", parts);
+	}
+
+	private static String issueEncode(String text)
+	{
+		try
+		{
+			return java.net.URLEncoder.encode(text, "UTF-8");
+		}
+		catch (java.io.UnsupportedEncodingException e)
+		{
+			return "";
+		}
+	}
+
 	public void captureDebugSnapshot()
 	{
 		clientThread.invokeLater(() ->
