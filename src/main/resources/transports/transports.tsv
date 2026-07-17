@@ -4470,10 +4470,10 @@
 2830 3677 0	2831 10076 2	Climb-down Troll ladder 18833							
 2832 3677 0	2831 10076 2	Climb-down Troll ladder 18833							
 2831 3678 0	2831 10076 2	Climb-down Troll ladder 18833							
-2840 3690 0	2837 10090 2	Enter Stronghold 3771							
-2837 10090 2	2840 3690 0	Leave Exit 3774							
-2837 10089 2	2840 3690 0	Leave Exit 3773							
-2837 10091 2	2840 3690 0	Use Exit 3772							
+2840 3690 0	2837 10090 2	Enter Stronghold 3771						5	
+2837 10090 2	2840 3690 0	Leave Exit 3774						5	
+2837 10089 2	2840 3690 0	Leave Exit 3773						5	
+2837 10091 2	2840 3690 0	Use Exit 3772						5	
 2845 10109 2	2841 10108 1	Climb-down Stone Staircase 3789							
 2841 10108 1	2845 10108 2	Climb-up Stone Staircase 3788							
 2845 10108 2	2841 10108 1	Climb-down Stone Staircase 3789							
