@@ -34,4 +34,14 @@ public class IssueReportUrlTest
 		assertTrue(t.find());
 		assertEquals("[Bug] ", URLDecoder.decode(t.group(1), StandardCharsets.UTF_8.name()));
 	}
+
+	@Test
+	public void versionIsReadFromTheBundledManifest()
+	{
+		// build.gradle bundles runelite-plugin.properties onto the classpath, so the plugin reports
+		// its real release version (not a hard-coded constant that can drift).
+		String version = ShortestPathPlugin.pluginVersion();
+		assertTrue("version must be read from the manifest, not the 'unknown' fallback: " + version,
+			version.matches("\\d+\\.\\d+\\.\\d+"));
+	}
 }

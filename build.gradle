@@ -37,6 +37,12 @@ dependencies {
 
 group = 'gps'
 
+// Bundle the plugin manifest onto the classpath so the plugin can read its own version at runtime
+// (the "report an issue" context). Harmless for the hub, which reads the repo-root copy for metadata.
+processResources {
+    from('runelite-plugin.properties')
+}
+
 
 // Toolchain pin removed: requires a JDK 11 install. The JavaCompile config below already sets
 // options.release = 11 and source/targetCompatibility = 11, so any JDK 11+ (e.g. 21) still produces

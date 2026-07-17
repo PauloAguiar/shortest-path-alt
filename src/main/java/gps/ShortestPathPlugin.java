@@ -2796,10 +2796,34 @@ public class ShortestPathPlugin extends Plugin
 		return stepsJson;
 	}
 
-	// Keep in sync with runelite-plugin.properties on each release — shown in the issue report so
-	// bug reports carry the version.
-	private static final String PLUGIN_VERSION = "0.11.0";
 	private static final String GITHUB_NEW_ISSUE = "https://github.com/PauloAguiar/runelite-gps-plugin/issues/new";
+
+	/**
+	 * The running plugin's version, read from the bundled {@code runelite-plugin.properties} so it
+	 * always matches the release (no constant to keep in sync). "unknown" in a dev build where the
+	 * file isn't on the classpath.
+	 */
+	static String pluginVersion()
+	{
+		try (java.io.InputStream in = ShortestPathPlugin.class.getResourceAsStream("/runelite-plugin.properties"))
+		{
+			if (in != null)
+			{
+				java.util.Properties props = new java.util.Properties();
+				props.load(in);
+				String version = props.getProperty("version");
+				if (version != null && !version.isEmpty())
+				{
+					return version;
+				}
+			}
+		}
+		catch (java.io.IOException ignored)
+		{
+			// Fall through to "unknown".
+		}
+		return "unknown";
+	}
 
 	/**
 	 * Opens a GitHub "new issue" page pre-filled with the current routing context — mode, start,
@@ -2812,7 +2836,7 @@ public class ShortestPathPlugin extends Plugin
 		body.append("**Describe the issue**\n\n\n");
 		body.append("**What did you expect?**\n\n\n");
 		body.append("---\n*Auto-captured context — please keep:*\n");
-		body.append("- GPS ").append(PLUGIN_VERSION).append('\n');
+		body.append("- GPS ").append(pluginVersion()).append('\n');
 		body.append("- Mode: ").append(routesMode).append(" · limit ").append(routeLimit)
 			.append(" · band x").append(routeCostMultiple).append('\n');
 		body.append("- Start: ").append(issuePointText(lastAltStart)).append('\n');
