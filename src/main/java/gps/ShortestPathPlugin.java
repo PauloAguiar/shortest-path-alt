@@ -2846,8 +2846,10 @@ public class ShortestPathPlugin extends Plugin
 			targets.add(issuePointText(target));
 		}
 		body.append("- Target(s): ").append(targets.isEmpty() ? "(none)" : String.join("; ", targets)).append('\n');
+		// Only settings that genuinely affect routing here — avoidWilderness applies in every mode,
+		// bankPickup weights the bank detour. The mode (above) already implies bank routing and the
+		// item scope, so those aren't repeated (they'd show the overridden config value, not the mode's).
 		body.append("- Config: avoidWilderness=").append(override("avoidWilderness", config.avoidWilderness()))
-			.append(", includeBankPath=").append(override("includeBankPath", config.includeBankPath()))
 			.append(", bankPickup=").append(override("costBankPickup", config.costBankPickup())).append('\n');
 		List<RouteOption> routes = alternativeRoutes;
 		body.append("- Routes (").append(routes.size()).append("):\n");
@@ -2960,9 +2962,11 @@ public class ShortestPathPlugin extends Plugin
 				snapshot.put("userExclusions", exclusions);
 				snapshot.put("bankContentsKnown", bankContentsKnown);
 
+				// includeBankPath and useTeleportationItems are omitted: the Owned/All mode forces them
+				// (see PathfinderConfig.refresh), so their config value is overridden and misleading —
+				// routesMode above is the effective control.
 				Map<String, Object> configValues = new LinkedHashMap<>();
 				configValues.put("avoidWilderness", override("avoidWilderness", config.avoidWilderness()));
-				configValues.put("includeBankPath", override("includeBankPath", config.includeBankPath()));
 				configValues.put("costBankPickup", override("costBankPickup", config.costBankPickup()));
 				configValues.put("defaultRouteCount", override("defaultRouteCount", config.defaultRouteCount()));
 				snapshot.put("config", configValues);
