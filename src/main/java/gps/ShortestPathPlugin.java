@@ -2847,7 +2847,6 @@ public class ShortestPathPlugin extends Plugin
 		}
 		body.append("- Target(s): ").append(targets.isEmpty() ? "(none)" : String.join("; ", targets)).append('\n');
 		body.append("- Config: avoidWilderness=").append(override("avoidWilderness", config.avoidWilderness()))
-			.append(", teleportItems=").append(override("useTeleportationItems", config.useTeleportationItems()))
 			.append(", includeBankPath=").append(override("includeBankPath", config.includeBankPath()))
 			.append(", bankPickup=").append(override("costBankPickup", config.costBankPickup())).append('\n');
 		List<RouteOption> routes = alternativeRoutes;
@@ -2963,7 +2962,6 @@ public class ShortestPathPlugin extends Plugin
 
 				Map<String, Object> configValues = new LinkedHashMap<>();
 				configValues.put("avoidWilderness", override("avoidWilderness", config.avoidWilderness()));
-				configValues.put("useTeleportationItems", String.valueOf(override("useTeleportationItems", config.useTeleportationItems())));
 				configValues.put("includeBankPath", override("includeBankPath", config.includeBankPath()));
 				configValues.put("costBankPickup", override("costBankPickup", config.costBankPickup()));
 				configValues.put("defaultRouteCount", override("defaultRouteCount", config.defaultRouteCount()));
