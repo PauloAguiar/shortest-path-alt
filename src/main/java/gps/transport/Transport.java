@@ -34,6 +34,8 @@ public class Transport
 	 * A location placeholder different from null to use for permutation transports
 	 */
 	public static final int LOCATION_PERMUTATION = WorldPointUtil.packWorldPoint(-1, -1, 1);
+	/** Minimum ticks for an object transport (stairs/door/gate/portal) that carries no explicit duration. */
+	private static final int OBJECT_TRANSPORT_MIN_DURATION = 2;
 	/**
 	 * Shared, never-mutated all-zero skill array. Most transports require no skills, so they point
 	 * at this singleton instead of each allocating their own {@code int[]} (issue #491).
@@ -190,6 +192,15 @@ public class Transport
 		if (record.has(TransportRecord.Fields.DURATION))
 		{
 			builder.duration(record.getDuration());
+		}
+		else if (transportType == TransportType.TRANSPORT)
+		{
+			// Object transports (stairs, ladders, doors, gates, dungeon portals, passages) without an
+			// explicit duration are NOT free: interacting with the object and crossing takes at least a
+			// tick. Pricing them at zero let the search treat them as free shortcuts — e.g. hopping out
+			// of a dungeon and back through an exit that shares its surface tile (Stronghold of
+			// Security). Specific transports still override this with a larger duration in the data.
+			builder.duration(OBJECT_TRANSPORT_MIN_DURATION);
 		}
 		if (record.has(TransportRecord.Fields.DISPLAY_INFO))
 		{
