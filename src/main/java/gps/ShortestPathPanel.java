@@ -360,7 +360,8 @@ public class ShortestPathPanel extends PluginPanel
 		reportButton.setForeground(ColorScheme.PROGRESS_ERROR_COLOR);
 		reportButton.setIconTextGap(4);
 		reportButton.setFocusPainted(false);
-		reportButton.setToolTipText("Report an issue — opens GitHub pre-filled with the current routes and settings");
+		reportButton.setToolTipText("<html>Opens GitHub pre-filled with the current routes and settings.<br>"
+			+ "First calculate the route that's misbehaving, so the report captures it.</html>");
 		reportButton.addActionListener(e -> plugin.reportIssue());
 		actions.add(reportButton);
 		JPopupMenu actionsMenu = new JPopupMenu();
